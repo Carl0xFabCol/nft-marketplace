@@ -1,0 +1,17 @@
+node_modules
+.next
+dist
+out
+coverage
+
+.env
+.env.local
+
+pnpm-lock.yaml
+
+apps/web/.next
+apps/indexer/dist
+
+packages/contracts/out
+packages/contracts/cache
+packages/contracts/broadcast
