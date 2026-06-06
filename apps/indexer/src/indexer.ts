@@ -1,6 +1,7 @@
 import "dotenv/config"
 import { createPublicClient, decodeEventLog, erc721Abi, http, Address } from "viem"
 import { sepolia } from "viem/chains"
+import { CHAIN_IDS } from "@marketplace/shared"
 import { supabase } from "./supabase"
 import { getDeploymentBlockCached as getDeploymentBlock } from "./etherscan"
 import { BIDS_CONTRACT_ADDRESS, CORE_CONTRACT_ADDRESS, MarketplaceBidsABI, MarketplaceCoreABI } from "./contracts"
@@ -80,7 +81,7 @@ async function getTokenURI(contract: Address, tokenId: string) {
   }
 }
 
-async function fetchMetadata(uri: string) {
+async function fetchMetadata(uri: string): Promise<any> {
   if (!uri) return null
 
   if (uri.startsWith("ipfs://")) {
@@ -202,7 +203,7 @@ const eventHandlers: Record<string, (ev: any, args: any, source: string) => Prom
     await supabase.from("collections").upsert(
       {
         contract_address: String(collection).toLowerCase(),
-        chain_id: 11155111,
+        chain_id: CHAIN_IDS.SEPOLIA,
         creator_wallet: String(owner).toLowerCase(),
         name: metadata.name,
         symbol: metadata.symbol,
@@ -588,7 +589,7 @@ const eventHandlers: Record<string, (ev: any, args: any, source: string) => Prom
       .eq("token_id", tokenId?.toString())
       .eq("bidder_wallet", String(bidder).toLowerCase())
       .eq("is_active", true)
-    console.log("------------------- INSERTANDO BID---------------- ", args)
+
     // Insert new bid
     const { data, error } = await supabase.from("token_bids").insert({
       collection_address: String(collection).toLowerCase(),
@@ -697,7 +698,7 @@ async function run() {
 
   try {
     // Get indexer state
-    const { data: state, error: stateError } = await supabase.from("indexer_state").select("last_block").eq("chain_id", 11155111).single()
+    const { data: state, error: stateError } = await supabase.from("indexer_state").select("last_block").eq("chain_id", CHAIN_IDS.SEPOLIA).single()
 
     if (stateError) {
       console.error("State error:", stateError)
@@ -858,7 +859,7 @@ async function run() {
     await supabase
       .from("indexer_state")
       .update({ last_block: Number(toBlock) })
-      .eq("chain_id", 11155111)
+      .eq("chain_id", CHAIN_IDS.SEPOLIA)
 
     console.log(`✅ Indexed up to block ${toBlock} (Core & Bids contracts)`)
   } catch (err) {

@@ -1,0 +1,26 @@
+{
+  "name": "marketplace",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "dev:web": "pnpm --filter @marketplace/web dev",
+    "dev:indexer": "pnpm --filter @marketplace/indexer dev",
+    "build:web": "pnpm --filter @marketplace/web build",
+    "build:contracts": "pnpm --filter @marketplace/contracts build"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "dependencies": {
+    "ws": "^8.21.0"
+  }
+}

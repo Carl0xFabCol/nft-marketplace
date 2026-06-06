@@ -1,5 +1,5 @@
 {
-  "name": "nft-mint-dapp",
+  "name": "@marketplace/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,6 +10,8 @@
     "update-types": "supabase gen types typescript --project-id \"tu-project-id\" > src/types/supabase.ts"
   },
   "dependencies": {
+    "@marketplace/contracts": "workspace:*",
+    "@marketplace/shared": "workspace:*",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "@tanstack/react-query": "^5.90.12",

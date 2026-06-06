@@ -1,6 +1,7 @@
 // app/api/listings/optimistic/route.ts
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
 
 export async function POST(req: Request) {
   try {
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
       token_id: tokenId,
       seller_wallet: seller.toLowerCase(),
       price: prices[i],
-      chain_id: chainId || 11155111,
+      chain_id: chainId || DEFAULT_CHAIN_ID,
       is_active: true,
       status: "pending",
       source: "optimistic",

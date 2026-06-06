@@ -1,5 +1,5 @@
 {
-  "name": "indexer",
+  "name": "@marketplace/indexer",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -11,6 +11,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@marketplace/contracts": "workspace:*",
+    "@marketplace/shared": "workspace:*",
     "@supabase/supabase-js": "^2.90.1",
     "alchemy-sdk": "^3.6.5",
     "dotenv": "^17.2.3",
