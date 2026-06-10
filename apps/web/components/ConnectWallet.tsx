@@ -5,8 +5,10 @@ import { mainnet, sepolia } from "wagmi/chains"
 import { LuWallet } from "react-icons/lu"
 import { FaEthereum } from "react-icons/fa"
 import { useAuth } from "@/components/AuthProvider"
+import { useRouter } from "next/navigation"
 
 export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
+  const router = useRouter()
   const { session } = useAuth()
 
   const [mounted, setMounted] = useState(false)
@@ -15,6 +17,11 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  function getSession() {
+    console.log(session)
+    setLoggedIn(!!session)
+  }
 
   const { address, isConnected, chainId } = useConnection()
   const { disconnect } = useDisconnect()
@@ -41,9 +48,12 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
       body: JSON.stringify({ message, signature }),
     })
 
-    const { actionLink } = await loginRes.json()
-
-    window.location.href = actionLink
+    const { ok } = await loginRes.json()
+    getSession()
+    if (ok) {
+      router.push("/")
+      router.refresh()
+    }
   }
 
   if (!mounted) return null

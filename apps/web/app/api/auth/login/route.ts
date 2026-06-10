@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server"
 import { recoverMessageAddress } from "viem"
 import { supabase } from "../supabase"
+import { signSupabaseJWT } from "@/lib/auth/jwt"
 
 async function validNonce(message: string) {
   const match = message.match(/nonce:\s*(\w+)/)
@@ -76,23 +77,26 @@ export async function POST(req: Request) {
       id: userId,
       wallet: wallet.toLowerCase(),
     })
-    const { data: link, error: linkError } = await supabase.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-      },
-    })
 
-    if (linkError || !link?.properties?.action_link) {
-      return NextResponse.json({ error: linkError }, { status: 500 })
-    }
+    const jwt = await signSupabaseJWT(wallet.toLowerCase())
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       wallet,
-      actionLink: link.properties.action_link,
     })
+
+    const cookieOptions = {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    }
+
+    response.cookies.set("sb-access-token", jwt, cookieOptions)
+    response.cookies.set("sb-refresh-token", jwt, cookieOptions)
+
+    return response
   } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
