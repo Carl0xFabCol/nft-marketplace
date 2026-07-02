@@ -14,10 +14,14 @@
     "generate-types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" > src/types.ts"
   },
   "devDependencies": {
+    "@types/ws": "^8.18.1",
     "supabase": "^2",
     "typescript": "^5"
   },
   "peerDependencies": {
     "@supabase/supabase-js": ">=2"
+  },
+  "dependencies": {
+    "ws": "^8.21.0"
   }
 }

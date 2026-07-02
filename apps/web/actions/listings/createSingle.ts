@@ -1,7 +1,11 @@
+"use server"
 import { Address } from "viem"
 import { MarketplaceABI } from "@/lib/abi"
 import { MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
 import { TxItem } from "@/app/context/TxContext"
+import { getSession } from "@/lib/auth/session"
+import { cookies } from "next/headers"
+
 interface ListingInput {
   collection: Address
   tokenId: bigint
@@ -9,8 +13,6 @@ interface ListingInput {
   expiresAt: bigint
   seller: Address
   chainId: number
-
-  token?: string
 
   // Injected dependencies from the component
   writeContractAsync: (args: any) => Promise<`0x${string}`>
@@ -20,7 +22,12 @@ interface ListingInput {
   removeTx: (hash: `0x${string}`) => void
 }
 
-export async function createListing({ collection, tokenId, price, expiresAt, seller, chainId, token, writeContractAsync, publicClient, addTx, updateTx, removeTx }: ListingInput) {
+export async function createListing({ collection, tokenId, price, expiresAt, seller, chainId, writeContractAsync, publicClient, addTx, updateTx, removeTx }: ListingInput) {
+  const session = await getSession()
+  if (!session) {
+    throw new Error("Unauthorized")
+  }
+
   // 1. Submit the transaction
   let hash: `0x${string}`
   try {
@@ -41,8 +48,12 @@ export async function createListing({ collection, tokenId, price, expiresAt, sel
     label: `Listing item...`,
   })
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" }
-  if (token) headers["Authorization"] = `Bearer ${token}`
+  const cookieStore = await cookies()
+  const token = cookieStore.get("sb-access-token")?.value
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(token ? { Cookie: `sb-access-token=${token}` } : {}),
+  }
 
   // 3. Optimistic DB write – don’t wait for the indexer
   await fetch("/api/listings/optimistic", {

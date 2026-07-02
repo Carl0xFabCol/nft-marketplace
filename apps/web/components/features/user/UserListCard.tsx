@@ -12,7 +12,7 @@ import { MarketplaceABI, MarketplaceCoreABI } from "@/lib/abi"
 import { EnrichedUserNFT, UserListing, Collection, UserNFT } from "@/types/user.types"
 import { useMarketplaceInfo } from "@/hooks/Contract"
 import { useTx } from "@/app/context/TxContext"
-import { createBatchListing } from "@/actions/listings/createBatch"
+import { saveBatchListingToDB, confirmBatchListing, failBatchListing } from "@/actions/listings/createBatch"
 import { createListing } from "@/actions/listings/createSingle"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { useAuth } from "@/components/AuthProvider"
@@ -129,41 +129,47 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     if (!validItems.length) return
 
     try {
-      if (validItems.length > 1) {
-        await createBatchListing({
-          collections: validItems.map((i) => i.collection_address as Address),
-          tokenIds: validItems.map((i) => BigInt(i.token_id)),
-          prices: validItems.map((i) => BigInt(i.price!)),
-          expiresAts: validItems.map((i) => (i.expiresAt ? BigInt(Math.floor(i.expiresAt.getTime() / 1000)) : BigInt(0))),
-          seller: address!.toLowerCase() as Address,
-          chainId: 11155111, // or from context
-          token,
-          writeContractAsync,
-          publicClient,
-          addTx,
-          updateTx,
-          removeTx,
-        })
-      } else {
-        await createListing({
-          collection: validItems[0].collection_address,
-          tokenId: validItems[0].token_id,
-          price: validItems[0].price,
-          expiresAt: BigInt(Math.floor(validItems[0].expiresAt.getTime() / 1000)),
-          seller: address!.toLowerCase() as Address,
-          chainId: 11155111, // or from context
-          token,
-          writeContractAsync,
-          publicClient,
-          addTx,
-          updateTx,
-          removeTx,
-        })
-      }
+      // 1. Prepara argumentos
+      const collections = validItems.map((i) => i.collection_address as Address)
+      const tokenIds = validItems.map((i) => BigInt(i.token_id))
+      const prices = validItems.map((i) => BigInt(i.price!))
+      const expiresAts = validItems.map((i) => (i.expiresAt ? BigInt(Math.floor(i.expiresAt.getTime() / 1000)) : BigInt(0)))
+
+      // 2. Ejecuta la transacción (popup de wallet)
+      const hash = await writeContractAsync({
+        address: MARKETPLACE_CONTRACT_ADDRESS,
+        abi: MarketplaceABI,
+        functionName: "createListingBatch",
+        args: [collections, tokenIds, prices, expiresAts],
+      })
+
+      // 3. Añade la tx al UI
+      addTx({ hash, status: "loading", label: `Listing ${validItems.length} items...` })
+
+      // 4. Guarda en DB de forma optimista (Server Action)
+      await saveBatchListingToDB({
+        txHash: hash,
+        collections,
+        tokenIds: tokenIds.map((id) => id.toString()),
+        prices: prices.map((p) => p.toString()),
+        seller: address!.toLowerCase() as Address,
+        chainId: 11155111,
+        expiresAts: expiresAts.map((e) => e.toString()),
+      })
+
+      // 5. Espera confirmación en blockchain
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash })
+      updateTx(hash, { status: "success", label: "Listed!" })
+
+      // 6. Confirma en DB
+      await confirmBatchListing(hash)
+      setTimeout(() => removeTx(hash), 3000)
 
       onSuccess?.()
     } catch (err) {
-      // Error already handled by action (toast shown)
+      // Manejo de errores (usuario rechazó, red, etc.)
+      console.error("Error en handleList:", err)
+      // Opcional: actualizar UI con toast
     }
   }
 

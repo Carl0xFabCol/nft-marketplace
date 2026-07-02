@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { getSession } from "@/lib/auth/session"
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms))
 
@@ -8,10 +9,10 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { txHash } = body
 
-    const authHeader = req.headers.get("Authorization")
-    const token = authHeader?.split(" ")[1]
-    if (!token) return NextResponse.json({ error: "Missing token" }, { status: 401 })
+    const session = await getSession()
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+    const { token } = session
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { global: { headers: { Authorization: `Bearer ${token}` } } })
 
     let attempts = 5

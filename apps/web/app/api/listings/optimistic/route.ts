@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
+import { getSession } from "@/lib/auth/session"
 
 export async function POST(req: Request) {
   try {
@@ -9,10 +10,10 @@ export async function POST(req: Request) {
     const { txHash, collection, tokenIds, seller, prices, chainId, expiresAts } = body
     console.log(new Date(expiresAts[0] * 1000).toISOString(), new Date().toISOString())
 
-    const authHeader = req.headers.get("Authorization")
-    const token = authHeader?.split(" ")[1]
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const session = await getSession()
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+    const { token } = session
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { global: { headers: { Authorization: `Bearer ${token}` } } })
 
     const {
