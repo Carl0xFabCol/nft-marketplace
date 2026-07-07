@@ -1,9 +1,9 @@
 import { TopCols24 } from "@/components/features/collections/TopCols24"
 import { CollectionService } from "@/services/collections.service"
-import { createClient } from "@/lib/supabase/server"
+import { getServerSupabase } from "@/lib/supabase/server"
 
 export default async function Home() {
-  const supabase = await createClient()
+  const supabase = await getServerSupabase()
 
   const collections = await CollectionService.getTopCollectionsByVolume(supabase)
   const collections24 = await CollectionService.getTopCollectionsByVolume24h(supabase)

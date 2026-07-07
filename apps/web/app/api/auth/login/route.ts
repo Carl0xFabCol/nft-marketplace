@@ -1,8 +1,6 @@
-// app/api/auth/login/route.ts
-import { NextResponse } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 import { recoverMessageAddress } from "viem"
 import { supabase } from "../supabase"
-import { signSupabaseJWT } from "@/lib/auth/jwt"
 
 async function validNonce(message: string) {
   const match = message.match(/nonce:\s*(\w+)/)
@@ -22,7 +20,7 @@ async function validNonce(message: string) {
   return true
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   const { signature, message } = await req.json()
 
   if (!signature || !message) {
@@ -30,17 +28,13 @@ export async function POST(req: Request) {
   }
 
   try {
-    const wallet = await recoverMessageAddress({
-      message,
-      signature,
-    })
+    const wallet = await recoverMessageAddress({ message, signature })
 
     if (!(await validNonce(message))) {
       return NextResponse.json({ error: "Invalid nonce" }, { status: 400 })
     }
 
     const email = `${wallet.toLowerCase()}@wallet.local`
-
     let userId: string = ""
 
     const { data, error } = await supabase.auth.admin.createUser({
@@ -51,8 +45,6 @@ export async function POST(req: Request) {
     if (data?.user) {
       userId = data.user.id
     } else if (error && error.code?.includes("exists")) {
-      console.log(error.code)
-
       const {
         data: { users },
         error: listError,
@@ -63,11 +55,9 @@ export async function POST(req: Request) {
       }
 
       const existing = users.find((u) => u.email === email)
-
       if (!existing) {
         return NextResponse.json({ error: "User exists but not found" }, { status: 500 })
       }
-
       userId = existing.id
     } else if (error) {
       return NextResponse.json({ error }, { status: 400 })
@@ -78,25 +68,32 @@ export async function POST(req: Request) {
       wallet: wallet.toLowerCase(),
     })
 
-    const jwt = await signSupabaseJWT(wallet.toLowerCase())
-
-    const response = NextResponse.json({
-      ok: true,
-      wallet,
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: "magiclink",
+      email: email,
     })
 
-    const cookieOptions = {
-      path: "/",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+    if (linkError || !linkData?.properties) {
+      return NextResponse.json({ error: "Error generando sesión de Supabase" }, { status: 500 })
     }
 
-    response.cookies.set("sb-access-token", jwt, cookieOptions)
-    response.cookies.set("sb-refresh-token", jwt, cookieOptions)
+    const { data: sessionData, error: sessionAuthError } = await supabase.auth.admin.updateUserById(userId, { password: Buffer.from(wallet).toString("base64") })
 
-    return response
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: Buffer.from(wallet).toString("base64"),
+    })
+
+    if (signInError || !signInData.session) {
+      return NextResponse.json({ error: "Error al iniciar sesión en el servidor" }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      wallet,
+      access_token: signInData.session.access_token,
+      refresh_token: signInData.session.refresh_token,
+    })
   } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }

@@ -1,7 +1,9 @@
+// actions/listings/createBatch.ts
 "use server"
 
 import { Address } from "viem"
-import { getSession } from "@/lib/auth/session"
+import { getServerSupabase } from "@/lib/supabase/server"
+import { revalidatePath } from "next/cache"
 
 export interface BatchListingData {
   txHash: `0x${string}`
@@ -14,46 +16,53 @@ export interface BatchListingData {
 }
 
 export async function saveBatchListingToDB(data: BatchListingData) {
-  const session = await getSession()
-  if (!session) throw new Error("Unauthorized")
+  try {
+    const supabase = await getServerSupabase()
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  await fetch(`${baseUrl}/api/listings/optimistic`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: `sb-access-token=${session.token}`,
-    },
-    body: JSON.stringify(data),
-  })
-}
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-export async function confirmBatchListing(txHash: `0x${string}`) {
-  const session = await getSession()
-  if (!session) throw new Error("Unauthorized")
+    if (authError || !user) {
+      throw new Error("Unauthorized")
+    }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  await fetch(`${baseUrl}/api/listings/confirm`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: `sb-access-token=${session.token}`,
-    },
-    body: JSON.stringify({ txHash }),
-  })
-}
+    const expectedEmail = `${data.seller.toLowerCase()}@wallet.local`
+    if (user.email !== expectedEmail) {
+      throw new Error("Forbidden: Wallet mismatch")
+    }
 
-export async function failBatchListing(txHash: `0x${string}`) {
-  const session = await getSession()
-  if (!session) throw new Error("Unauthorized")
+    const rows = data.tokenIds.map((tokenId, index) => {
+      const rawExpire = data.expiresAts?.[index]
+      const expiresAt = rawExpire && Number(rawExpire) > 0 ? new Date(Number(rawExpire) * 1000).toISOString() : null
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  await fetch(`${baseUrl}/api/listings/fail`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: `sb-access-token=${session.token}`,
-    },
-    body: JSON.stringify({ txHash }),
-  })
+      return {
+        tx_hash: data.txHash,
+        collection_address: data.collections[index].toLowerCase(),
+        listing_id: `${data.collections[index].toLowerCase()}-${tokenId}`,
+        token_id: tokenId,
+        seller_wallet: data.seller.toLowerCase(),
+        price: data.prices[index],
+        chain_id: data.chainId,
+        is_active: true,
+        status: "pending",
+        source: "optimistic",
+        expires_at: expiresAt,
+      }
+    })
+
+    const { error: dbError } = await supabase.from("listings").upsert(rows, {
+      onConflict: "listing_id",
+    })
+
+    if (dbError) {
+      throw new Error(`Database error: ${dbError.message} (${dbError.code})`)
+    }
+
+    revalidatePath(`/user/${data.seller}`)
+    return { success: true }
+  } catch (err: any) {
+    throw new Error(err.message || "Internal Server Error")
+  }
 }

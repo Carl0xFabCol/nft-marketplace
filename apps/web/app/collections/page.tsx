@@ -2,10 +2,10 @@
 import CollectionsCol from "../../components/features/collections/CollectionsCol"
 import { Collection, CollectionService } from "@/services/collections.service"
 import { Pagination } from "@/components/ui/ServerPagination"
-import { createClient } from "@/lib/supabase/server"
+import { getServerSupabase } from "@/lib/supabase/server"
 
 export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const supabase = await createClient()
+  const supabase = await getServerSupabase()
   const { page: pageStr } = await searchParams
   const page = Number(pageStr) || 1
 

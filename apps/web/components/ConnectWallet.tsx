@@ -6,22 +6,18 @@ import { LuWallet } from "react-icons/lu"
 import { FaEthereum } from "react-icons/fa"
 import { useAuth } from "@/components/AuthProvider"
 import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase/client"
 
 export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
   const router = useRouter()
   const { session } = useAuth()
-
   const [mounted, setMounted] = useState(false)
   const [loggedIn, setLoggedIn] = useState(!!session)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
-
-  function getSession() {
-    console.log(session)
     setLoggedIn(!!session)
-  }
+  }, [session])
 
   const { address, isConnected, chainId } = useConnection()
   const { disconnect } = useDisconnect()
@@ -30,9 +26,7 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
 
   const { data: balance } = useBalance({
     address,
-    query: {
-      enabled: !!address,
-    },
+    query: { enabled: !!address },
   })
 
   async function loginUser() {
@@ -48,9 +42,22 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
       body: JSON.stringify({ message, signature }),
     })
 
-    const { ok } = await loginRes.json()
-    getSession()
-    if (ok) {
+    const data = await loginRes.json()
+    const { access_token, refresh_token, ok } = data
+
+    if (access_token && refresh_token) {
+      // ✅ Esto ahora pasará limpio como el agua
+      const { error } = await supabase.auth.setSession({
+        access_token: access_token,
+        refresh_token: refresh_token,
+      })
+
+      if (error) {
+        console.error("Error al establecer la sesión:", error)
+        return
+      }
+
+      setLoggedIn(true)
       router.push("/")
       router.refresh()
     }

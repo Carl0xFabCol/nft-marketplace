@@ -2,12 +2,13 @@
 
 import { randomBytes } from "crypto"
 import { recoverMessageAddress } from "viem"
-import { createClient } from "@/lib/supabase/server"
+import { getServerSupabase } from "@/lib/supabase/server"
+
 import { createSupabaseJWT } from "@/lib/auth/jwt"
 import { cookies } from "next/headers"
 
 export async function getNonce() {
-  const supabase = await createClient()
+  const supabase = await getServerSupabase()
   const nonce = randomBytes(16).toString("hex")
 
   const { error } = await supabase.from("nonces").insert({
@@ -22,7 +23,7 @@ export async function getNonce() {
 }
 
 export async function signIn({ message, signature }: { message: string; signature: `0xstring` }) {
-  const supabase = await createClient()
+  const supabase = await getServerSupabase()
 
   // 1. Verify Signature
   try {
@@ -109,7 +110,7 @@ export async function signIn({ message, signature }: { message: string; signatur
 }
 
 export async function signOut() {
-  const supabase = await createClient()
+  const supabase = await getServerSupabase()
   await supabase.auth.signOut()
 
   const cookieStore = await cookies()

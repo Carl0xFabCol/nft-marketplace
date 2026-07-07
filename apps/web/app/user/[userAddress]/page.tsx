@@ -5,7 +5,7 @@ import { notFound } from "next/navigation"
 import { isAddress } from "viem"
 import { UserService } from "@/services/user.service"
 import UserDashboard from "@/components/features/user/UserDashboard"
-import { createClient } from "@/lib/supabase/server"
+import { getServerSupabase } from "@/lib/supabase/server"
 
 interface UserPageProps {
   params: Promise<{ userAddress: string }>
@@ -13,7 +13,7 @@ interface UserPageProps {
 
 export default async function UserPage({ params }: UserPageProps) {
   const { userAddress } = await params
-  const supabase = await createClient()
+  const supabase = await getServerSupabase()
   if (!isAddress(userAddress)) notFound()
 
   const userData = await UserService.getUserData(supabase, userAddress)

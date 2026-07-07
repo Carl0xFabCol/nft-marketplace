@@ -1,5 +1,6 @@
 // app/collection/[colAddress]/page.tsx
-import { createClient } from "@/lib/supabase/server"
+import { getServerSupabase } from "@/lib/supabase/server"
+
 import ColInfo from "../../../components/features/collections/collection/ColInfo"
 import CollectionClientArea from "../../../components/features/collections/collection/CollectionClientArea"
 import { notFound } from "next/navigation"
@@ -7,7 +8,7 @@ import { isAddress } from "viem"
 import { NFTService } from "@/services/nft.service"
 
 export default async function CollectionPage({ params }: { params: { colAddress: string } }) {
-  const supabase = await createClient()
+  const supabase = await getServerSupabase()
   const { colAddress } = await params
 
   if (!isAddress(colAddress)) notFound()

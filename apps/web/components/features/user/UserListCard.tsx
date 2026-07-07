@@ -1,19 +1,18 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Address, erc721Abi, parseEther } from "viem"
 import { useConnection, useWriteContract, useReadContracts, usePublicClient } from "wagmi"
 import { FaEthereum, FaTrash, FaTimes } from "react-icons/fa"
 import { MdOutlineLocalOffer } from "react-icons/md"
 import { RiNftFill } from "react-icons/ri"
-import { CORE_CONTRACT_ADDRESS, MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
-import { MarketplaceABI, MarketplaceCoreABI } from "@/lib/abi"
+import { MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
+import { MarketplaceABI } from "@/lib/abi"
 import { EnrichedUserNFT, UserListing, Collection, UserNFT } from "@/types/user.types"
 import { useMarketplaceInfo } from "@/hooks/Contract"
 import { useTx } from "@/app/context/TxContext"
-import { saveBatchListingToDB, confirmBatchListing, failBatchListing } from "@/actions/listings/createBatch"
-import { createListing } from "@/actions/listings/createSingle"
+import { saveBatchListingToDB } from "@/actions/listings/createBatch"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { useAuth } from "@/components/AuthProvider"
 
@@ -48,7 +47,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
 
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient()
-  // Obtener nombres de colecciones
+
   const { data: names } = useReadContracts({
     contracts: collections.map((col) => ({
       address: col.contract_address,
@@ -60,7 +59,6 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     },
   })
 
-  // Obtener datos de colecciones (royalties)
   const { data: colsData, isLoading: isLoadingCore } = useReadContracts({
     contracts: collections.map((col) => ({
       address: MARKETPLACE_CONTRACT_ADDRESS as Address,
@@ -73,7 +71,6 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     },
   })
 
-  // Calcular floors por colección
   const floors = useMemo<Record<string, bigint>>(() => {
     if (!listings?.length) return {}
 
@@ -91,7 +88,6 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     return map
   }, [listings])
 
-  // Recalcular totales cuando cambian los precios
   useEffect(() => {
     if (!colsData || !info) return
 
@@ -123,53 +119,54 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     setTotalRoyalties(_royaltyFee)
   }, [colsData, listItems, info, collections])
 
-  // Handler para listar items
   const handleList = async () => {
     const validItems = listItems.filter((i) => i.price && i.price > BigInt(0))
     if (!validItems.length) return
 
     try {
-      // 1. Prepara argumentos
       const collections = validItems.map((i) => i.collection_address as Address)
-      const tokenIds = validItems.map((i) => BigInt(i.token_id))
-      const prices = validItems.map((i) => BigInt(i.price!))
-      const expiresAts = validItems.map((i) => (i.expiresAt ? BigInt(Math.floor(i.expiresAt.getTime() / 1000)) : BigInt(0)))
+      const tokenIds = validItems.map((i) => i.token_id.toString())
+      const prices = validItems.map((i) => i.price!.toString())
+      const expiresAts = validItems.map((i) => (i.expiresAt ? Math.floor(i.expiresAt.getTime() / 1000).toString() : "0"))
+      const seller = address!.toLowerCase() as Address
+      const chainId = 11155111
 
-      // 2. Ejecuta la transacción (popup de wallet)
       const hash = await writeContractAsync({
         address: MARKETPLACE_CONTRACT_ADDRESS,
         abi: MarketplaceABI,
         functionName: "createListingBatch",
-        args: [collections, tokenIds, prices, expiresAts],
+        args: [collections, tokenIds.map(BigInt), prices.map(BigInt), expiresAts.map(BigInt)],
       })
 
-      // 3. Añade la tx al UI
-      addTx({ hash, status: "loading", label: `Listing ${validItems.length} items...` })
+      addTx({
+        hash,
+        status: "loading",
+        label: `Listing ${validItems.length} items...`,
+      })
 
-      // 4. Guarda en DB de forma optimista (Server Action)
       await saveBatchListingToDB({
         txHash: hash,
         collections,
-        tokenIds: tokenIds.map((id) => id.toString()),
-        prices: prices.map((p) => p.toString()),
-        seller: address!.toLowerCase() as Address,
-        chainId: 11155111,
-        expiresAts: expiresAts.map((e) => e.toString()),
+        tokenIds,
+        prices,
+        seller,
+        chainId,
+        expiresAts,
       })
 
-      // 5. Espera confirmación en blockchain
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash })
+      const receipt = await publicClient.waitForTransactionReceipt({ hash })
       updateTx(hash, { status: "success", label: "Listed!" })
 
-      // 6. Confirma en DB
-      await confirmBatchListing(hash)
       setTimeout(() => removeTx(hash), 3000)
 
       onSuccess?.()
     } catch (err) {
-      // Manejo de errores (usuario rechazó, red, etc.)
-      console.error("Error en handleList:", err)
-      // Opcional: actualizar UI con toast
+      console.error("Error en listing:", err)
+      const hash = (err as any)?.hash
+      if (hash) {
+        updateTx(hash, { status: "error", label: "Listing failed" })
+        setTimeout(() => removeTx(hash), 5000)
+      }
     }
   }
 
@@ -177,9 +174,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     setListItems((prev) => prev.map((item) => (item.token_id === tokenId && item.collection_address.toLowerCase() === collection.toLowerCase() ? { ...item, expiresAt: expiresAt } : item)))
   }
 
-  // Actualizar precio de un item individual
   const updateItemPrice = (tokenId: string, collection: string, value: string) => {
-    // Validar formato decimal
     if (!/^\d*\.?\d*$/.test(value)) return
 
     const wei = value === "" ? BigInt(0) : parseEther(value)
@@ -187,7 +182,6 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     setListItems((prev) => prev.map((item) => (item.token_id === tokenId && item.collection_address.toLowerCase() === collection.toLowerCase() ? { ...item, priceEth: value, price: wei } : item)))
   }
 
-  // Actualizar precio de todos los items
   const updateAllPrices = (value: string) => {
     if (!/^\d*\.?\d*$/.test(value)) return
 
@@ -204,12 +198,10 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     )
   }
 
-  // Remover item de la lista
   const removeListItem = (tokenId: string, collection: Address) => {
     removeFromBatch({ token_id: tokenId, collection_address: collection } as UserNFT, "list")
   }
 
-  // Obtener nombre de colección
   const getCollectionName = (collectionAddress: string): string => {
     const colIndex = collections.findIndex((col) => col.contract_address.toLowerCase() === collectionAddress.toLowerCase())
 
@@ -218,7 +210,6 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     return String(names[colIndex].result) || "Unknown"
   }
 
-  // Obtener datos de royalty de colección
   const getCollectionData = (collectionAddress: string): any => {
     const colIndex = collections.findIndex((col) => col.contract_address.toLowerCase() === collectionAddress.toLowerCase())
 
@@ -227,7 +218,6 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     return colsData[colIndex].result
   }
 
-  // Calcular si el botón de list está habilitado
   const canList = listItems.some((item) => item.price && item.price > BigInt(0))
 
   return (

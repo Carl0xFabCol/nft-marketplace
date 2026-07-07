@@ -1,41 +1,39 @@
 "use client"
 
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useState, ReactNode } from "react"
 import { FaTimes } from "react-icons/fa"
 import { Address } from "viem"
 import { RxCrossCircled } from "react-icons/rx"
 import { FiCheckCircle } from "react-icons/fi"
 
-export type TxItem = {
-  hash?: `0x${string}`
-  status: "waiting" | "loading" | "success" | "error"
-  label?: string
+export interface TxItem {
+  hash: `0x${string}`
+  status: "loading" | "success" | "error"
+  label: string
 }
 
-type TxContextType = {
+interface TxContextType {
   txs: TxItem[]
   addTx: (tx: TxItem) => void
-  updateTx: (hash: string, patch: Partial<TxItem>) => void
-  removeTx: (txHash: Address) => void
+  updateTx: (hash: string, update: Partial<Omit<TxItem, "hash">>) => void
+  removeTx: (hash: `0x${string}`) => void
 }
 
-const TxContext = createContext<TxContextType | null>(null)
+const TxContext = createContext<TxContextType | undefined>(undefined)
 
-export function TxProvider({ children }: { children: React.ReactNode }) {
+export function TxProvider({ children }: { children: ReactNode }) {
   const [txs, setTxs] = useState<TxItem[]>([])
 
   const addTx = (tx: TxItem) => {
-    setTxs((prev) => [tx, ...prev])
+    setTxs((prev) => [...prev, tx])
   }
 
-  const updateTx = (hash: string, patch: Partial<TxItem>) => {
-    setTxs((prev) => prev.map((tx) => (tx.hash === hash ? { ...tx, ...patch } : tx)))
+  const updateTx = (hash: string, update: Partial<Omit<TxItem, "hash">>) => {
+    setTxs((prev) => prev.map((tx) => (tx.hash === hash ? { ...tx, ...update } : tx)))
   }
 
-  const removeTx = (txHash: Address | undefined) => {
-    setTimeout(() => {
-      setTxs(() => txs.filter((tx) => tx.hash?.toLowerCase() != txHash?.toLowerCase()))
-    }, 3500)
+  const removeTx = (hash: `0x${string}`) => {
+    setTxs((prev) => prev.filter((tx) => tx.hash !== hash))
   }
 
   return (
