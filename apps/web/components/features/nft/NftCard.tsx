@@ -111,7 +111,6 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
   const handleAcceptTokenBid = async (token_id: number, bidder: string, collection_address: string) => {
     let hash = ""
     try {
-      console.log(collection_address as `0x${string}`, token_id, bidder as `0x${string}`)
       const hash = await acceptTokenBid(collection_address as `0x${string}`, token_id, bidder as `0x${string}`)
 
       addTx({ hash, label: "Accepting bid...", status: "loading" })

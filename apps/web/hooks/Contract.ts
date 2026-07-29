@@ -392,7 +392,6 @@ export function useRegisterCollection() {
   const publicClient = usePublicClient()
 
   const registerCollection = async (collection: `0x${string}`, royaltyFee: bigint, receiver: `0x${string}`) => {
-    console.log(collection, royaltyFee)
     const txHash = await writeContractAsync({
       address: MARKETPLACE_CONTRACT_ADDRESS,
       abi: MarketplaceABI,

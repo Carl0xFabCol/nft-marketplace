@@ -46,7 +46,6 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
     const { access_token, refresh_token, ok } = data
 
     if (access_token && refresh_token) {
-      // ✅ Esto ahora pasará limpio como el agua
       const { error } = await supabase.auth.setSession({
         access_token: access_token,
         refresh_token: refresh_token,

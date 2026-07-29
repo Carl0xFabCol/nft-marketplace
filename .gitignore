@@ -6,11 +6,17 @@ coverage
 
 .env
 .env.local
+.env.production
+.env.development
+.env.test
+.env.staging
 
 pnpm-lock.yaml
 
 apps/web/.next
 apps/indexer/dist
+
+docs/audit-plan.md
 
 packages/contracts/out
 packages/contracts/cache

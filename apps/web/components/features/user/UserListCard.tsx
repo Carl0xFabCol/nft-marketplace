@@ -161,7 +161,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
 
       onSuccess?.()
     } catch (err) {
-      console.error("Error en listing:", err)
+      console.error("Listing error:", err)
       const hash = (err as any)?.hash
       if (hash) {
         updateTx(hash, { status: "error", label: "Listing failed" })

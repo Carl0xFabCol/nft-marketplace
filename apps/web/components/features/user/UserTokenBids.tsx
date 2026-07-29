@@ -53,7 +53,6 @@ export default function UserTokenBids(params: any) {
       removeTx(hash)
     } catch (e) {
       updateTx(hash, { status: "success", label: "Cancelling error!" })
-      console.log(e)
       removeTx(hash)
     }
   }
@@ -87,8 +86,6 @@ export default function UserTokenBids(params: any) {
           {!!sortedBids &&
             sortedBids.map((c: any, index: number) => {
               const col = collections.find((col: Collection) => col.contract_address.toLowerCase() == c.collection_address.toLowerCase())
-              console.log(sortedBids)
-              console.log(collections)
               const colName = col ? col.name : "-"
               return (
                 <div key={index} className="flex items-center  relative  ">

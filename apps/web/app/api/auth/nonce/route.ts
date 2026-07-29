@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { randomBytes } from "crypto"
-import { supabase } from "../supabase"
+import { supabase } from "@/lib/supabase/client"
 
 export async function POST() {
   const nonce = randomBytes(16).toString("hex")

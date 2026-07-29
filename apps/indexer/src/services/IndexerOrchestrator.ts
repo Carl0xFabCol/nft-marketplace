@@ -174,9 +174,26 @@ export class IndexerOrchestrator {
           eventCount: events.length,
           fromBlock: fromBlock.toString(),
           toBlock: toBlock.toString(),
+          contracts: this.contracts.map((c) => ({ name: c.name, address: c.address })),
         },
         `📊 Fetched ${events.length} events`,
       )
+
+      // Log warning if no events found despite block range having blocks to process
+      if (events.length === 0) {
+        const blockRange = toBlock - fromBlock + BigInt(1)
+        if (blockRange > 0) {
+          logger.warn(
+            {
+              fromBlock: fromBlock.toString(),
+              toBlock: toBlock.toString(),
+              blockRange: blockRange.toString(),
+              contracts: this.contracts.map((c) => c.name),
+            },
+            "⚠️ No events found in range - check RPC connectivity, contract addresses, or event filters",
+          )
+        }
+      }
 
       // Step 5: Process each event through the handler registry
       if (events.length > 0) {

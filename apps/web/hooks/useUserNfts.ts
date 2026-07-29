@@ -77,7 +77,6 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress }: UseUse
   // Handler para approve collection
   const approveCollection = async (collectionAddress: Address) => {
     // Implementar lógica de approve
-    console.log("Approve collection:", collectionAddress)
     let txHash = ""
     try {
       const txHash = await writeContractAsync({
@@ -94,7 +93,6 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress }: UseUse
       removeTx(txHash as `0x${string}`)
       clearBatch("approve")
     } catch (e) {
-      console.log("Error approving collection: ", e)
       updateTx(txHash, { label: "Transaction reverted!", status: "error" })
       removeTx(txHash as `0x${string}`)
     }

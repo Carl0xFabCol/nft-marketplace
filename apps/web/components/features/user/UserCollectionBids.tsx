@@ -92,7 +92,6 @@ export default function UserCollectionBids(params: any) {
           {sorted.map((c: any, index: number) => {
             const percent = ((Number(c.quantity) / totalSize) * 100).toFixed(0)
             const collection = collections.find((col: Collection) => col.contract_address == c.collection_address)
-            console.log(collection)
             const name = collection ? collection.name : "-"
             const col_address = collection ? collection.contract_address : "-"
             return (

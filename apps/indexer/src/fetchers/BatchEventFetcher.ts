@@ -121,10 +121,77 @@ export class BatchEventFetcher implements IEventFetcher {
 
   /**
    * Fetch and parse events from a single contract.
+   * Iterates over each event name defined in the contract's events array.
    */
   private async fetchContractEvents(contract: ContractConfig, fromBlock: bigint, toBlock: bigint): Promise<ParsedEvent[]> {
     try {
-      // Fetch raw events from the provider
+      // If contract has specific events defined, fetch each one individually
+      // This is more reliable than fetching all events at once
+      if (contract.events && contract.events.length > 0) {
+        logger.debug(
+          {
+            contract: contract.name,
+            events: contract.events,
+            fromBlock: fromBlock.toString(),
+            toBlock: toBlock.toString(),
+          },
+          "📡 Fetching specific events from contract",
+        )
+
+        // Fetch each event type separately for better reliability
+        const allEventsByType = await Promise.all(
+          contract.events.map(async (eventName) => {
+            try {
+              const rawEvents = await this.provider.getContractEvents({
+                address: contract.address,
+                abi: contract.abi,
+                fromBlock,
+                toBlock,
+                eventName,
+              })
+
+              logger.debug(
+                {
+                  contract: contract.name,
+                  eventName,
+                  count: rawEvents.length,
+                  fromBlock: fromBlock.toString(),
+                  toBlock: toBlock.toString(),
+                },
+                "📥 Fetched events",
+              )
+
+              return rawEvents.map((rawEvent) => this.parseEvent(rawEvent, contract))
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              logger.warn(
+                {
+                  contract: contract.name,
+                  eventName,
+                  error: errorMessage,
+                  fromBlock: fromBlock.toString(),
+                  toBlock: toBlock.toString(),
+                },
+                "⚠️  Failed to fetch specific event, continuing...",
+              )
+              return []
+            }
+          }),
+        )
+
+        return allEventsByType.flat()
+      }
+
+      // Fallback: fetch all events from contract ABI (no filter)
+      logger.debug(
+        {
+          contract: contract.name,
+          fromBlock: fromBlock.toString(),
+          toBlock: toBlock.toString(),
+        },
+        "📡 Fetching all events from contract (no specific event filter)",
+      )
+
       const rawEvents = await this.provider.getContractEvents({
         address: contract.address,
         abi: contract.abi,
@@ -132,7 +199,6 @@ export class BatchEventFetcher implements IEventFetcher {
         toBlock,
       })
 
-      // Parse and decode events
       const parsedEvents = rawEvents
         .map((rawEvent) => {
           try {

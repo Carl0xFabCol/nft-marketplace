@@ -23,7 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      console.log("Session from authprovider: ", session)
       setIsLoading(false)
     })
 
@@ -41,7 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  console.log("Session from useAuth: ", context.session)
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider")
   }

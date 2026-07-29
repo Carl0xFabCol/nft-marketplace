@@ -28,8 +28,10 @@ export async function saveBatchListingToDB(data: BatchListingData) {
       throw new Error("Unauthorized")
     }
 
-    const expectedEmail = `${data.seller.toLowerCase()}@wallet.local`
-    if (user.email !== expectedEmail) {
+    const { data: profile, error: profileError } = await supabase.from("profiles").select("wallet").eq("id", user.id).single()
+    console.log("DEBUG profile:", { profile, profileError, userId: user.id, seller: data.seller })
+
+    if (!profile || profile.wallet?.toLowerCase() !== data.seller.toLowerCase()) {
       throw new Error("Forbidden: Wallet mismatch")
     }
 

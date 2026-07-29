@@ -1,6 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// components/features/user/UserInventory.tsx
-// ─────────────────────────────────────────────────────────────────────────────
 "use client"
 
 import { AnimatePresence } from "framer-motion"
@@ -11,10 +8,11 @@ import { NFTCard } from "../nft/NftCard"
 import { UserListCard } from "./UserListCard"
 import { useUserNfts } from "@/hooks/useUserNfts"
 import { EnrichedUserNFT } from "@/types/user.types"
-import { useAccount } from "wagmi" // ← useAccount, no useConnection
+import { useAccount } from "wagmi"
 import { IoIosArrowDown } from "react-icons/io"
 import { SortBy, SortDir } from "@/lib/constants"
 import { UserService } from "@/services/user.service"
+import { supabase } from "@/lib/supabase/client"
 
 interface UserInventoryProps {
   userAddress: Address
@@ -33,13 +31,18 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
   const [isLoading, setIsLoading] = useState(false)
   const [hasMore, setHasMore] = useState(hasMoreNfts)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isMounted, setIsMounted] = useState(false)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const observerRef = useRef<HTMLDivElement | null>(null)
   const isFirstRender = useRef(true)
 
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   const { address } = useAccount()
-  const isOwner = address?.toLowerCase() === userAddress.toLowerCase()
+  const isOwner = isMounted && address?.toLowerCase() === userAddress.toLowerCase()
 
   const { listTokensBatch, delistBatch, approveBatch, clearBatch, removeFromBatch } = batchOps
 
@@ -51,11 +54,12 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
   })
 
   const reloadFromSort = useCallback(async () => {
+    if (!userAddress) return
     abortControllerRef.current?.abort()
     setIsLoading(true)
 
     try {
-      const data = await UserService.getUserNFTsPaginated(userAddress, {
+      const data = await UserService.getUserNFTsPaginated(supabase, userAddress, {
         page: 1,
         limit: 24,
         sortBy,
@@ -81,7 +85,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
   }, [sortBy, sortDir, reloadFromSort])
 
   const loadMore = useCallback(async () => {
-    if (isLoading || !hasMore) return
+    if (!userAddress || isLoading || !hasMore) return
 
     abortControllerRef.current?.abort()
     abortControllerRef.current = new AbortController()
@@ -89,7 +93,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
 
     try {
       const nextPage = currentPage + 1
-      const data = await UserService.getUserNFTsPaginated(userAddress, {
+      const data = await UserService.getUserNFTsPaginated(supabase, userAddress, {
         page: nextPage,
         limit: 24,
         sortBy,

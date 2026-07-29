@@ -15,8 +15,6 @@ interface CollectionsColProps {
 }
 
 export default function CollectionsCol({ collections }: CollectionsColProps) {
-  console.log(collections)
-
   const { data: marketplaceData } = useReadContracts({
     contracts: collections.map(
       (col: Collection) =>
