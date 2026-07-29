@@ -56,10 +56,11 @@ contract TestSetup is Test {
         vm.deal(bidder, 100 ether);
         vm.deal(feeReceiverAddr, 100 ether);
         vm.deal(royaltyReceiverAddr, 100 ether);
+        vm.deal(address(marketplace), 100 ether);
 
         // Deploy mocks and marketplace from `owner` (so owner is the
         // collection owner for Ownable-based mocks)
-        vm.prank(owner);
+        vm.startPrank(owner);
         nft = new MockNFT();
         nftWithRoyalty = new MockNFTWithRoyalty();
         nonERC721 = new MockNFTNonERC721();
@@ -74,12 +75,13 @@ contract TestSetup is Test {
         core.setAuthorizedContract(address(bids), true);
         core.setAuthorizedContract(address(marketplace), true);
         bids.setMarketplaceAddress(address(marketplace));
+        vm.stopPrank();
     }
 
     // ── Helper: register a collection (from owner) ───────────────────
     function _registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver) internal {
         vm.prank(owner);
-        core.registerCollection(collection, royaltyFee, royaltyReceiver);
+        marketplace.registerCollection(collection, royaltyFee, royaltyReceiver);
     }
 
     // ── Helper: mint NFT to `to` ─────────────────────────────────────

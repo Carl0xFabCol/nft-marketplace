@@ -76,6 +76,8 @@ interface IMarketplaceCore {
 
     // View functions
     function getCollectionStats(address collection) external view returns (uint256, uint32, bool, bool);
+
+    function paused() external view returns (bool);
 }
 
 interface IMarketplaceBids {
@@ -239,6 +241,10 @@ contract Marketplace {
 
     function owner() external view returns (address) {
         return core.owner();
+    }
+
+    function paused() external view returns (bool) {
+        return core.paused();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

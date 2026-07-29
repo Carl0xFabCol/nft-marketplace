@@ -15,6 +15,7 @@ contract IntegrationTest is TestSetup {
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
 
+        vm.prank(seller);
         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
 
         uint256 sellerBefore = seller.balance;
