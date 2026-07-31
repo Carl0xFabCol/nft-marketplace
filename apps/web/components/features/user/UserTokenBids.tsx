@@ -4,12 +4,20 @@ import { useEffect, useState } from "react"
 import { FaEthereum, FaInbox } from "react-icons/fa"
 import { useTx } from "@/app/context/TxContext"
 import { useAccount, usePublicClient } from "wagmi"
-import { Collection } from "@/types/user.types"
+import { Address } from "viem"
+import { Collection, UserTokenBid } from "@/types/user.types"
 import Link from "next/link"
-import { useCancelTokenBid, useCancelTokenBidBatch } from "@/hooks/Contract"
+import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
+import { useCancelTokenBid, useCancelTokenBidBatch } from "@/hooks/useBidActions"
 
-export default function UserTokenBids(params: any) {
-  const { tokenBids, selectedCollection, batchOps, collections } = params
+interface UserTokenBidsProps {
+  tokenBids: UserTokenBid[]
+  selectedCollection: Address | ""
+  collections: Collection[]
+  batchOps: UseBatchOperationsReturn
+}
+
+export default function UserTokenBids({ tokenBids, selectedCollection, batchOps, collections }: UserTokenBidsProps) {
   const [sortedBids, setSortedBids] = useState(tokenBids)
   const { addTx, removeTx, updateTx } = useTx()
   const publicClient = usePublicClient()
@@ -21,17 +29,13 @@ export default function UserTokenBids(params: any) {
 
   useEffect(() => {
     if (tokenBids && address) {
-      let _tokenBids = tokenBids
+      let _tokenBids = tokenBids.filter((b) => String(b.bidder_wallet).toLowerCase() === String(address).toLowerCase())
       if (selectedCollection) {
-        _tokenBids = tokenBids.filter(
-          (b: any) =>
-            String(b.bidder_wallet).toLowerCase() == String(address).toLowerCase() &&
-            (selectedCollection ? String(b.collection_address).toLowerCase() == String(selectedCollection).toLowerCase() : true),
-        )
+        _tokenBids = _tokenBids.filter((b) => String(b.collection_address).toLowerCase() === String(selectedCollection).toLowerCase())
       }
-      setSortedBids(_tokenBids.sort((a: any, b: any) => Number(b.price) - Number(a.price)))
+      setSortedBids([..._tokenBids].sort((a, b) => Number(b.price) - Number(a.price)))
     }
-  }, [tokenBids, address])
+  }, [tokenBids, address, selectedCollection])
 
   const handleCancelBids = async () => {
     if (!cancelTokenBidBatch.length) return
@@ -39,12 +43,12 @@ export default function UserTokenBids(params: any) {
     try {
       if (cancelTokenBidBatch.length > 1) {
         hash = await cancelTokenBids(
-          cancelTokenBidBatch.map((b: any) => b.collection_address),
-          cancelTokenBidBatch.map((b: any) => b.token_id),
+          cancelTokenBidBatch.map((b) => b.collection_address),
+          cancelTokenBidBatch.map((b) => BigInt(b.token_id)),
         )
         addTx({ hash, status: "loading", label: "Cancelling token bids" })
       } else {
-        hash = await cancelTokenBid(cancelTokenBidBatch[0].collection, cancelTokenBidBatch[0].tokenId)
+        hash = await cancelTokenBid(cancelTokenBidBatch[0].collection_address, Number(cancelTokenBidBatch[0].token_id))
         addTx({ hash, status: "loading", label: "Cancelling token bids" })
       }
       await publicClient?.waitForTransactionReceipt({ hash })
@@ -52,7 +56,7 @@ export default function UserTokenBids(params: any) {
       clearBatch("cancelTokenBid")
       removeTx(hash)
     } catch (e) {
-      updateTx(hash, { status: "success", label: "Cancelling error!" })
+      updateTx(hash, { status: "error", label: "Cancelling error!" })
       removeTx(hash)
     }
   }

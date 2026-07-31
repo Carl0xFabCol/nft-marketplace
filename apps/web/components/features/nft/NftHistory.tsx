@@ -3,6 +3,7 @@ import { MdCancel, MdGavel, MdLocalOffer, MdShoppingCart, MdSwapHoriz } from "re
 import { Address } from "viem"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
+import { explorerTokenInstanceUrl, explorerTxUrl } from "@/lib/chains"
 
 interface ActivityItem {
   id: string
@@ -25,22 +26,17 @@ interface NFTHistoryProps {
 export function NFTHistory({ nft }: NFTHistoryProps) {
   const history = nft.history || []
 
-  // Función para obtener icono según tipo de actividad
+  // Función para obtener icono según tipo de actividad.
+  // Los eventos vienen en mayúsculas (p.ej. "SALE", "LISTING_CANCELLED",
+  // "TOKEN_BID_PLACED") — comparar por mayúsculas / subcadenas, no exacto.
   const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "sale":
-        return <MdShoppingCart className="text-green-500" />
-      case "transfer":
-        return <MdSwapHoriz className="text-blue-500" />
-      case "listing":
-        return <MdLocalOffer className="text-yellow-500" />
-      case "bid":
-        return <MdGavel className="text-purple-500" />
-      case "cancel":
-        return <MdCancel className="text-red-500" />
-      default:
-        return <MdSwapHoriz className="text-gray-500" />
-    }
+    const t = String(type).toUpperCase()
+    if (t === "SALE" || t.includes("BID_ACCEPTED")) return <MdShoppingCart className="text-green-500" />
+    if (t === "TRANSFER") return <MdSwapHoriz className="text-blue-500" />
+    if (t.includes("CANCELLED") || t.includes("CANCEL")) return <MdCancel className="text-red-500" />
+    if (t.includes("LISTING")) return <MdLocalOffer className="text-yellow-500" />
+    if (t.includes("BID")) return <MdGavel className="text-purple-500" />
+    return <MdSwapHoriz className="text-gray-500" />
   }
 
   // Función para formatear label del tipo
@@ -120,7 +116,7 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
               <div className="col-span-1 flex items-center gap-2">
                 <span className="text-xs opacity-75">{timeAgo}</span>
                 <a
-                  href={`https://sepolia.etherscan.io/tx/${activity.tx_hash}`}
+                  href={explorerTxUrl(activity.tx_hash)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs hover:text-(--accent) transition-colors"
@@ -138,7 +134,7 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
       {history.length > 0 && (
         <div className="flex justify-center pt-4 border-t border-(--text)/20">
           <Link
-            href={`https://sepolia.etherscan.io/token/${nft.collection_address}?a=${nft.token_id}`}
+            href={explorerTokenInstanceUrl(nft.collection_address, nft.token_id)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm hover:text-(--accent) transition-colors"
@@ -149,116 +145,5 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
         </div>
       )}
     </div>
-  )
-}
-
-// =============================================================================
-// VERSIÓN MÓVIL RESPONSIVE DEL HISTORY
-// =============================================================================
-
-export function NFTHistoryMobile({ nft }: NFTHistoryProps) {
-  const history = nft.history || []
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "sale":
-        return <MdShoppingCart className="text-green-500" />
-      case "transfer":
-        return <MdSwapHoriz className="text-blue-500" />
-      case "listing":
-        return <MdLocalOffer className="text-yellow-500" />
-      case "bid":
-        return <MdGavel className="text-purple-500" />
-      case "cancel":
-        return <MdCancel className="text-red-500" />
-      default:
-        return <MdSwapHoriz className="text-gray-500" />
-    }
-  }
-
-  const formatAddress = (address: Address) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`
-  }
-
-  if (history.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 opacity-50">
-        <MdSwapHoriz className="text-4xl mb-2" />
-        <p>No activity yet</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-3 max-h-96 overflow-y-auto">
-      {history.map((activity) => {
-        const timeAgo = formatDistanceToNow(new Date(activity.created_at), {
-          addSuffix: true,
-        })
-
-        return (
-          <div key={activity.id} className="card rounded-lg p-4 border border-(--text)/20">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="text-2xl">{getActivityIcon(activity.event)}</div>
-                <span className="font-bold text-lg">{String(activity.event).replace("_", " ").toLocaleLowerCase()}</span>
-              </div>
-              {activity.price && (
-                <div className="flex items-center gap-1 font-bold">
-                  <FaEthereum />
-                  <span>{(Number(activity.price) / 1e18).toFixed(4)}</span>
-                </div>
-              )}
-            </div>
-
-            {/* From/To */}
-            <div className="flex flex-col gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="opacity-75">From:</span>
-                <Link href={`/user/${activity.from}`} className="font-mono hover:text-(--accent)">
-                  {formatAddress(activity.from)}
-                </Link>
-              </div>
-              <div className="flex justify-between">
-                <span className="opacity-75">To:</span>
-                <Link href={`/user/${activity.to}`} className="font-mono hover:text-(--accent)">
-                  {formatAddress(activity.to)}
-                </Link>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-(--text)/10 text-xs">
-              <span className="opacity-75">{timeAgo}</span>
-              <Link href={`https://sepolia.etherscan.io/tx/${activity.tx_hash}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-(--accent)">
-                <span>View tx</span>
-                <FaExternalLinkAlt />
-              </Link>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// =============================================================================
-// EXPORTAR VERSIÓN RESPONSIVA QUE CAMBIA SEGÚN PANTALLA
-// =============================================================================
-
-export function NFTHistoryResponsive({ nft }: NFTHistoryProps) {
-  return (
-    <>
-      {/* Desktop */}
-      <div className="hidden md:block">
-        <NFTHistory nft={nft} />
-      </div>
-
-      {/* Mobile */}
-      <div className="block md:hidden">
-        <NFTHistoryMobile nft={nft} />
-      </div>
-    </>
   )
 }

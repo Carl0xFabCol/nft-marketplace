@@ -1,23 +1,20 @@
 // components/TopCollectionsSlider.tsx
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { FiTrendingUp, FiChevronLeft, FiChevronRight, FiImage } from "react-icons/fi" // Feather
+import { FiChevronLeft, FiChevronRight, FiImage } from "react-icons/fi"
 import { Collection } from "@/types/user.types"
 
 interface TopCollectionsSliderProps {
   collections: Collection[]
-  loading: boolean
-  error: string | null
 }
 
-export function TopCollectionsSlider({ collections, loading, error }: TopCollectionsSliderProps) {
+export function TopCollectionsSlider({ collections }: TopCollectionsSliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [imagesError, setImagesError] = useState<Record<string, boolean>>({})
 
-  const sliderRef = useRef<HTMLDivElement>(null)
   const itemsPerView = 1 // Número de colecciones visibles por slide
 
   const handleImageError = (contractAddress: string) => {
@@ -41,32 +38,11 @@ export function TopCollectionsSlider({ collections, loading, error }: TopCollect
     return `${volume.toFixed(3)} ETH`
   }
 
-  if (loading) {
-    return (
-      <div className="w-full ">
-        <div className="grid grid-cols-1  ">
-          {[...Array(1)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-4">
-                <div className="w-full h-48 bg-gray-300 dark:bg-gray-700 rounded-lg mb-3" />
-                <div className="h-5 bg-gray-300 dark:bg-gray-700 rounded w-1/3 mb-2" />
-                <div className="flex gap-4 h-13 ">
-                  <div className=" bg-gray-300 dark:bg-gray-700 rounded w-33" />
-                  <div className=" bg-gray-300 dark:bg-gray-700 rounded w-33 " />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (error || collections.length === 0) {
+  if (collections.length === 0) {
     return (
       <div className="w-full py-8">
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-8 text-center">
-          <p className="text-yellow-800 dark:text-yellow-200">{error || "No hay datos disponibles para las últimas 24h"}</p>
+          <p className="text-yellow-800 dark:text-yellow-200">No collections available yet</p>
         </div>
       </div>
     )
@@ -81,7 +57,7 @@ export function TopCollectionsSlider({ collections, loading, error }: TopCollect
               onClick={prevSlide}
               disabled={currentIndex === 0}
               className="p-2 rounded-full text-(--accent)! bg-transparent!  disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              aria-label="Anterior"
+              aria-label="Previous slide"
             >
               <FiChevronLeft className="w-5 h-5" />
             </button>
@@ -89,7 +65,7 @@ export function TopCollectionsSlider({ collections, loading, error }: TopCollect
               onClick={nextSlide}
               disabled={currentIndex >= collections.length - itemsPerView}
               className="p-2 rounded-full  text-(--accent)! bg-transparent! disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              aria-label="Siguiente"
+              aria-label="Next slide"
             >
               <FiChevronRight className="w-5 h-5" />
             </button>
@@ -99,7 +75,6 @@ export function TopCollectionsSlider({ collections, loading, error }: TopCollect
 
       <div className="relative overflow-hidden w-full bg-white">
         <div
-          ref={sliderRef}
           className="flex transition-transform duration-300 ease-in-out "
           style={{
             transform: `translateX(-${currentIndex * (100 / itemsPerView)}%)`,
@@ -173,7 +148,7 @@ export function TopCollectionsSlider({ collections, loading, error }: TopCollect
                 key={i}
                 onClick={() => setCurrentIndex(dotIndex)}
                 className={`w-2 h-2 rounded-full transition-all ${currentIndex === dotIndex ? "w-6 bg-blue-500" : "bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600"}`}
-                aria-label={`Ir a slide ${i + 1}`}
+                aria-label={`Go to slide ${i + 1}`}
               />
             )
           })}

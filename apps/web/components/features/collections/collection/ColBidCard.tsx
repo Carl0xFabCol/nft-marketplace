@@ -3,11 +3,12 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { FaGavel, FaTimes, FaEthereum } from "react-icons/fa"
-import { useBidCollection } from "@/hooks/Contract"
+import { useBidCollection } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { usePublicClient } from "wagmi"
 import { Address } from "viem"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
+import { dateToEpochSeconds } from "@/lib/dates"
 
 interface ColBidCardProps {
   collectionAddress: Address
@@ -40,7 +41,7 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
     try {
       const bidPrice = BigInt(Math.floor(Number(price) * 1e18))
       const qty = Number(quantity)
-      hash = await bidCollection(collectionAddress, bidPrice, qty, expirationDate.getTime())
+      hash = await bidCollection(collectionAddress, bidPrice, qty, dateToEpochSeconds(expirationDate))
 
       addTx({
         hash,
@@ -56,10 +57,8 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
         })
         removeTx(hash)
 
-        setTimeout(() => {
-          onSuccess?.()
-          onClose()
-        }, 2000)
+        onSuccess?.()
+        onClose()
       }
     } catch (error) {
       console.error("Collection bid error:", error)

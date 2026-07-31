@@ -6,7 +6,7 @@
 //
 // This file is a backward-compatible re-export so that existing imports
 // within apps/web/* continue to work without any changes to consumers.
-// The `MockAbi` alias preserves the old export name used in hooks/Contract.ts.
+// The `MockAbi` alias preserves the old export name used by the mint flow.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {

@@ -3,22 +3,28 @@ import { useState, useMemo, useEffect } from "react"
 import { Address } from "viem"
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi"
 import { erc721Abi } from "viem"
-import { EnrichedUserNFT, Collection } from "@/types/user.types"
+import { EnrichedUserNFT, Collection, UserNFT } from "@/types/user.types"
 import { CORE_CONTRACT_ADDRESS } from "@/lib/constants"
 import { useTx } from "@/app/context/TxContext"
 import { UseBatchOperationsReturn } from "./useBatchOperations"
+import { useCancelListBatch } from "./useListingActions"
 
 interface UseUserNftsParams {
   nfts: EnrichedUserNFT[]
   collections: Collection[]
   batchOps: UseBatchOperationsReturn
   userAddress: Address
+  /** Called right after the delist tx is sent — optimistic local patch. */
+  onDelist?: (items: UserNFT[]) => void
+  /** Called when the delist tx fails — restore the optimistic patch. */
+  onDelistFail?: (items: UserNFT[]) => void
 }
 
-export function useUserNfts({ nfts, collections, batchOps, userAddress }: UseUserNftsParams) {
+export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist, onDelistFail }: UseUserNftsParams) {
   const publicClient = usePublicClient()
 
   const { writeContractAsync } = useWriteContract()
+  const { cancelListBatch } = useCancelListBatch()
   const { address } = useAccount()
   const [approvalMap, setApprovalMap] = useState<Map<string, boolean>>(new Map())
 
@@ -71,7 +77,36 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress }: UseUse
 
   // Handler para delist
   const handleDelist = async () => {
-    // Implementar lógica de delist
+    const items = delistBatch
+    if (!items.length) return
+
+    const collectionAddresses = items.map((i) => i.collection_address as Address)
+    const tokenIds = items.map((i) => BigInt(i.token_id))
+
+    try {
+      const hash = await cancelListBatch(collectionAddresses, tokenIds)
+
+      addTx({ hash, status: "loading", label: `Delisting ${items.length} items...` })
+
+      // Optimistic local patch: the items stop rendering as listed immediately;
+      // the indexer + realtime reconcile the DB `is_active = false`.
+      onDelist?.(items)
+
+      await publicClient?.waitForTransactionReceipt({ hash })
+      updateTx(hash, { status: "success", label: "Delisted!" })
+      setTimeout(() => removeTx(hash), 3000)
+
+      clearBatch("delist")
+    } catch (err) {
+      console.error("Delist error:", err)
+      const hash = (err as any)?.hash
+      if (hash) {
+        updateTx(hash, { status: "error", label: "Delist failed" })
+        setTimeout(() => removeTx(hash), 5000)
+      }
+      // Restore the optimistic patch so items don't stay visually unlisted.
+      onDelistFail?.(items)
+    }
   }
 
   // Handler para approve collection

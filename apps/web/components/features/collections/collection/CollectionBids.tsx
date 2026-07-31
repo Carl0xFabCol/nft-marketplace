@@ -4,22 +4,27 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FaEthereum, FaInbox } from "react-icons/fa"
 import { useAccount } from "wagmi"
+import { UserCollectionBid } from "@/types/user.types"
 
-export default function CollectionBids({ collectionBids, allBids = true }: any) {
+interface CollectionBidsProps {
+  collectionBids: UserCollectionBid[]
+  allBids?: boolean
+}
+
+export default function CollectionBids({ collectionBids, allBids = true }: CollectionBidsProps) {
   const [totalSize, setTotalSize] = useState<number>(0)
-  const [sorted, setSorted] = useState<any[]>([])
+  const [sorted, setSorted] = useState<UserCollectionBid[]>([])
   const { address } = useAccount()
   useEffect(() => {
-    if (collectionBids) {
-      let _collectionBids = allBids ? collectionBids : collectionBids.filter((bid: any) => String(bid.bidder_wallet).toLowerCase() == String(address).toLowerCase())
-      setTotalSize(
-        _collectionBids.reduce((size: number, bid: any) => {
-          return size + Number(bid.quantity)
-        }, 0),
-      )
-      setSorted(_collectionBids.sort((a: any, b: any) => Number(b.price) - Number(a.price)))
-    }
-  }, [collectionBids.length])
+    if (!collectionBids) return
+    const _collectionBids = allBids ? collectionBids : collectionBids.filter((bid) => String(bid.bidder_wallet).toLowerCase() === String(address).toLowerCase())
+    setTotalSize(
+      _collectionBids.reduce((size, bid) => {
+        return size + Number(bid.quantity)
+      }, 0),
+    )
+    setSorted([..._collectionBids].sort((a, b) => Number(b.price) - Number(a.price)))
+  }, [collectionBids, allBids, address])
 
   return (
     <div className="w-full flex pb-4 ">

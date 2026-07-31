@@ -1,5 +1,5 @@
 import { useTx } from "@/app/context/TxContext"
-import { useAcceptTokenBid } from "@/hooks/Contract"
+import { useAcceptTokenBid } from "@/hooks/useBidActions"
 import Link from "next/link"
 import { FaEthereum, FaExternalLinkAlt, FaGavel } from "react-icons/fa"
 import { useConnection, usePublicClient } from "wagmi"
@@ -11,31 +11,16 @@ export default function NFTBids({ bids, owner }: any) {
 
   const handleAcceptBid = async (bid: any) => {
     let hash: any
-    bid
-    hash
-    bid
-    hash
-    bid
-    hash
-    bid
-    hash
-    bid
-    hash
-    bid
-    hash
-    bid
-    hash
-    bid
-    hash
-
     try {
-      hash = await acceptTokenBid(bid.collection_address, bid.bidder_wallet, bid.token_id)
+      // Signature is acceptTokenBid(collection, tokenId, bidder) — tokenId must
+      // be the token id, not the bidder address.
+      hash = await acceptTokenBid(bid.collection_address, Number(bid.token_id), bid.bidder_wallet)
       addTx({ hash, label: "Accepting token bid", status: "loading" })
       await publicClient?.waitForTransactionReceipt({ hash })
       updateTx(hash, { status: "success" })
       removeTx(hash)
     } catch (e) {
-      console.error("Error acceptin token bid: " + e)
+      console.error("Error accepting token bid: " + e)
       updateTx(hash, { status: "error" })
       removeTx(hash)
     }

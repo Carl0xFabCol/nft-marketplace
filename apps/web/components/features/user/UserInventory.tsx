@@ -5,29 +5,40 @@ import { FaInbox } from "react-icons/fa"
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import { Address } from "viem"
 import { NFTCard } from "../nft/NftCard"
-import { UserListCard } from "./UserListCard"
+import { UserListCard, ListableItem } from "./UserListCard"
 import { useUserNfts } from "@/hooks/useUserNfts"
-import { EnrichedUserNFT } from "@/types/user.types"
+import { useRealtimeListings } from "@/hooks/useRealtimeListings"
+import { Collection, EnrichedUserNFT, UserListing, UserNFT } from "@/types/user.types"
 import { useAccount } from "wagmi"
 import { IoIosArrowDown } from "react-icons/io"
 import { SortBy, SortDir } from "@/lib/constants"
 import { UserService } from "@/services/user.service"
 import { supabase } from "@/lib/supabase/client"
+import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
+import {
+  toUserListing,
+  upsertListingIntoNfts,
+  deactivateListingInNfts,
+  upsertListingIntoListings,
+  deactivateListingInListings,
+} from "@/lib/listingMerge"
 
 interface UserInventoryProps {
   userAddress: Address
   initialNfts: EnrichedUserNFT[]
-  collections: any[]
-  batchOps: any
+  listings: UserListing[]
+  collections: Collection[]
+  batchOps: UseBatchOperationsReturn
   hasMoreNfts: boolean
 }
 
-export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, collections, batchOps }: UserInventoryProps) {
+export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, collections, batchOps, listings: initialListings }: UserInventoryProps) {
   const [showListCard, setShowListCard] = useState(false)
   const [sortBy, setSortBy] = useState<SortBy>("price")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [searchQuery, setSearchQuery] = useState("")
   const [nfts, setNfts] = useState(initialNfts)
+  const [listings, setListings] = useState(initialListings ?? [])
   const [isLoading, setIsLoading] = useState(false)
   const [hasMore, setHasMore] = useState(hasMoreNfts)
   const [currentPage, setCurrentPage] = useState(1)
@@ -46,11 +57,79 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
 
   const { listTokensBatch, delistBatch, approveBatch, clearBatch, removeFromBatch } = batchOps
 
+  // ─── Realtime backbone: merge every listings DB write into state ───
+  // Indexer confirmations, price updates, delists and sales all land here;
+  // the optimistic local patches below are reconciled by these same merges.
+  const handleUpsertListing = useCallback((listing: UserListing) => {
+    setNfts((prev) => upsertListingIntoNfts(prev, listing))
+    setListings((prev) => upsertListingIntoListings(prev, listing))
+  }, [])
+
+  const handleDeactivateListing = useCallback((listing: UserListing) => {
+    setNfts((prev) => deactivateListingInNfts(prev, listing))
+    setListings((prev) => deactivateListingInListings(prev, listing))
+  }, [])
+
+  useRealtimeListings({
+    userAddress,
+    onUpsert: handleUpsertListing,
+    onDeactivate: handleDeactivateListing,
+  })
+
+  // ─── Optimistic list patch: render as listed before the realtime round-trip ───
+  const applyOptimisticList = useCallback(
+    (items: ListableItem[]) => {
+      if (!items.length) return
+      items.forEach((item) => {
+        const listing = toUserListing({
+          collection_address: item.collection_address,
+          token_id: String(item.token_id),
+          seller_wallet: userAddress,
+          price: item.price ? item.price.toString() : "0",
+          is_active: true,
+          status: "pending",
+          source: "optimistic",
+        })
+        setNfts((prev) => upsertListingIntoNfts(prev, listing))
+        setListings((prev) => upsertListingIntoListings(prev, listing))
+      })
+    },
+    [userAddress],
+  )
+
+  const revertOptimisticList = useCallback((items: ListableItem[]) => {
+    if (!items.length) return
+    const keys = new Set(items.map((i) => `${i.collection_address.toLowerCase()}-${String(i.token_id)}`))
+    setNfts((prev) => prev.map((nft) => (keys.has(`${nft.collection_address.toLowerCase()}-${String(nft.token_id)}`) ? { ...nft, active_listing: null } : nft)))
+  }, [])
+
+  // ─── Optimistic delist patch ───
+  const applyOptimisticDelist = useCallback((items: UserNFT[]) => {
+    if (!items.length) return
+    const keys = new Set(items.map((i) => `${i.collection_address.toLowerCase()}-${String(i.token_id)}`))
+    setNfts((prev) => prev.map((nft) => (keys.has(`${nft.collection_address.toLowerCase()}-${String(nft.token_id)}`) ? { ...nft, active_listing: null } : nft)))
+  }, [])
+
+  // If the delist tx fails, restore the listing from the live listings array.
+  const revertOptimisticDelist = useCallback(
+    (items: UserNFT[]) => {
+      if (!items.length) return
+      items.forEach((item) => {
+        const key = `${item.collection_address.toLowerCase()}-${String(item.token_id)}`
+        const listing = listings.find((l) => `${l.collection_address.toLowerCase()}-${String(l.token_id)}` === key)
+        setNfts((prev) => prev.map((nft) => (`${nft.collection_address.toLowerCase()}-${String(nft.token_id)}` === key ? { ...nft, active_listing: listing ?? nft.active_listing } : nft)))
+      })
+    },
+    [listings],
+  )
+
   const { approvalMap, allApproved, handleDelist, approveCollection } = useUserNfts({
     nfts,
     collections,
     batchOps,
     userAddress,
+    onDelist: applyOptimisticDelist,
+    onDelistFail: revertOptimisticDelist,
   })
 
   const reloadFromSort = useCallback(async () => {
@@ -267,7 +346,9 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
             removeFromBatch={removeFromBatch}
             items={listTokensBatch}
             collections={collections}
-            listings={[]}
+            listings={listings}
+            onOptimisticList={applyOptimisticList}
+            onOptimisticListFail={revertOptimisticList}
             onClose={() => setShowListCard(false)}
             onSuccess={() => {
               clearBatch("list")

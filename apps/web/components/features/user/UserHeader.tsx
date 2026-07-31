@@ -1,14 +1,25 @@
-import { Collection } from "@/types/user.types"
-import { useMemo, useEffect } from "react"
+import { useMemo } from "react"
 import { FaExternalLinkAlt, FaGavel, FaHistory, FaTimes } from "react-icons/fa"
 import { FiCopy } from "react-icons/fi"
 import { HiOutlineCollection } from "react-icons/hi"
-import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io"
+import { IoIosArrowBack } from "react-icons/io"
 import { IoFilter } from "react-icons/io5"
+import { Address } from "viem"
+import { explorerAddressUrl, explorerTokenUrl } from "@/lib/chains"
+import { Collection } from "@/types/user.types"
+import { ViewType } from "./UserDashboard"
 
-export default function UserHeader(params: any) {
-  const { userAddress, selectedCollection, collections, currentView, onViewChange, onToggleSidebar, showSidebar } = params
+interface UserHeaderProps {
+  userAddress: Address
+  selectedCollection: Address | ""
+  collections: Collection[]
+  currentView: ViewType
+  onViewChange: (view: ViewType) => void
+  onToggleSidebar: () => void
+  showSidebar: boolean
+}
 
+export default function UserHeader({ userAddress, selectedCollection, collections, currentView, onViewChange, onToggleSidebar, showSidebar }: UserHeaderProps) {
   const copyToClipboard = (value: string) => {
     navigator.clipboard.writeText(value)
   }
@@ -28,11 +39,11 @@ export default function UserHeader(params: any) {
             <button onClick={() => copyToClipboard(userAddress)} className="bg-transparent! text-(--text)!   hover:opacity-75!">
               <FiCopy className=" text-xl" />
             </button>
-            <a href={`https://sepolia.etherscan.io/address/${userAddress}`} target="_blank">
+            <a href={explorerAddressUrl(userAddress)} target="_blank">
               <FaExternalLinkAlt className="hover:opacity-75 hover:cursor-pointer text-[17px]" />
             </a>
           </div>
-          <button onClick={() => onToggleSidebar(false)} className="bg-transparent! lg:hidden text-(--text)! p-4">
+          <button onClick={() => onToggleSidebar()} className="bg-transparent! lg:hidden text-(--text)! p-4">
             <FaTimes />
           </button>
         </div>
@@ -50,7 +61,7 @@ export default function UserHeader(params: any) {
               <button onClick={() => copyToClipboard(selectedCollection)} className="bg-transparent! text-(--text)! hover:opacity-75!">
                 <FiCopy className=" text-xl" />
               </button>
-              <a href={`https://sepolia.etherscan.io/token/${selectedCollection}`} target="_blank">
+              <a href={explorerTokenUrl(selectedCollection)} target="_blank">
                 <FaExternalLinkAlt className="hover:opacity-75 hover:cursor-pointer text-[17px]" />
               </a>
             </div>

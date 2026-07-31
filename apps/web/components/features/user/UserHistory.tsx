@@ -7,6 +7,7 @@ import { FaEthereum, FaExternalLinkAlt, FaInbox } from "react-icons/fa"
 import { useAccount } from "wagmi"
 import { RiNftFill } from "react-icons/ri"
 import Link from "next/link"
+import { explorerTxUrl } from "@/lib/chains"
 
 const CREATION_EVENTS = new Set(["LISTING_CREATED", "TOKEN_BID_PLACED", "COLLECTION_BID_PLACED", "COLLECTION_REGISTERED"])
 const SALE_EVENTS = new Set(["SALE", "TOKEN_BID_ACCEPTED", "COLLECTION_BID_ACCEPTED"])
@@ -45,7 +46,17 @@ function AddressCell({ addr, self }: { addr: string | null; self: string | undef
   return <Link href={`/user/${addr}`}>{addr.slice(-6)}</Link>
 }
 
-export default function UserHistory({ activity: actions }: { activity: any[] }) {
+interface ActivityRow {
+  event: string
+  token_id?: string | number
+  price?: string | number | null
+  from: string | null
+  to: string | null
+  tx_hash: string
+  created_at: string
+}
+
+export default function UserHistory({ activity: actions }: { activity: ActivityRow[] }) {
   const { address } = useAccount()
   const self = address?.toLowerCase()
 
@@ -108,7 +119,7 @@ export default function UserHistory({ activity: actions }: { activity: any[] }) 
             </div>
 
             <div className="p-2 flex-[0.1] relative z-10">
-              <a target="_blank" href={`https://sepolia.etherscan.io/tx/${a.tx_hash}`} className="flex gap-2 items-center">
+              <a target="_blank" href={explorerTxUrl(a.tx_hash)} className="flex gap-2 items-center">
                 <FaExternalLinkAlt />
               </a>
             </div>

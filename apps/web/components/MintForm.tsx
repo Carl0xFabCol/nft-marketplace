@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useMint, useNftStats } from "@/hooks/Contract"
+import { useNftStats } from "@/hooks/useMarketplaceReads"
+import { useMint } from "@/hooks/useMintActions"
+import { explorerTxUrl } from "@/lib/chains"
 import { motion, AnimatePresence } from "framer-motion"
 import { useReadContract, useBalance, useAccount } from "wagmi"
 import { nftAbi } from "@/lib/abi"
@@ -159,7 +161,7 @@ export default function MintForm({ contractAddress, name, symbol }: props) {
                 </svg>
               )}
 
-              <a target="_blank" href={`https://sepolia.etherscan.io/tx/${txHash}`} className=" hover:opacity-80">
+              <a target="_blank" href={explorerTxUrl(txHash as string)} className=" hover:opacity-80">
                 <span>Tx: </span>
                 <span>
                   {txHash?.slice(0, 6)}...{txHash?.slice(-4)}

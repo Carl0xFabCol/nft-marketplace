@@ -14,8 +14,11 @@ import { BuyCard } from "./BuyCard"
 import { BidCard } from "./BidCard"
 import { ColBidCard } from "./ColBidCard"
 import { useBatchOperations } from "@/hooks/useBatchOperations"
+import { useRealtimeListings } from "@/hooks/useRealtimeListings"
+import { upsertListingIntoNfts, deactivateListingInNfts } from "@/lib/listingMerge"
 import { SortBy, SortDir } from "@/lib/constants"
 import { NFTService } from "@/services/nft.service"
+import { UserListing } from "@/types/user.types"
 
 interface CollectionClientAreaProps {
   colAddress: Address
@@ -44,6 +47,21 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
   const [currentPage, setCurrentPage] = useState(initialNftsData.page)
   const [isLoading, setIsLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialNftsData.hasMore)
+
+  // ─── Realtime: reflect indexer writes (sale, delist, price change) live ───
+  const handleUpsertListing = useCallback((listing: UserListing) => {
+    setNfts((prev) => upsertListingIntoNfts(prev, listing))
+  }, [])
+
+  const handleDeactivateListing = useCallback((listing: UserListing) => {
+    setNfts((prev) => deactivateListingInNfts(prev, listing))
+  }, [])
+
+  useRealtimeListings({
+    collectionAddress: colAddress,
+    onUpsert: handleUpsertListing,
+    onDeactivate: handleDeactivateListing,
+  })
 
   // Usamos useAccount en lugar de useConnection (hook correcto de wagmi v2)
   const { address } = useAccount()

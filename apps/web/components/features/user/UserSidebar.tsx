@@ -1,14 +1,17 @@
 import { CollectionLabel } from "@/components/features/collections/collection/CollectionLabel"
-import { FaExternalLinkAlt, FaSearch, FaTimes } from "react-icons/fa"
-import { FiCopy } from "react-icons/fi"
+import { FaSearch } from "react-icons/fa"
 import { Address } from "viem"
+import { Collection, EnrichedUserNFT, UserListing } from "@/types/user.types"
 
-export default function UserSidebar(params: any) {
-  const { userAddress, collections, nfts, listings, selectedCollection, onSelectCollection, showSideBar, onToggleSidebar } = params
+interface UserSidebarProps {
+  collections: Collection[]
+  nfts: EnrichedUserNFT[]
+  listings: UserListing[]
+  selectedCollection: Address | ""
+  onSelectCollection: (address: Address | "") => void
+}
 
-  const copyToClipboard = (value: string) => {
-    navigator.clipboard.writeText(value)
-  }
+export default function UserSidebar({ collections, nfts, listings, selectedCollection, onSelectCollection }: UserSidebarProps) {
   return (
     <div className=" flex-1 card w-full rounded overflow-hidden">
       <div className="flex flex-col  h-full   ">
@@ -48,9 +51,9 @@ export default function UserSidebar(params: any) {
                 </div>
               </div>
             </div>
-            {collections.map((col: any) => {
-              const colItems = nfts.filter((item: any) => String(item.collection_address).toLowerCase() == String(col.contract_address).toLowerCase())
-              const colListings = listings.filter((l: any) => String(l.collection_address).toLowerCase() == String(col.contract_address).toLowerCase())
+            {collections.map((col) => {
+              const colItems = nfts.filter((item) => String(item.collection_address).toLowerCase() == String(col.contract_address).toLowerCase())
+              const colListings = listings.filter((l) => String(l.collection_address).toLowerCase() == String(col.contract_address).toLowerCase())
               return (
                 <div
                   key={col.contract_address}
@@ -62,7 +65,7 @@ export default function UserSidebar(params: any) {
                     onSelectCollection(col.contract_address.toLowerCase() as Address)
                   }}
                 >
-                  <CollectionLabel collection={{ collection: col.contract_address, colItems: colItems, colListings: colListings }} />
+                  <CollectionLabel collection={{ collection: col.contract_address, name: col.name, symbol: col.symbol, colItems: colItems, colListings: colListings }} />
                 </div>
               )
             })}

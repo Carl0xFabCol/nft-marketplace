@@ -1,16 +1,21 @@
 "use client"
 
-import { useCancelCollectionBid } from "@/hooks/Contract"
-import { Collection } from "@/types/user.types"
+import { useCancelCollectionBid } from "@/hooks/useBidActions"
+import { Collection, UserCollectionBid } from "@/types/user.types"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FaEthereum, FaInbox } from "react-icons/fa"
-import { useAccount } from "wagmi"
 import { useTx } from "@/app/context/TxContext"
 import { usePublicClient } from "wagmi"
+import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 
-export default function UserCollectionBids(params: any) {
-  const { collectionBids, selectedCollection, collections, batchOps } = params
+interface UserCollectionBidsProps {
+  collectionBids: UserCollectionBid[]
+  collections: Collection[]
+  batchOps: UseBatchOperationsReturn
+}
+
+export default function UserCollectionBids({ collectionBids, collections, batchOps }: UserCollectionBidsProps) {
   const [totalSize, setTotalSize] = useState<number>(0)
   const [sorted, setSorted] = useState<any[]>([])
   const publicClient = usePublicClient()
@@ -20,9 +25,9 @@ export default function UserCollectionBids(params: any) {
 
   useEffect(() => {
     if (collectionBids) {
-      setSorted(collectionBids.sort((a: any, b: any) => Number(a.price) - Number(b.price)))
+      setSorted([...collectionBids].sort((a, b) => Number(a.price) - Number(b.price)))
       setTotalSize(
-        collectionBids.reduce((sum: number, bid: any) => {
+        collectionBids.reduce((sum, bid) => {
           return (sum += Number(bid.price))
         }, 0),
       )
@@ -30,25 +35,29 @@ export default function UserCollectionBids(params: any) {
   }, [collectionBids])
 
   const handleCancelCollectionBids = async () => {
+    const collectionAddresses = cancelCollectionBidBatch.map((i: any) => i.collection_address)
+    if (!collectionAddresses.length) return
+
     let hash: any
     try {
-      const collectionAddresses = cancelCollectionBidBatch.map((i: any) => i.collection_address)
+      hash = await cancelCollectionBid(collectionAddresses[0])
+      addTx({
+        hash,
+        status: "loading",
+        label: `Cancelling ${collectionAddresses.length} bids...`,
+      })
 
-      if (cancelCollectionBidBatch.length > 1) {
-      } else {
-        hash = await cancelCollectionBid(collectionAddresses[0])
-        addTx({
-          hash,
-          status: "loading",
-          label: `Cancelling ${cancelCollectionBidBatch.length} bids...`,
-        })
+      // The contract has no batch cancel for collection bids — cancel each
+      // remaining collection sequentially (one tx per collection).
+      for (let i = 1; i < collectionAddresses.length; i++) {
+        await cancelCollectionBid(collectionAddresses[i])
       }
 
       if (hash && publicClient) {
         await publicClient.waitForTransactionReceipt({ hash })
         updateTx(hash, {
           status: "success",
-          label: cancelCollectionBidBatch ? `Cancelled ${cancelCollectionBidBatch.length} bids!` : "Cancelled!",
+          label: `Cancelled ${collectionAddresses.length} bids!`,
         })
 
         removeTx(hash)
@@ -56,7 +65,7 @@ export default function UserCollectionBids(params: any) {
     } catch (error) {
       console.error("Cancel col bid error:", error)
       if (hash) {
-        updateTx(hash, { status: "error", label: "Listing failed!" })
+        updateTx(hash, { status: "error", label: "Cancellation failed!" })
         removeTx(hash)
       }
     }

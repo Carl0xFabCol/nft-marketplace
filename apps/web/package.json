@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "update-types": "supabase gen types typescript --project-id \"tu-project-id\" > src/types/supabase.ts"
   },
   "dependencies": {
@@ -16,11 +17,8 @@
     "@supabase/supabase-js": "^2.110.0",
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tanstack/react-query": "^5.90.12",
-    "@types/jsonwebtoken": "^9.0.10",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.26",
-    "jose": "^6.2.3",
-    "jsonwebtoken": "^9.0.3",
     "next-themes": "^0.4.6",
     "react-icons": "^5.5.0",
     "viem": "^2.43.1",

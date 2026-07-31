@@ -1,9 +1,12 @@
 import MintForm from "@/components/MintForm"
 import { RegisterCollection } from "@/components/RegisterCollection"
-import { Collection, CollectionService } from "@/services/collections.service"
+import { CollectionService } from "@/services/collections.service"
+import { Collection } from "@/types/user.types"
+import { getServerSupabase } from "@/lib/supabase/server"
 
 export default async function MintPage() {
-  const { collections } = await CollectionService.getCollections({ page: 1, limit: 24, sortBy: "volume", sortDir: "desc", verified: false })
+  const supabase = await getServerSupabase()
+  const { collections } = await CollectionService.getCollections(supabase, { page: 1, limit: 24, sortBy: "volume", sortDir: "desc", verified: false })
 
   return (
     <div className="flex gap-2 min-h-120 w-full max-w-full lg:w-[70%] mx-auto items-center relative pt-16">

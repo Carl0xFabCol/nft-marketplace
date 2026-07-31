@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { FaShoppingCart, FaTimes, FaTrash, FaEthereum } from "react-icons/fa"
 import { RiNftFill } from "react-icons/ri"
-import { useBuy, useBuyBatch } from "@/hooks/Contract"
+import { useBuy, useBuyBatch } from "@/hooks/useBuyActions"
 import { useTx } from "@/app/context/TxContext"
 import { UserNFT } from "@/types/user.types"
 import { Address } from "viem"
@@ -63,10 +63,8 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
         const tokenIds = items.map((item) => String(item.token_id))
         removeTx(hash)
 
-        setTimeout(() => {
-          onSuccess?.(tokenIds)
-          onClose()
-        }, 2000)
+        onSuccess?.(tokenIds)
+        onClose()
       }
     } catch (error) {
       console.error("Buy error:", error)

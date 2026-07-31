@@ -1,6 +1,6 @@
-"use server"
 import CollectionsCol from "../../components/features/collections/CollectionsCol"
-import { Collection, CollectionService } from "@/services/collections.service"
+import { CollectionService } from "@/services/collections.service"
+import { Collection } from "@/types/user.types"
 import { Pagination } from "@/components/ui/ServerPagination"
 import { getServerSupabase } from "@/lib/supabase/server"
 

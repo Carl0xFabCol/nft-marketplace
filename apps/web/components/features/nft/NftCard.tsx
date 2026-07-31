@@ -1,5 +1,5 @@
 import { useTx } from "@/app/context/TxContext"
-import { useAcceptTokenBid } from "@/hooks/Contract"
+import { useAcceptTokenBid } from "@/hooks/useBidActions"
 import { EnrichedUserNFT } from "@/types/user.types"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -28,7 +28,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
 
       if (!isInBatch(nft, "list") && !isInBatch(nft, "approve") && !isInBatch(nft, "delist")) {
         if (isApproved) {
-          if (nft.listed) {
+          if (Boolean(nft.active_listing)) {
             addToBatch(nft, "delist")
           } else {
             addToBatch(nft, "list")
@@ -74,7 +74,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
       if (isInBatch(nft, "delist")) return "border-[#c19137]!"
 
       if (!isApproved) return "peer-hover:border-white!"
-      if (nft.listed) return "peer-hover:border-[#c19137]!"
+      if (Boolean(nft.active_listing)) return "peer-hover:border-[#c19137]!"
       return "peer-hover:border-(--accent)!"
     } else {
       if (batchOps.isInBatch(nft, "buy")) return "border-(--accent)!"
@@ -174,6 +174,9 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
               <div className="flex gap-2  text-xs lg:text-sm items-center ">
                 <span className="font-bold  ">{token.price ? Number(token.price.toString()) / 1e18 : token.active_listing ? Number(token.active_listing.price.toString()) / 1e18 : "-"}</span>
                 <FaEthereum />
+                {isUserPage && token.active_listing?.status === "pending" && (
+                  <span className="text-[10px] uppercase tracking-wide opacity-70 px-1.5 py-0.5 rounded border border-(--accent)/40 text-(--accent)">Pending…</span>
+                )}
               </div>
             </div>
 

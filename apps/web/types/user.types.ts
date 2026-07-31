@@ -20,6 +20,8 @@ export interface Collection {
   is_verified: boolean | null;
   nft_count: number;
   royalty_fee: number | null;
+  owner_count?: number;
+  top_bid?: any;
 }
 
 export interface Collection24h {
@@ -67,6 +69,10 @@ export interface UserListing {
   token_id: string;
   tx_hash: string;
   updated_at: string | null;
+  /** "pending" (optimistic insert) → "confirmed" (indexer). */
+  status?: string | null;
+  /** "optimistic" | "indexer". */
+  source?: string | null;
 }
 
 export interface UserCollectionBid {

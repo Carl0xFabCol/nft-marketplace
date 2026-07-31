@@ -7,13 +7,13 @@ import { NFTProperties } from "./NftProperties"
 import { NFTActions } from "./NftActions"
 import NFTBids from "./NftBids"
 import { useConnection } from "wagmi"
+import { explorerAddressUrl } from "@/lib/chains"
 
 interface NFTDetailProps {
   nft: any
-  isModal?: boolean // 👈 Cambia el comportamiento según contexto
 }
 
-export default function NFTDetail({ nft, isModal = false }: NFTDetailProps) {
+export default function NFTDetail({ nft }: NFTDetailProps) {
   const [activeTab, setActiveTab] = useState<"details" | "history" | "properties" | "bids">("details")
   const { address } = useConnection()
 
@@ -39,7 +39,7 @@ export default function NFTDetail({ nft, isModal = false }: NFTDetailProps) {
       {/* Detalles del NFT */}
       <div
         className={`
-        ${isModal ? "lg:flex-1" : "lg:w-1/2"}
+        lg:w-1/2
         flex flex-col gap-4
       `}
       >
@@ -95,7 +95,7 @@ export default function NFTDetail({ nft, isModal = false }: NFTDetailProps) {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="opacity-75">Contract:</span>
-                  <a href={`https://etherscan.io/address/${nft.collection}`} target="_blank" className="font-mono hover:text-(--accent)">
+                  <a href={explorerAddressUrl(nft.collection_address)} target="_blank" className="font-mono hover:text-(--accent)">
                     {nft.collection_address.slice(0, 6)}...{nft.collection_address.slice(-4)}
                   </a>
                 </div>

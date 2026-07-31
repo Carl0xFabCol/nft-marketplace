@@ -3,24 +3,25 @@
 import { useState } from "react"
 import { Address } from "viem"
 import { useAccount } from "wagmi"
+import { useRouter } from "next/navigation"
 import { FaEthereum, FaShoppingCart, FaGavel, FaTag, FaTimes } from "react-icons/fa"
 import { MdLocalOffer, MdCancel } from "react-icons/md"
-import { useBuy, useCancelList, useBidToken, useBidTokenBatch } from "@/hooks/Contract"
+import { useBuy } from "@/hooks/useBuyActions"
+import { useCancelList } from "@/hooks/useListingActions"
+import { useBidToken, useBidTokenBatch } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { BidCard } from "../collections/collection/BidCard"
 import { useBatchOperations } from "@/hooks/useBatchOperations"
-import { formatDistanceToNow } from "date-fns"
+import { UserNFT } from "@/types/user.types"
 
 interface NFTActionsProps {
-  nft: {
-    token_id: string
-    collection_address: Address
-    owner_wallet: Address
+  nft: UserNFT & {
     listing?: {
       id: string
       price: string
       seller_wallet: Address
       is_active: boolean
+      expires_at?: string
     }
     collection?: {
       name: string
@@ -30,9 +31,9 @@ interface NFTActionsProps {
 }
 
 export function NFTActions({ nft }: NFTActionsProps) {
+  const router = useRouter()
   const { address: userAddress } = useAccount()
   const [showBidModal, setShowBidModal] = useState(false)
-  const [bidAmount, setBidAmount] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const { removeFromBatch, clearBatch, addToBatch, isInBatch, bidBatch } = useBatchOperations()
   const { buy } = useBuy()
@@ -71,10 +72,8 @@ export function NFTActions({ nft }: NFTActionsProps) {
         })
         removeTx(hash)
 
-        setTimeout(() => {
-          // Reload page or refetch data
-          window.location.reload()
-        }, 2000)
+        // Refetch the server component data in place (no full reload).
+        router.refresh()
       }
     } catch (error) {
       console.error("Buy error:", error)
@@ -123,9 +122,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
         })
         removeTx(hash)
 
-        setTimeout(() => {
-          window.location.reload()
-        }, 2000)
+        router.refresh()
       }
     } catch (error) {
       console.error("Cancel listing error:", error)
@@ -153,7 +150,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
             {/* Detalles del precio */}
             {nft.collection?.royalty_fee && (
               <div className="text-xs opacity-75 mt-2 flex justify-between">
-                <div>Expires at: {formatDate(new Date(nft.listing!.expires_at).getTime())}</div>
+                <div>Expires at: {formatDate(nft.listing!.expires_at)}</div>
                 <div>Creator royalty: {nft.collection.royalty_fee / 100}%</div>
               </div>
             )}
@@ -182,7 +179,10 @@ export function NFTActions({ nft }: NFTActionsProps) {
                 </button>
 
                 <button
-                  onClick={() => {}}
+                  onClick={() => {
+                    setShowBidModal(true)
+                    addToBatch(nft, "bid")
+                  }}
                   className="flex items-center w-full justify-center gap-2 border-2 border-(--accent) text-(--accent) py-4 px-6 rounded-xl font-bold text-lg hover:bg-(--accent) hover:text-(--bg-secondary) transition-all"
                 >
                   <FaGavel />
@@ -212,7 +212,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
                   <button
                     onClick={() => {
                       // Navigate to user page to list
-                      window.location.href = `/user/${userAddress}`
+                      router.push(`/user/${userAddress}`)
                     }}
                     className="flex items-center w-full justify-center gap-2 bg-(--accent) text-(--bg-secondary) py-2 px-6 rounded-xl font-bold hover:opacity-90"
                   >
@@ -231,7 +231,8 @@ export function NFTActions({ nft }: NFTActionsProps) {
                   <p className="opacity-75 text-center">This NFT is not listed for sale</p>
                   <button
                     onClick={() => {
-                      ;(setShowBidModal(true), addToBatch(nft, "bid"))
+                      setShowBidModal(true)
+                      addToBatch(nft, "bid")
                     }}
                     className="flex items-center w-full justify-center gap-2 border-2 border-(--accent) text-(--accent) py-2 px-6 rounded-xl font-bold hover:bg-(--accent) hover:text-(--bg-secondary)"
                   >
@@ -315,10 +316,12 @@ export function NFTActions({ nft }: NFTActionsProps) {
           collectionAddress={nft.collection_address}
           collectionName={nft.collection?.name}
           onClose={() => {
-            ;(setShowBidModal(false), clearBatch("bid"))
+            setShowBidModal(false)
+            clearBatch("bid")
           }}
           onSuccess={() => {
-            ;(setShowBidModal(false), clearBatch("bid"))
+            setShowBidModal(false)
+            clearBatch("bid")
           }}
           onRemoveItem={() => removeFromBatch(nft, "bid")}
         />

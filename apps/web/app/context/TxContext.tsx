@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, ReactNode } from "react"
 import { FaTimes } from "react-icons/fa"
 import { Address } from "viem"
+import { explorerTxUrl } from "@/lib/chains"
 import { RxCrossCircled } from "react-icons/rx"
 import { FiCheckCircle } from "react-icons/fi"
 
@@ -58,7 +59,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                   )}
                   {tx.status === "success" && <FiCheckCircle className="text-[#6dfa6d] w-2 h-2 lg:w-4 lg:h-4" />}
                   {tx.status === "error" && <RxCrossCircled className="text-red-500 w-2 h-2 lg:w-4 lg:h-4" />}
-                  <a target="_blank" href={`https://sepolia.etherscan.io/tx/${tx.hash}`} className="hover:opacity-75 ">
+                  <a target="_blank" href={explorerTxUrl(tx.hash)} className="hover:opacity-75 ">
                     {tx.hash?.slice(0, 6)}...{tx.hash?.slice(-6)}
                   </a>
                 </div>

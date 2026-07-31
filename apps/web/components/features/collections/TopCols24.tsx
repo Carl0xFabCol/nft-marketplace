@@ -11,21 +11,15 @@ interface props {
 }
 export function TopCols24({ initialCollections, initialCollections24 }: props) {
   const [shownCollections, setShownCollections] = useState<Collection[]>(initialCollections)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [collectionsType, setCollectionsType] = useState<"trending" | "top">("top")
 
   useEffect(() => {
     setShownCollections(collectionsType == "top" ? initialCollections : initialCollections24)
   }, [collectionsType])
 
-  useEffect(() => {
-    setLoading(false)
-  }, [initialCollections])
-
   return (
     <div className="w-full pb-4">
-      <TopCollectionsSlider collections={initialCollections} loading={loading} error={error} />
+      <TopCollectionsSlider collections={initialCollections} />
       <div className="card ">
         <div className="flex gap-4 border-b border-(--text)/20 py-4 px-2 w-full text-(--text)">
           <button onClick={() => setCollectionsType("top")} className={"bg-transparent! text-(--text)! " + (collectionsType == "top" ? " " : " opacity-50")}>

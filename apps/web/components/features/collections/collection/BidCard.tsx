@@ -4,11 +4,12 @@ import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { FaGavel, FaTimes, FaTrash, FaEthereum } from "react-icons/fa"
 import { RiNftFill } from "react-icons/ri"
-import { useBidToken, useBidTokenBatch } from "@/hooks/Contract"
+import { useBidToken, useBidTokenBatch } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { UserNFT } from "@/types/user.types"
 import { usePublicClient } from "wagmi"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
+import { dateToEpochSeconds } from "@/lib/dates"
 
 interface BidItemWithPrice extends UserNFT {
   priceEth?: string
@@ -56,7 +57,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
         // Bid batch
         const tokenIds = validItems.map((item) => BigInt(item.token_id))
         const prices = validItems.map((item) => item.bidPrice as bigint)
-        const expiresAts = validItems.map((item: any) => item.expiresAt)
+        const expiresAts = validItems.map((item: any) => dateToEpochSeconds(item.expiresAt))
         const totalVal = prices.reduce((sum, price) => sum + price, BigInt(0))
 
         hash = await bidTokenBatch(collectionAddress as `0x${string}`, tokenIds, prices, totalVal, expiresAts)
@@ -68,7 +69,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
       } else {
         // Bid individual
         const item: any = validItems[0]
-        hash = await bidToken(collectionAddress as `0x${string}`, BigInt(item.token_id), item.bidPrice as bigint, item.expiresAt)
+        hash = await bidToken(collectionAddress as `0x${string}`, BigInt(item.token_id), item.bidPrice as bigint, dateToEpochSeconds(item.expiresAt))
         addTx({
           hash,
           status: "loading",
@@ -83,11 +84,9 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
           label: validItems.length > 1 ? `${validItems.length} bids placed!` : "Bid placed!",
         })
 
-        setTimeout(() => {
-          removeTx(hash)
-          onSuccess?.()
-          onClose()
-        }, 2000)
+        removeTx(hash)
+        onSuccess?.()
+        onClose()
       }
     } catch (error) {
       console.error("Bid error:", error)

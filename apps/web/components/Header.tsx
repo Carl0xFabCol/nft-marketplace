@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import ConnectWallet from "./ConnectWallet"
-import ThemeToggle from "../app/ThemeToggle"
 import { useEffect, useState } from "react"
 import { useAccount } from "wagmi"
 
@@ -11,7 +10,6 @@ interface Props {
   openWalletModal: () => void
 }
 export default function Header({ openWalletModal }: Props) {
-  const [menuCard, setMenuCard] = useState(false)
   const [mounted, setMounted] = useState<boolean>(false)
 
   const pathname = usePathname()
@@ -20,21 +18,8 @@ export default function Header({ openWalletModal }: Props) {
     setMounted(true)
   }, [])
 
-  const switchMenuCard = (e: any) => {
-    setMenuCard(!menuCard)
-  }
-  const closeMenuCard = (e: any) => {
-    if (e.target.id === "menu-bg") {
-      setMenuCard(false)
-    }
-  }
-
   const linkClass = (path: string) => {
-    if (menuCard) {
-      return `h-7 ${pathname == path ? " " : ""}`
-    } else {
-      return `h-7 ${pathname == path ? "text-(--accent)" : "text-(--text) hover:text-(--accent)"}`
-    }
+    return `h-7 ${pathname == path ? "text-(--accent)" : "text-(--text) hover:text-(--accent)"}`
   }
 
   return (
@@ -63,7 +48,6 @@ export default function Header({ openWalletModal }: Props) {
             <div className="flex">
               <ConnectWallet setWalletOptionsCard={openWalletModal} textMsg={"CONNECT WALLET"} />
             </div>
-            {/* <div><ThemeToggle /></div> */}
           </div>
         </div>
       </div>

@@ -1,21 +1,15 @@
-"use client"
-
-import { useReadContract } from "wagmi"
-import { Address, erc721Abi } from "viem"
 import { FaEthereum } from "react-icons/fa"
 
+// Receives the collection DB row (with name) + derived item/listing arrays from
+// UserSidebar. No on-chain reads — name comes from the DB.
 export function CollectionLabel({ collection }: { collection: any }) {
-  const { data: name } = useReadContract({
-    address: collection.collection,
-    abi: erc721Abi,
-    functionName: "name",
-  })
-  const listed = collection.colItems.filter((item: any) => item.listed)
-  const floor = collection.colListings.sort((a: any, b: any) => Number(a.price) - Number(b.price))
+  const name = collection.name || collection.symbol || "-"
+  const listed = collection.colItems.filter((item: any) => Boolean(item.active_listing))
+  const floor = [...collection.colListings].sort((a: any, b: any) => Number(a.price) - Number(b.price))
 
   return (
     <div className="flex flex-col justify-end w-full h-full">
-      <div className="flex justify-between  rounded py-2 px-4 gap-1 w-full">
+      <div className="flex justify-between  rounded py-4 px-4 gap-1 w-full">
         <div className="flex flex-1 text-left items-center gap-2">
           <span className="font-bold text-xs">{name}</span>
         </div>

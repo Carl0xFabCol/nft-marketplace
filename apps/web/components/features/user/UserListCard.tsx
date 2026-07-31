@@ -8,13 +8,23 @@ import { FaEthereum, FaTrash, FaTimes } from "react-icons/fa"
 import { MdOutlineLocalOffer } from "react-icons/md"
 import { RiNftFill } from "react-icons/ri"
 import { MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
+import { CHAIN_ID } from "@/lib/chains"
 import { MarketplaceABI } from "@/lib/abi"
 import { EnrichedUserNFT, UserListing, Collection, UserNFT } from "@/types/user.types"
-import { useMarketplaceInfo } from "@/hooks/Contract"
+import { BatchType } from "@/hooks/useBatchOperations"
+import { useMarketplaceInfo } from "@/hooks/useMarketplaceReads"
 import { useTx } from "@/app/context/TxContext"
 import { saveBatchListingToDB } from "@/actions/listings/createBatch"
+import { failListingsByTxHash } from "@/actions/listings/failBatch"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
+import { dateToEpochSeconds } from "@/lib/dates"
 import { useAuth } from "@/components/AuthProvider"
+
+export interface ListableItem {
+  collection_address: Address
+  token_id: string
+  price?: bigint
+}
 
 interface UserListCardProps {
   items: EnrichedUserNFT[]
@@ -22,14 +32,18 @@ interface UserListCardProps {
   listings: UserListing[]
   onClose: () => void
   onSuccess?: () => void
-  removeFromBatch: (token: UserNFT, batch: string) => void
+  /** Called right after the tx is sent — optimistic local patch (instant UX). */
+  onOptimisticList?: (items: ListableItem[]) => void
+  /** Called when the tx fails — revert the optimistic patch. */
+  onOptimisticListFail?: (items: ListableItem[]) => void
+  removeFromBatch: (token: UserNFT, batch: BatchType) => void
 }
 
 interface ListItemWithPrice extends EnrichedUserNFT {
   priceEth?: string
 }
 
-export function UserListCard({ items, collections, listings, onClose, onSuccess, removeFromBatch }: UserListCardProps) {
+export function UserListCard({ items, collections, listings, onClose, onSuccess, onOptimisticList, onOptimisticListFail, removeFromBatch }: UserListCardProps) {
   const [priceAll, setPriceAll] = useState<string>("")
   const [totalEstimated, setTotalEstimated] = useState<number>(0)
   const [totalRoyalties, setTotalRoyalties] = useState<number>(0)
@@ -123,20 +137,26 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     const validItems = listItems.filter((i) => i.price && i.price > BigInt(0))
     if (!validItems.length) return
 
+    let txHash: `0x${string}` | undefined
     try {
       const collections = validItems.map((i) => i.collection_address as Address)
       const tokenIds = validItems.map((i) => i.token_id.toString())
       const prices = validItems.map((i) => i.price!.toString())
-      const expiresAts = validItems.map((i) => (i.expiresAt ? Math.floor(i.expiresAt.getTime() / 1000).toString() : "0"))
+      const expiresAts = validItems.map((i) => dateToEpochSeconds(i.expiresAt).toString())
       const seller = address!.toLowerCase() as Address
-      const chainId = 11155111
+      const chainId = CHAIN_ID
 
-      const hash = await writeContractAsync({
+      txHash = await writeContractAsync({
         address: MARKETPLACE_CONTRACT_ADDRESS,
         abi: MarketplaceABI,
         functionName: "createListingBatch",
         args: [collections, tokenIds.map(BigInt), prices.map(BigInt), expiresAts.map(BigInt)],
       })
+      const hash = txHash
+
+      // Optimistic local patch: the listed items render as listed immediately,
+      // before the server-action insert / realtime round-trip.
+      onOptimisticList?.(validItems)
 
       addTx({
         hash,
@@ -154,7 +174,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
         expiresAts,
       })
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash })
+      await publicClient!.waitForTransactionReceipt({ hash })
       updateTx(hash, { status: "success", label: "Listed!" })
 
       setTimeout(() => removeTx(hash), 3000)
@@ -162,10 +182,17 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
       onSuccess?.()
     } catch (err) {
       console.error("Listing error:", err)
-      const hash = (err as any)?.hash
+      const hash = txHash ?? (err as any)?.hash
       if (hash) {
         updateTx(hash, { status: "error", label: "Listing failed" })
         setTimeout(() => removeTx(hash), 5000)
+      }
+
+      // Revert the optimistic patch and kill any stale `pending` DB rows so a
+      // reverted listing doesn't linger forever.
+      onOptimisticListFail?.(validItems)
+      if (hash) {
+        failListingsByTxHash(hash).catch((e) => console.error("Failed to fail listings:", e))
       }
     }
   }

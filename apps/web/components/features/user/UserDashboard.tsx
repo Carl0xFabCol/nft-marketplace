@@ -11,7 +11,7 @@ import UserTokenBids from "./UserTokenBids"
 import UserHistory from "./UserHistory"
 import { AnimatePresence, motion } from "framer-motion"
 
-type ViewType = "inventory" | "colBids" | "tokenBids" | "history"
+export type ViewType = "inventory" | "colBids" | "tokenBids" | "history"
 
 const VIEW_ORDER: Record<ViewType, number> = {
   inventory: 1,
@@ -53,14 +53,11 @@ export default function UserDashboard({ userAddress, initialData }: UserDashboar
           {showSidebar && (
             <motion.div layout="position" initial={{ width: 0 }} animate={{ width: 280 }} exit={{ width: 0 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="overflow-hidden">
               <UserSidebar
-                userAddress={userAddress}
                 collections={initialData.collections}
                 nfts={initialData.nfts}
                 listings={initialData.listings}
                 selectedCollection={selectedCollection}
-                onSelectCollection={(address: Address) => setSelectedCollection(address)}
-                showSidebar={showSidebar}
-                onToggleSidebar={() => setShowSidebar((v) => !v)}
+                onSelectCollection={(address: Address | "") => setSelectedCollection(address)}
               />
             </motion.div>
           )}
@@ -94,10 +91,17 @@ export default function UserDashboard({ userAddress, initialData }: UserDashboar
                   className="flex flex-col min-h-0 grow"
                 >
                   {currentView === "inventory" && (
-                    <UserInventory userAddress={userAddress} initialNfts={filteredNFTs} hasMoreNfts={initialData.hasMore} collections={initialData.collections} batchOps={batchOps} />
+                    <UserInventory
+                      userAddress={userAddress}
+                      initialNfts={filteredNFTs}
+                      listings={initialData.listings}
+                      hasMoreNfts={initialData.hasMore}
+                      collections={initialData.collections}
+                      batchOps={batchOps}
+                    />
                   )}
                   {currentView === "colBids" && (
-                    <UserCollectionBids collections={initialData.collections} collectionBids={initialData.collectionBids} selectedCollection={selectedCollection} batchOps={batchOps} />
+                    <UserCollectionBids collections={initialData.collections} collectionBids={initialData.collectionBids} batchOps={batchOps} />
                   )}
                   {currentView === "tokenBids" && <UserTokenBids collections={initialData.collections} tokenBids={initialData.tokenBids} selectedCollection={selectedCollection} batchOps={batchOps} />}
                   {currentView === "history" && <UserHistory activity={initialData.activity} />}

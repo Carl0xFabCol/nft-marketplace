@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { useRegisterCollection } from "../hooks/Contract"
+import { useRegisterCollection } from "../hooks/useCollectionActions"
 import { FaTimes } from "react-icons/fa"
 import { useTx } from "@/app/context/TxContext"
 import { useConnection } from "wagmi"
@@ -33,14 +33,14 @@ export function RegisterCollection() {
       {!cardOpen && (
         <div className="w-full">
           <button className="rounded p-2 w-full border border-(--accent) bg-transparent! text-(--accent)!" onClick={() => setCardOpen(true)}>
-            Register your colletion
+            Register your collection
           </button>
         </div>
       )}
       {cardOpen && (
         <div className="card rounded p-4">
           <div className="flex justify-between mb-5">
-            <h2 className="text-xl font-bold">Register your colletion</h2>
+            <h2 className="text-xl font-bold">Register your collection</h2>
 
             <FaTimes onClick={() => setCardOpen(false)} className="text-(--accent) hover:opacity-75 hover:cursor-pointer" />
           </div>
