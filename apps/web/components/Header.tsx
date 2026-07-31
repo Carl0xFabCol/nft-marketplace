@@ -63,9 +63,7 @@ export default function Header({ openWalletModal }: Props) {
             <div className="flex">
               <ConnectWallet setWalletOptionsCard={openWalletModal} textMsg={"CONNECT WALLET"} />
             </div>
-            <div>
-              <ThemeToggle />
-            </div>
+            {/* <div><ThemeToggle /></div> */}
           </div>
         </div>
       </div>

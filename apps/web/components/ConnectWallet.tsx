@@ -33,7 +33,7 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
     const nonceRes = await fetch("/api/auth/nonce", { method: "POST" })
     const { nonce } = await nonceRes.json()
 
-    const message = `Bienvenido! nonce: ${nonce}`
+    const message = `Welcome to Hypermarket!\nLogin to use all its features.\nNonce: ${nonce}`
     const signature = await signMessageAsync({ message })
 
     const loginRes = await fetch("/api/auth/login", {

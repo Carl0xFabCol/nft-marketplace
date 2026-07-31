@@ -4,18 +4,25 @@ import { supabaseAdmin } from "@/lib/supabase/admin"
 import { randomBytes, randomUUID } from "crypto"
 
 async function validateNonce(message: string): Promise<boolean> {
-  const match = message.match(/nonce:\s*(\w+)/)
-  if (!match) return false
+  const match = message.match(/nonce:\s*(\w+)/i)
+  if (!match) {
+    return false
+  }
 
   const nonce = match[1]
-
   const { data, error } = await supabaseAdmin.from("nonces").select("*").eq("nonce", nonce).single()
 
-  if (error || !data) return false
-  if (data.used) return false
+  if (error || !data) {
+    return false
+  }
+  if (data.used) {
+    return false
+  }
 
   const created = new Date(data.created_at).getTime()
-  if (Date.now() - created > 5 * 60 * 1000) return false
+  if (Date.now() - created > 5 * 60 * 1000) {
+    return false
+  }
 
   await supabaseAdmin.from("nonces").update({ used: true }).eq("nonce", nonce)
   return true
@@ -63,6 +70,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       userId = mapping.supabase_user_id
       email = mapping.email
       password = mapping.supabase_password
+
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: { wallet: walletAddress },
+      })
     } else {
       // New user — create a Supabase Auth user with a random email + password
       email = `user_${randomUUID()}@internal.local`
@@ -72,6 +83,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         email,
         password,
         email_confirm: true,
+        user_metadata: { wallet: walletAddress },
       })
 
       if (createError || !createUser?.user) {

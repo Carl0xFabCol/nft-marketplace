@@ -16,8 +16,10 @@ pnpm-lock.yaml
 apps/web/.next
 apps/indexer/dist
 
-docs/audit-plan.md
+docs
 
 packages/contracts/out
 packages/contracts/cache
 packages/contracts/broadcast
+
+.claude
