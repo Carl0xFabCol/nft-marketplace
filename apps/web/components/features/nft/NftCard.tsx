@@ -1,13 +1,28 @@
 import { useTx } from "@/app/context/TxContext"
 import { useAcceptTokenBid } from "@/hooks/useBidActions"
 import { EnrichedUserNFT } from "@/types/user.types"
+import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
 import { FaEthereum, FaUser } from "react-icons/fa"
 import { useConnection, usePublicClient } from "wagmi"
+import { Address } from "viem"
 
-export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMap = null }: any) {
+type NftCardToken = EnrichedUserNFT & {
+  price?: number
+  seller_wallet?: string | null
+}
+
+interface NFTCardProps {
+  token: NftCardToken
+  isUserPage?: boolean
+  index?: number
+  batchOps: UseBatchOperationsReturn
+  approvalMap?: Map<string, boolean> | null
+}
+
+export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMap = null }: NFTCardProps) {
   const [bidHovered, setBidHovered] = useState<boolean>(false)
   const [hovered, setHovered] = useState<string | null>(null)
   const { addToBatch, isInBatch, removeFromBatch } = batchOps
@@ -16,7 +31,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
   const publicClient = usePublicClient()
   const { acceptTokenBid } = useAcceptTokenBid()
   const { addTx, removeTx, updateTx } = useTx()
-  const handleNFTClick = (nft: any, e: React.MouseEvent) => {
+  const handleNFTClick = (nft: NftCardToken, e: React.MouseEvent) => {
     const target = e.target as HTMLElement
 
     if (isUserPage) {
@@ -24,7 +39,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
         return
       }
 
-      const isApproved = approvalMap.get(nft.collection_address.toLowerCase())
+      const isApproved = approvalMap?.get(nft.collection_address.toLowerCase())
 
       if (!isInBatch(nft, "list") && !isInBatch(nft, "approve") && !isInBatch(nft, "delist")) {
         if (isApproved) {
@@ -65,9 +80,9 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
     }
   }
 
-  const getBorderClass = (nft: any) => {
+  const getBorderClass = (nft: NftCardToken) => {
     if (isUserPage) {
-      const isApproved = approvalMap[nft.collection_address.toLowerCase()]
+      const isApproved = approvalMap?.get(nft.collection_address.toLowerCase())
 
       if (isInBatch(nft, "list")) return "border-(--accent)!"
       if (isInBatch(nft, "approve")) return "border-white!"
@@ -108,10 +123,10 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
     }
   }
 
-  const handleAcceptTokenBid = async (token_id: number, bidder: string, collection_address: string) => {
+  const handleAcceptTokenBid = async (token_id: string, bidder: string, collection_address: string) => {
     let hash = ""
     try {
-      const hash = await acceptTokenBid(collection_address as `0x${string}`, token_id, bidder as `0x${string}`)
+      const hash = await acceptTokenBid(collection_address as Address, Number(token_id), bidder as Address)
 
       addTx({ hash, label: "Accepting bid...", status: "loading" })
 
@@ -134,7 +149,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
       key={token.token_id + token.collection_address}
       initial={{ filter: "blur(5px)", opacity: 0.3 }}
       animate={{ filter: "blur(0px)", opacity: 1 }}
-      transition={{ duration: 0.2, delay: index * 0.03 }}
+      transition={{ duration: 0.2, delay: (index ?? 0) * 0.03 }}
       onClick={(e) => handleNFTClick(token, e)}
       className={`
                          relative border-2 
@@ -190,7 +205,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
                 </span>
                 {bidHovered && (
                   <div className="w-full p-1 absolute top-0 left-0  flex items-center card">
-                    <button onClick={() => handleAcceptTokenBid(token.token_id, token.topBid.bidder_wallet, token.collection_address)} className="w-full rounded p-1 ">
+                    <button onClick={() => handleAcceptTokenBid(token.token_id, token.topBid?.bidder_wallet ?? "", token.collection_address)} className="w-full rounded p-1 ">
                       Accept bid
                     </button>
                   </div>

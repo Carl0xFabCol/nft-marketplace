@@ -1,14 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { FaGavel, FaTimes, FaTrash, FaEthereum } from "react-icons/fa"
+import { FaGavel, FaTrash, FaEthereum } from "react-icons/fa"
 import { RiNftFill } from "react-icons/ri"
 import { useBidToken, useBidTokenBatch } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { UserNFT } from "@/types/user.types"
 import { usePublicClient } from "wagmi"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
+import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
 
 interface BidItemWithPrice extends UserNFT {
@@ -19,7 +19,7 @@ interface BidItemWithPrice extends UserNFT {
 interface BidCardProps {
   items: UserNFT[]
   collectionAddress: string
-  collectionName?: string
+  collectionName?: string | null
   onClose: () => void
   onSuccess?: () => void
   onRemoveItem: (item: UserNFT) => void
@@ -38,7 +38,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
     setBidItems(items.map((item) => ({ ...item, priceEth: "", bidPrice: BigInt(0) })))
   }, [items])
 
-  // Calcular valor total necesario
+  // Total value needed across all bids
   const totalValue = bidItems.reduce((total, item) => {
     return total + (item.bidPrice || BigInt(0))
   }, BigInt(0))
@@ -97,7 +97,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
     }
   }
 
-  // Actualizar precio de un item individual
+  // Update the price of a single item
   const updateItemPrice = (tokenId: string, value: string) => {
     if (!/^\d*\.?\d*$/.test(value)) return
 
@@ -110,7 +110,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
     setBidItems((prev) => prev.map((item) => (item.token_id === tokenId && item.collection_address.toLowerCase() === collection.toLowerCase() ? { ...item, expiresAt: expiresAt } : item)))
   }
 
-  // Actualizar precio de todos los items
+  // Update the price of all items
   const updateAllPrices = (value: string) => {
     if (!/^\d*\.?\d*$/.test(value)) return
 
@@ -129,38 +129,13 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
   const canBid = bidItems.some((item) => item.bidPrice && item.bidPrice > BigInt(0))
 
   return (
-    <AnimatePresence>
-      <motion.div
-        id="bid-card-bg"
-        onClick={(e: any) => {
-          if (e.target.id === "bid-card-bg") {
-            onClose()
-          }
-        }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50"
-      >
-        <motion.div
-          initial={{ opacity: 0, translateY: 50 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          exit={{ opacity: 0, translateY: 50 }}
-          transition={{ duration: 0.2 }}
-          className="flex flex-col card rounded-2xl border border-(--text)/20 min-w-[70%] max-w-[90%] max-h-[80vh] overflow-hidden"
-        >
-          {/* Header */}
-          <div className="p-4 flex justify-between items-center ">
-            <div className="flex items-center gap-3">
-              <FaGavel className="text-3xl" />
-              <span className="font-bold text-2xl">Bid items</span>
-            </div>
-            <button onClick={onClose} className="bg-transparent! text-(--text)! hover:opacity-75">
-              <FaTimes className="opacity-75" />
-            </button>
-          </div>
-
+    <Modal
+      id="bid-card"
+      onClose={onClose}
+      title="Bid items"
+      icon={<FaGavel className="text-3xl" />}
+      panelClassName="min-w-[70%] max-w-[90%] max-h-[80vh]"
+    >
           {/* Table header */}
           <div className="flex justify-between px-6 py-3 font-bold ">
             <div className="flex-2">
@@ -269,8 +244,6 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
               </button>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    </Modal>
   )
 }

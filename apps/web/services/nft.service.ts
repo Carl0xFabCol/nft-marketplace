@@ -2,16 +2,17 @@
 import { supabase } from "@/lib/supabase/client"
 import { Address } from "viem"
 import { DEFAULT_CHAIN_ID, ZERO_ADDRESS } from "@marketplace/shared"
+import { NFTDetail } from "@/types/user.types"
 
 const ZERO = ZERO_ADDRESS
 const DEFAULT_CHAIN = DEFAULT_CHAIN_ID
 
 export class NFTService {
   /**
-   * Detalles completos de un NFT.
-   * Todas las queries en paralelo, sin roundtrips adicionales.
+   * Full detail of an NFT (row + listing + bids + collection + history).
+   * All queries run in parallel — no extra roundtrips.
    */
-  static async getNFTDetail(collectionAddress: Address, tokenId: string) {
+  static async getNFTDetail(collectionAddress: Address, tokenId: string): Promise<NFTDetail | null> {
     try {
       const [nftRes, listingRes, bidsRes, collectionRes, historyRes] = await Promise.allSettled([
         supabase.from("nfts").select("*").eq("collection_address", collectionAddress.toLowerCase()).eq("token_id", tokenId).single(),
@@ -27,13 +28,15 @@ export class NFTService {
 
       if (nftRes.status === "rejected" || !nftRes.value.data) return null
 
+      // Addresses/metadata come back as loose `string`/`Json` from the DB types;
+      // the domain types narrow them to `Address` / `NFTMetadata`.
       return {
         ...nftRes.value.data,
         listing: listingRes.status === "fulfilled" ? listingRes.value.data : undefined,
         bids: bidsRes.status === "fulfilled" ? (bidsRes.value.data ?? []) : [],
         collection: collectionRes.status === "fulfilled" ? collectionRes.value.data : undefined,
         history: historyRes.status === "fulfilled" ? (historyRes.value.data ?? []) : [],
-      }
+      } as NFTDetail
     } catch (error) {
       console.error("Error fetching NFT detail:", error)
       return null
@@ -41,8 +44,8 @@ export class NFTService {
   }
 
   /**
-   * NFTs de una colección con paginación.
-   * Corrige el bug de doble subquery para onlyListed ejecutando listedIds una sola vez.
+   * Collection NFTs with pagination.
+   * Fixes the double-subquery bug for onlyListed by resolving listedIds once.
    */
   static async getCollectionNFTs(
     collectionAddress: Address,
@@ -60,7 +63,7 @@ export class NFTService {
     const to = from + limit - 1
     const addr = collectionAddress.toLowerCase()
 
-    // Resolver listedIds una sola vez si hace falta
+    // Resolve listedIds once if needed
     let listedIds: string[] | null = null
     if (onlyListed) {
       const { data } = await supabase.from("listings").select("token_id").eq("collection_address", addr).eq("is_active", true)
@@ -78,14 +81,14 @@ export class NFTService {
       }
     }
 
-    // Query de count separada con head:true — evita el GenericStringError del SDK
+    // Separate count query with head:true — avoids the SDK's GenericStringError
     const countQuery = supabase.from("nfts").select("*", { count: "exact", head: true }).eq("collection_address", addr).eq("chain_id", DEFAULT_CHAIN).neq("owner_wallet", ZERO)
 
     const { count, error: countErr } = listedIds ? await countQuery.in("token_id", listedIds) : await countQuery
 
     if (countErr) throw countErr
 
-    // Query de datos tipada correctamente con select("*")
+    // Typed data query with select("*")
     let nftsQuery = supabase.from("nfts").select("*").eq("collection_address", addr).eq("chain_id", DEFAULT_CHAIN).neq("owner_wallet", ZERO)
 
     if (listedIds) nftsQuery = nftsQuery.in("token_id", listedIds)
@@ -119,7 +122,7 @@ export class NFTService {
   }
 
   /**
-   * NFTs de un owner con paginación.
+   * An owner's NFTs with pagination.
    */
   static async getNFTsByOwner(
     ownerAddress: Address,
@@ -150,7 +153,7 @@ export class NFTService {
     const to = from + limit - 1
     const owner = ownerAddress.toLowerCase()
 
-    // Resolver listedIds una sola vez
+    // Resolve listedIds once
     let listedIds: string[] | null = null
     if (onlyListed) {
       const { data } = await supabase.from("listings").select("token_id").eq("seller_wallet", owner).eq("is_active", true)
@@ -177,7 +180,7 @@ export class NFTService {
 
     if (countErr) throw countErr
 
-    // Query de datos tipada con select("*")
+    // Typed data query with select("*")
     let nftsQuery = supabase.from("nfts").select("*").eq("owner_wallet", owner).eq("chain_id", DEFAULT_CHAIN)
 
     if (collectionAddress) nftsQuery = nftsQuery.eq("collection_address", collectionAddress.toLowerCase())
@@ -236,8 +239,8 @@ export class NFTService {
   // ─── private helpers ──────────────────────────────────────────────────────
 
   /**
-   * Mapa token_id → listing activo.
-   * Si filterBySeller=true filtra por seller_wallet (útil en portfolio de usuario).
+   * Map token_id → active listing.
+   * When filterBySeller=true filters by seller_wallet (useful in a user portfolio).
    */
   private static async fetchListingsMap(addressOrSeller: string, tokenIds: string[], filterBySeller = false): Promise<Map<string, any>> {
     if (tokenIds.length === 0) return new Map()
@@ -251,7 +254,7 @@ export class NFTService {
   }
 
   /**
-   * Mapa token_id → bid más alto activo.
+   * Map token_id → highest active bid.
    */
   private static async fetchTopBidsMap(collectionAddress: string | null, tokenIds: string[], collectionAddresses?: Address[]): Promise<Map<string, any>> {
     if (tokenIds.length === 0) return new Map()
@@ -269,7 +272,7 @@ export class NFTService {
 
     const { data } = await q
 
-    // Mantener solo el bid más alto por token
+    // Keep only the highest bid per token
     const map = new Map<string, any>()
     data?.forEach((bid) => {
       const existing = map.get(String(bid.token_id))
@@ -281,7 +284,7 @@ export class NFTService {
   }
 
   /**
-   * Mapa collection_address → collection bid más alto activo.
+   * Map collection_address → highest active collection bid.
    */
   private static async fetchTopCollectionBidsMap(collectionAddresses: Address[]): Promise<Map<string, any>> {
     if (collectionAddresses.length === 0) return new Map()
@@ -304,8 +307,8 @@ export class NFTService {
   }
 
   /**
-   * Mapa contract_address → collection.
-   * Resuelve el doble roundtrip: va directamente a collections con las direcciones.
+   * Map contract_address → collection.
+   * Avoids the double roundtrip: queries collections directly by address.
    */
   private static async fetchCollectionsMap(collectionAddresses: Address[]): Promise<Map<string, any>> {
     if (collectionAddresses.length === 0) return new Map()

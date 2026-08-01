@@ -1,5 +1,6 @@
 // types/user.types.ts
 import { Address } from "viem";
+import { Tables } from "@/lib/supabase/types";
 
 export interface Collection {
   id: string;
@@ -46,7 +47,7 @@ export interface UserNFT {
   chain_id: number;
   name: string | null;
   description: string | null;
-  image: string | null;
+  image_url: string | null;
   metadata: any;
   attributes: any;
   created_at: string | null;
@@ -132,3 +133,30 @@ export interface UserData {
   activity: Activity[];
   hasMore: boolean;
 }
+
+/** Token metadata as hydrated from the `nfts.metadata` JSONB column. */
+export interface NFTMetadata {
+  name?: string;
+  image?: string;
+  description?: string;
+  attributes?: Array<{ trait_type: string; value: string | number }>;
+}
+
+/**
+ * Shape returned by `NFTService.getNFTDetail`: the `nfts` row plus its
+ * active listing, token bids, parent collection and activity history.
+ */
+export type NFTDetail = Omit<Tables<"nfts">, "metadata" | "collection_address"> & {
+  collection_address: Address;
+  metadata?: NFTMetadata | null;
+  /** Optional display name for the owner (not part of the DB row). */
+  ownerName?: string;
+  /** Active listing for this token (if any). */
+  listing?: UserListing | null;
+  /** Active token bids, highest first. */
+  bids?: UserTokenBid[];
+  /** Parent collection row. */
+  collection?: Tables<"collections"> | null;
+  /** Activity rows for this token, newest first. */
+  history?: Tables<"activity">[];
+};

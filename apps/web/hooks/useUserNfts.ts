@@ -31,14 +31,14 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
   const { listTokensBatch, delistBatch, approveBatch, clearBatch } = batchOps
   const { addTx, removeTx, updateTx } = useTx()
 
-  // Obtener direcciones de colecciones únicas
+  // Collect the unique collection addresses
   const uniqueCollections = useMemo(() => {
     const addresses = new Set<string>()
     nfts.forEach((nft) => addresses.add(nft.collection_address.toLowerCase()))
     return Array.from(addresses)
   }, [nfts])
 
-  // Verificar aprobaciones para cada colección
+  // Check approvals for each collection
   const { data: approvals } = useReadContracts({
     contracts: uniqueCollections.map((collectionAddress) => ({
       address: collectionAddress as Address,
@@ -51,7 +51,7 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
     },
   })
 
-  // Actualizar mapa de aprobaciones
+  // Update the approvals map
   useEffect(() => {
     if (!approvals) return
 
@@ -64,7 +64,7 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
     setApprovalMap(newApprovalMap)
   }, [approvals, uniqueCollections])
 
-  // Verificar si todas las colecciones necesarias están aprobadas
+  // Check that every collection in the approve batch is approved
   const allApproved = useMemo(() => {
     const collectionsToApprove = new Set(approveBatch.map((item: any) => item.toLowerCase()))
     for (const collection of collectionsToApprove) {
@@ -75,7 +75,7 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
     return true
   }, [approveBatch, approvalMap])
 
-  // Handler para delist
+  // Handler for delisting
   const handleDelist = async () => {
     const items = delistBatch
     if (!items.length) return
@@ -109,9 +109,9 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
     }
   }
 
-  // Handler para approve collection
+  // Handler for approving a collection
   const approveCollection = async (collectionAddress: Address) => {
-    // Implementar lógica de approve
+    // Approve the marketplace to transfer all tokens of this collection.
     let txHash = ""
     try {
       const txHash = await writeContractAsync({

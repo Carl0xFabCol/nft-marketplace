@@ -101,9 +101,11 @@ export default function UserDashboard({ userAddress, initialData }: UserDashboar
                     />
                   )}
                   {currentView === "colBids" && (
-                    <UserCollectionBids collections={initialData.collections} collectionBids={initialData.collectionBids} batchOps={batchOps} />
+                    <UserCollectionBids collections={initialData.collections} collectionBids={initialData.collectionBids} batchOps={batchOps} userAddress={userAddress} />
                   )}
-                  {currentView === "tokenBids" && <UserTokenBids collections={initialData.collections} tokenBids={initialData.tokenBids} selectedCollection={selectedCollection} batchOps={batchOps} />}
+                  {currentView === "tokenBids" && (
+                    <UserTokenBids collections={initialData.collections} tokenBids={initialData.tokenBids} selectedCollection={selectedCollection} batchOps={batchOps} userAddress={userAddress} />
+                  )}
                   {currentView === "history" && <UserHistory activity={initialData.activity} />}
                 </motion.div>
               </AnimatePresence>

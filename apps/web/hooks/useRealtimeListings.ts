@@ -1,21 +1,18 @@
 "use client"
 
-import { supabase } from "@/lib/supabase/client"
-import { useEffect, useRef } from "react"
 import { Address } from "viem"
+import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserListing, RealtimeListingRow } from "@/lib/listingMerge"
 import { UserListing } from "@/types/user.types"
 
 // hooks/useRealtimeListings.ts
 //
-// Backbone of the listing state propagation. Subscribes to Supabase Realtime
-// `postgres_changes` on the `listings` table, filtered to the page owner's
-// listings, and forwards every DB write (optimistic insert, indexer
-// confirmation, price update, delist, sale) to the caller. This is the only
-// mechanism that reflects *indexer* writes without polling.
-//
-// Callbacks are held in refs so the subscription is created once per address
-// instead of being torn down/recreated on every `nfts` change.
+// Listings-specific wrapper over the generic `useRealtimeTable` backbone.
+// Subscribes to `postgres_changes` on the `listings` table, filtered to the
+// page owner's listings, and forwards every DB write (optimistic insert,
+// indexer confirmation, price update, delist, sale) to the caller. Kept for
+// the two existing callers (user portfolio + collection page) so they don't
+// have to think about the generic payload shape.
 
 export interface UseRealtimeListingsOptions {
   /** Filter by seller wallet — the user portfolio page. */
@@ -29,50 +26,28 @@ export interface UseRealtimeListingsOptions {
 }
 
 export function useRealtimeListings({ userAddress, collectionAddress, onUpsert, onDeactivate }: UseRealtimeListingsOptions) {
-  const onUpsertRef = useRef(onUpsert)
-  const onDeactivateRef = useRef(onDeactivate)
+  const filter = collectionAddress
+    ? `collection_address=eq.${collectionAddress.toLowerCase()}`
+    : userAddress
+      ? `seller_wallet=eq.${userAddress.toLowerCase()}`
+      : null
 
-  useEffect(() => {
-    onUpsertRef.current = onUpsert
-    onDeactivateRef.current = onDeactivate
-  }, [onUpsert, onDeactivate])
+  useRealtimeTable<RealtimeListingRow>({
+    table: "listings",
+    filter: filter ?? undefined,
+    enabled: Boolean(filter),
+    onChange: (change) => {
+      if (change.eventType === "DELETE") {
+        if (change.old) onDeactivate(toUserListing(change.old))
+        return
+      }
 
-  useEffect(() => {
-    const filter = collectionAddress
-      ? `collection_address=eq.${collectionAddress.toLowerCase()}`
-      : userAddress
-        ? `seller_wallet=eq.${userAddress.toLowerCase()}`
-        : null
-    if (!filter) return
+      const row = change.new
+      if (!row) return
 
-    const channel = supabase
-      .channel(`realtime-listings-${filter.replace(/[^a-z0-9]/gi, "")}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "listings",
-          filter,
-        },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            if (payload.old) onDeactivateRef.current(toUserListing(payload.old as RealtimeListingRow))
-            return
-          }
-
-          const row = payload.new as RealtimeListingRow | undefined
-          if (!row) return
-
-          const listing = toUserListing(row)
-          if (row.is_active) onUpsertRef.current(listing)
-          else onDeactivateRef.current(listing)
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [userAddress, collectionAddress])
+      const listing = toUserListing(row)
+      if (row.is_active) onUpsert(listing)
+      else onDeactivate(listing)
+    },
+  })
 }

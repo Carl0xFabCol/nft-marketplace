@@ -2,7 +2,7 @@
 "use server"
 
 import { Address } from "viem"
-import { getServerSupabase } from "@/lib/supabase/server"
+import { requireWalletMatch } from "@/lib/supabase/auth"
 import { revalidatePath } from "next/cache"
 
 export interface BatchListingData {
@@ -17,23 +17,8 @@ export interface BatchListingData {
 
 export async function saveBatchListingToDB(data: BatchListingData) {
   try {
-    const supabase = await getServerSupabase()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      throw new Error("Unauthorized")
-    }
-
-    const { data: profile, error: profileError } = await supabase.from("profiles").select("wallet").eq("id", user.id).single()
-    console.log("DEBUG profile:", { profile, profileError, userId: user.id, seller: data.seller })
-
-    if (!profile || profile.wallet?.toLowerCase() !== data.seller.toLowerCase()) {
-      throw new Error("Forbidden: Wallet mismatch")
-    }
+    // The caller must own the wallet that appears as seller on the rows.
+    const supabase = await requireWalletMatch(data.seller)
 
     const rows = data.tokenIds.map((tokenId, index) => {
       const rawExpire = data.expiresAts?.[index]

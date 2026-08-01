@@ -14,8 +14,8 @@ const DEFAULT_CHAIN = DEFAULT_CHAIN_ID
 
 export class CollectionService {
   /**
-   * Colecciones con paginación.
-   * Resuelve el N+1 de nft_count con un COUNT agregado en una sola query.
+   * Collections with pagination.
+   * Resolves the nft_count N+1 with an aggregated COUNT in a single query.
    */
   static async getCollections(
     supabase: SupabaseClient,
@@ -68,7 +68,7 @@ export class CollectionService {
   }
 
   /**
-   * Top N colecciones por volumen.
+   * Top N collections by volume.
    */
   static async getTopCollectionsByVolume(supabase: SupabaseClient, limit = 10, chainId = DEFAULT_CHAIN) {
     const { data, error } = await supabase
@@ -88,8 +88,8 @@ export class CollectionService {
   }
 
   /**
-   * Colecciones con top bid incluido.
-   * Resuelve el N+1 trayendo todos los top bids en una sola query.
+   * Collections with their top bid included.
+   * Resolves the N+1 by fetching all top bids in a single query.
    */
   static async getCollectionsWithTopBids(supabase: SupabaseClient, options?: { page?: number; limit?: number; chainId?: number }) {
     const { page = 1, limit = 20, chainId = DEFAULT_CHAIN } = options || {}
@@ -104,7 +104,7 @@ export class CollectionService {
 
     const addresses = collectionsResult.collections.map((c: any) => c.contract_address.toLowerCase())
 
-    // Un solo fetch para todos los top bids
+    // Single fetch for all top bids
     const { data: bids } = await supabase
       .from("collection_bids")
       .select("collection_address, price, bidder_wallet, created_at")
@@ -112,7 +112,7 @@ export class CollectionService {
       .in("collection_address", addresses)
       .order("price", { ascending: false })
 
-    // Construir mapa: solo el bid más alto por colección
+    // Build a map: only the highest bid per collection
     const topBidMap = new Map<string, any>()
     bids?.forEach((bid) => {
       if (!topBidMap.has(String(bid.collection_address))) {
@@ -132,7 +132,7 @@ export class CollectionService {
   }
 
   /**
-   * Top 5 colecciones por volumen en las últimas 24h.
+   * Top 5 collections by volume in the last 24h.
    */
   static async getTopCollectionsByVolume24h(supabase: SupabaseClient, chainId = DEFAULT_CHAIN) {
     try {

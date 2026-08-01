@@ -9,15 +9,20 @@ import { Collection, UserTokenBid } from "@/types/user.types"
 import Link from "next/link"
 import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 import { useCancelTokenBid, useCancelTokenBidBatch } from "@/hooks/useBidActions"
+import { useRealtimeTable } from "@/hooks/useRealtimeTable"
+import { toUserTokenBid, upsertTokenBid, deactivateTokenBid } from "@/lib/bidMerge"
 
 interface UserTokenBidsProps {
   tokenBids: UserTokenBid[]
   selectedCollection: Address | ""
   collections: Collection[]
   batchOps: UseBatchOperationsReturn
+  /** Page owner — used for the realtime subscription filter. */
+  userAddress: Address
 }
 
-export default function UserTokenBids({ tokenBids, selectedCollection, batchOps, collections }: UserTokenBidsProps) {
+export default function UserTokenBids({ tokenBids, selectedCollection, batchOps, collections, userAddress }: UserTokenBidsProps) {
+  const [bids, setBids] = useState(tokenBids)
   const [sortedBids, setSortedBids] = useState(tokenBids)
   const { addTx, removeTx, updateTx } = useTx()
   const publicClient = usePublicClient()
@@ -27,15 +32,38 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
   const { cancelTokenBid } = useCancelTokenBid()
   const { cancelTokenBids } = useCancelTokenBidBatch()
 
+  // Sync when the server re-delivers a fresh list (e.g. router.refresh()).
   useEffect(() => {
-    if (tokenBids && address) {
-      let _tokenBids = tokenBids.filter((b) => String(b.bidder_wallet).toLowerCase() === String(address).toLowerCase())
+    setBids(tokenBids)
+  }, [tokenBids])
+
+  // Live bid updates: new/updated/cancelled rows from the indexer arrive here
+  // without a reload, so the "my bids" view reflects the DB as it changes.
+  useRealtimeTable<UserTokenBid>({
+    table: "token_bids",
+    filter: `bidder_wallet=eq.${userAddress.toLowerCase()}`,
+    onChange: (change) => {
+      if (change.eventType === "DELETE") {
+        const old = change.old
+        if (old) setBids((prev) => deactivateTokenBid(prev, toUserTokenBid(old)))
+        return
+      }
+      const row = change.new
+      if (!row) return
+      const bid = toUserTokenBid(row)
+      setBids((prev) => (bid.is_active === false ? deactivateTokenBid(prev, bid) : upsertTokenBid(prev, bid)))
+    },
+  })
+
+  useEffect(() => {
+    if (bids && address) {
+      let _tokenBids = bids.filter((b) => String(b.bidder_wallet).toLowerCase() === String(address).toLowerCase())
       if (selectedCollection) {
         _tokenBids = _tokenBids.filter((b) => String(b.collection_address).toLowerCase() === String(selectedCollection).toLowerCase())
       }
       setSortedBids([..._tokenBids].sort((a, b) => Number(b.price) - Number(a.price)))
     }
-  }, [tokenBids, address, selectedCollection])
+  }, [bids, address, selectedCollection])
 
   const handleCancelBids = async () => {
     if (!cancelTokenBidBatch.length) return
@@ -121,7 +149,7 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
                 </div>
               )
             })}
-          {!tokenBids.length && (
+          {!bids.length && (
             <div className=" flex flex-col items-center justify-center gap-2 p-4">
               <FaInbox className="text-3xl" />
               <p>No token bids found </p>

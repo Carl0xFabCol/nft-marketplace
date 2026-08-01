@@ -7,32 +7,61 @@ import { useEffect, useState } from "react"
 import { FaEthereum, FaInbox } from "react-icons/fa"
 import { useTx } from "@/app/context/TxContext"
 import { usePublicClient } from "wagmi"
+import { Address } from "viem"
 import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
+import { useRealtimeTable } from "@/hooks/useRealtimeTable"
+import { toUserCollectionBid, upsertCollectionBid, deactivateCollectionBid } from "@/lib/bidMerge"
 
 interface UserCollectionBidsProps {
   collectionBids: UserCollectionBid[]
   collections: Collection[]
   batchOps: UseBatchOperationsReturn
+  /** Page owner — used for the realtime subscription filter. */
+  userAddress: Address
 }
 
-export default function UserCollectionBids({ collectionBids, collections, batchOps }: UserCollectionBidsProps) {
+export default function UserCollectionBids({ collectionBids, collections, batchOps, userAddress }: UserCollectionBidsProps) {
+  const [bids, setBids] = useState<UserCollectionBid[]>(collectionBids)
   const [totalSize, setTotalSize] = useState<number>(0)
-  const [sorted, setSorted] = useState<any[]>([])
+  const [sorted, setSorted] = useState<UserCollectionBid[]>([])
   const publicClient = usePublicClient()
   const { cancelCollectionBidBatch, addToBatch, removeFromBatch, isInBatch } = batchOps
   const { cancelCollectionBid } = useCancelCollectionBid()
   const { addTx, removeTx, updateTx } = useTx()
 
+  // Sync when the server re-delivers a fresh list (e.g. router.refresh()).
   useEffect(() => {
-    if (collectionBids) {
-      setSorted([...collectionBids].sort((a, b) => Number(a.price) - Number(b.price)))
+    setBids(collectionBids)
+  }, [collectionBids])
+
+  // Live bid updates: new/updated/cancelled rows from the indexer arrive here
+  // without a reload, so the "my bids" view reflects the DB as it changes.
+  useRealtimeTable<UserCollectionBid>({
+    table: "collection_bids",
+    filter: `bidder_wallet=eq.${userAddress.toLowerCase()}`,
+    onChange: (change) => {
+      if (change.eventType === "DELETE") {
+        const old = change.old
+        if (old) setBids((prev) => deactivateCollectionBid(prev, toUserCollectionBid(old)))
+        return
+      }
+      const row = change.new
+      if (!row) return
+      const bid = toUserCollectionBid(row)
+      setBids((prev) => (bid.is_active === false ? deactivateCollectionBid(prev, bid) : upsertCollectionBid(prev, bid)))
+    },
+  })
+
+  useEffect(() => {
+    if (bids) {
+      setSorted([...bids].sort((a, b) => Number(a.price) - Number(b.price)))
       setTotalSize(
-        collectionBids.reduce((sum, bid) => {
+        bids.reduce((sum, bid) => {
           return (sum += Number(bid.price))
         }, 0),
       )
     }
-  }, [collectionBids])
+  }, [bids])
 
   const handleCancelCollectionBids = async () => {
     const collectionAddresses = cancelCollectionBidBatch.map((i: any) => i.collection_address)
@@ -134,7 +163,7 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
               </div>
             )
           })}
-          {!sorted.length && (
+          {!bids.length && (
             <div className=" flex flex-col items-center justify-center gap-2 p-4">
               <FaInbox className="text-3xl" />
               <p>No collection bids found </p>

@@ -1,16 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { FaEthereum, FaHeart, FaShareAlt } from "react-icons/fa"
 import { NFTHistory } from "./NftHistory"
 import { NFTProperties } from "./NftProperties"
 import { NFTActions } from "./NftActions"
 import NFTBids from "./NftBids"
 import { useConnection } from "wagmi"
 import { explorerAddressUrl } from "@/lib/chains"
+import { NFTDetail as NFTDetailData } from "@/types/user.types"
 
 interface NFTDetailProps {
-  nft: any
+  nft: NFTDetailData
 }
 
 export default function NFTDetail({ nft }: NFTDetailProps) {
@@ -33,10 +33,10 @@ export default function NFTDetail({ nft }: NFTDetailProps) {
         rounded-2xl overflow-hidden border border-(--text)/20 aspect-square h-min
       `}
       >
-        <img src={nft.image_url || "/placeholder-nft.png"} alt={nft.name} className="w-full aspect-square object-cover" />
+        <img src={nft.image_url || "/placeholder-nft.png"} alt={nft.name ?? "NFT"} className="w-full aspect-square object-cover" />
       </div>
 
-      {/* Detalles del NFT */}
+      {/* NFT details */}
       <div
         className={`
         lg:w-1/2
@@ -45,7 +45,7 @@ export default function NFTDetail({ nft }: NFTDetailProps) {
       >
         {/* Header */}
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold">{nft.metadata.name}</h1>
+          <h1 className="text-3xl font-bold">{nft.metadata?.name || nft.name || `NFT #${nft.token_id}`}</h1>
         </div>
 
         {/* Owner */}
@@ -108,7 +108,7 @@ export default function NFTDetail({ nft }: NFTDetailProps) {
           )}
           {activeTab === "properties" && <NFTProperties nft={nft} />}
 
-          {activeTab === "bids" && <NFTBids bids={nft.bids} owner={address?.toLowerCase() == nft.owner_wallet} />}
+          {activeTab === "bids" && <NFTBids bids={nft.bids ?? []} owner={address?.toLowerCase() == nft.owner_wallet} collectionAddress={nft.collection_address} tokenId={nft.token_id} />}
           {activeTab === "history" && <NFTHistory nft={nft} />}
         </div>
       </div>

@@ -15,7 +15,7 @@ export function TopCollectionsSlider({ collections }: TopCollectionsSliderProps)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [imagesError, setImagesError] = useState<Record<string, boolean>>({})
 
-  const itemsPerView = 1 // Número de colecciones visibles por slide
+  const itemsPerView = 1 // Number of collections visible per slide
 
   const handleImageError = (contractAddress: string) => {
     setImagesError((prev) => ({ ...prev, [contractAddress]: true }))

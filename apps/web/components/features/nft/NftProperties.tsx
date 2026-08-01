@@ -1,17 +1,10 @@
 "use client"
 import { FaTag } from "react-icons/fa"
+import { NFTMetadata } from "@/types/user.types"
 
 interface NFTPropertiesProps {
   nft: {
-    metadata?: {
-      attributes?: Array<{
-        trait_type: string
-        value: string | number
-      }>
-    }
-    collection?: {
-      total_supply?: number
-    }
+    metadata?: NFTMetadata | null
   }
 }
 

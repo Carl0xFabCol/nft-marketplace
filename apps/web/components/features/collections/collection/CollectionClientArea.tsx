@@ -63,7 +63,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     onDeactivate: handleDeactivateListing,
   })
 
-  // Usamos useAccount en lugar de useConnection (hook correcto de wagmi v2)
+  // Use useAccount instead of useConnection (the correct wagmi v2 hook)
   const { address } = useAccount()
   const abortControllerRef = useRef<AbortController | null>(null)
   const observerRef = useRef<HTMLDivElement | null>(null)
@@ -77,12 +77,12 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     functionName: "name",
   })
 
-  // floor_price viene del servidor — solo se recalcula si los filtros cambian
-  // y el servidor ya no tiene el dato actualizado (edge case). Para el caso
-  // normal, usamos el valor de DB que el trigger mantiene al día.
+  // floor_price comes from the server — only recompute when filters change and
+  // the server doesn't have the updated value yet (edge case). For the normal
+  // case we use the DB value that the trigger keeps up to date.
   const floorPrice = useMemo(() => {
-    // Si hay NFTs cargados con listings, calculamos desde ellos para reflejar
-    // el estado actual de la página (puede diferir si se hizo una venta reciente)
+    // If NFTs are loaded with listings, compute from them to reflect the
+    // current page state (may differ right after a recent sale).
     const prices = nfts.map((nft: any) => (nft.active_listing?.price ? BigInt(nft.active_listing.price) : null)).filter((p): p is bigint => p !== null)
 
     if (!prices.length) return BigInt(initialFloorPrice)
@@ -97,8 +97,8 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     [address, batchOps],
   )
 
-  // Carga de primera página — solo cuando cambian los filtros, NO en el mount inicial
-  // porque initialNftsData ya viene con la primera página desde el servidor.
+  // First page load — only when filters change, NOT on the initial mount,
+  // because initialNftsData already carries the first page from the server.
   const loadFirstPage = useCallback(async () => {
     abortControllerRef.current?.abort()
     setIsLoading(true)
@@ -123,7 +123,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     }
   }, [colAddress, onlyListed, sortBy, sortDir])
 
-  // Evitar la carga doble en el mount inicial
+  // Avoid the double fetch on the initial mount
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
@@ -166,7 +166,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     }
   }, [colAddress, currentPage, isLoading, hasMore, onlyListed, sortBy, sortDir])
 
-  // Intersection Observer para infinite scroll
+  // Intersection Observer for infinite scroll
   useEffect(() => {
     const el = observerRef.current
     if (!el) return
@@ -182,20 +182,20 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     return () => observer.disconnect()
   }, [loadMore, isLoading, hasMore])
 
-  // Cleanup al desmontar
+  // Cleanup on unmount
   useEffect(() => {
     return () => abortControllerRef.current?.abort()
   }, [])
 
-  // Filtrado local por búsqueda (solo sobre los NFTs ya cargados)
+  // Local search filter (over the NFTs already loaded)
   const filteredNFTs = useMemo(() => {
     if (!searchQuery) return nfts
     const q = searchQuery.toLowerCase()
     return nfts.filter((nft: any) => nft.token_id.toString().includes(q) || nft.metadata?.name?.toLowerCase().includes(q) || nft.collection_address.toLowerCase() === q)
   }, [nfts, searchQuery])
 
-  // Reordenamiento local solo cuando hay búsqueda activa
-  // (sin búsqueda el servidor ya devuelve los datos ordenados)
+  // Local re-sort only when a search is active
+  // (without a search the server already returns sorted data)
   const sortedNFTs = useMemo(() => {
     if (!searchQuery) return filteredNFTs
 
@@ -237,7 +237,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
           ))}
         </div>
 
-        {/* Controles */}
+        {/* Controls */}
         {collectionCard === "items" && (
           <div className="flex w-full justify-between items-center py-2 gap-4">
             <div className="flex gap-4 items-center">
@@ -298,7 +298,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
           </div>
         )}
 
-        {/* Contenido */}
+        {/* Content */}
         {collectionCard === "items" && (
           <div>
             <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4 pb-4">
@@ -328,7 +328,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
           </div>
         )}
 
-        {collectionCard === "bids" && <CollectionBids collectionBids={collectionBids} />}
+        {collectionCard === "bids" && <CollectionBids collectionBids={collectionBids} collectionAddress={colAddress} />}
 
         {collectionCard === "holders" && (
           <div className="py-8 text-center opacity-50">

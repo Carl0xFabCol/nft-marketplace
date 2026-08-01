@@ -7,7 +7,7 @@ import { useState } from "react"
 import { AuthProvider } from "@/components/AuthProvider"
 import { TxProvider } from "./context/TxContext"
 import Header from "@/components/Header"
-import { FaTimes } from "react-icons/fa"
+import { Modal } from "@/components/ui/Modal"
 import { WalletOptions } from "./WalletOptions"
 
 const config = createConfig({
@@ -32,25 +32,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <TxProvider>
             <Header openWalletModal={() => setWalletModal(true)} />
             {walletOptionsCard && (
-              <div
-                id="woc-bg"
-                onClick={(e: any) => {
-                  if (e.target.id == "woc-bg") {
-                    setWalletModal(false)
-                  }
-                }}
-                className="absolute w-full bg-[#0000006b] bottom-0 left-0 h-full flex items-center justify-center z-200"
+              <Modal
+                id="woc"
+                onClose={() => setWalletModal(false)}
+                title="Connect wallet"
+                titleClassName="text-sm"
+                headerClassName="!pb-2"
+                backdropClassName="absolute w-full bg-[#0000006b] bottom-0 left-0 h-full flex items-center justify-center z-200"
+                panelClassName="min-w-[30%] gap-2"
               >
-                <div className="bg-(--bg-secondary) min-w-[30%] gap-2 border border-(--text)/20 rounded-2xl p-4 flex flex-col  ">
-                  <div className="flex w-full items-center justify-between pb-2">
-                    <h2 className="text-sm">Connect wallet</h2>
-                    <button onClick={() => setWalletModal(false)} className="bg-transparent! text-(--text)!">
-                      <FaTimes />
-                    </button>
-                  </div>
+                <div className="p-4">
                   <WalletOptions onConnect={() => setWalletModal(false)} />
                 </div>
-              </div>
+              </Modal>
             )}
             <main className="flex flex-col grow min-h-0 items-center  overflow-scroll">{children}</main>
             <footer className=" bg-(--bg) fixed  bottom-0  w-full flex items-center justify-between border-t border-(--text)/20 text-xs mt-auto text-center z-50">

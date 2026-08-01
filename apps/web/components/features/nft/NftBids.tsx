@@ -1,20 +1,59 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { useTx } from "@/app/context/TxContext"
 import { useAcceptTokenBid } from "@/hooks/useBidActions"
 import Link from "next/link"
 import { FaEthereum, FaExternalLinkAlt, FaGavel } from "react-icons/fa"
-import { useConnection, usePublicClient } from "wagmi"
+import { usePublicClient } from "wagmi"
+import { Address } from "viem"
+import { UserTokenBid } from "@/types/user.types"
+import { useRealtimeTable } from "@/hooks/useRealtimeTable"
+import { toUserTokenBid, upsertTokenBid, deactivateTokenBid } from "@/lib/bidMerge"
 
-export default function NFTBids({ bids, owner }: any) {
+interface NFTBidsProps {
+  bids: UserTokenBid[]
+  owner?: boolean
+  /** Used for the realtime subscription filter. */
+  collectionAddress: Address
+  tokenId: string
+}
+
+export default function NFTBids({ bids, owner = false, collectionAddress, tokenId }: NFTBidsProps) {
+  const [bidList, setBidList] = useState<UserTokenBid[]>(bids)
   const { acceptTokenBid } = useAcceptTokenBid()
   const { addTx, updateTx, removeTx } = useTx()
   const publicClient = usePublicClient()
 
-  const handleAcceptBid = async (bid: any) => {
+  // Sync when the server re-delivers fresh bids (e.g. router.refresh()).
+  useEffect(() => {
+    setBidList(bids)
+  }, [bids])
+
+  // Live bid updates: a new offer on this token appears instantly; a
+  // cancelled/accepted bid disappears without a reload.
+  useRealtimeTable<UserTokenBid>({
+    table: "token_bids",
+    filter: `and=(collection_address.eq.${collectionAddress.toLowerCase()},token_id.eq.${tokenId})`,
+    onChange: (change) => {
+      if (change.eventType === "DELETE") {
+        const old = change.old
+        if (old) setBidList((prev) => deactivateTokenBid(prev, toUserTokenBid(old)))
+        return
+      }
+      const row = change.new
+      if (!row) return
+      const bid = toUserTokenBid(row)
+      setBidList((prev) => (bid.is_active === false ? deactivateTokenBid(prev, bid) : upsertTokenBid(prev, bid)))
+    },
+  })
+
+  const handleAcceptBid = async (bid: UserTokenBid) => {
     let hash: any
     try {
       // Signature is acceptTokenBid(collection, tokenId, bidder) — tokenId must
       // be the token id, not the bidder address.
-      hash = await acceptTokenBid(bid.collection_address, Number(bid.token_id), bid.bidder_wallet)
+      hash = await acceptTokenBid(bid.collection_address as Address, Number(bid.token_id), bid.bidder_wallet as Address)
       addTx({ hash, label: "Accepting token bid", status: "loading" })
       await publicClient?.waitForTransactionReceipt({ hash })
       updateTx(hash, { status: "success" })
@@ -26,7 +65,7 @@ export default function NFTBids({ bids, owner }: any) {
     }
   }
 
-  if (bids.length > 0)
+  if (bidList.length > 0)
     return (
       <div className="flex flex-col gap-2">
         {/* Header */}
@@ -38,9 +77,9 @@ export default function NFTBids({ bids, owner }: any) {
 
         {/* Activity items */}
         <div className="flex flex-col max-h-96 overflow-y-auto">
-          {bids.map((bid: any, index: number) => {
+          {bidList.map((bid: UserTokenBid, index: number) => {
             return (
-              <div key={index} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-(--accent)/5 border-b border-(--text)/10 transition-colors">
+              <div key={bid.id ?? index} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-(--accent)/5 border-b border-(--text)/10 transition-colors">
                 {/* Event type */}
                 <div className="col-span-3 flex items-center gap-2">
                   <span className="font-semibold">{Number(bid.price) / 1e18}</span>
@@ -50,7 +89,7 @@ export default function NFTBids({ bids, owner }: any) {
                 {/* From */}
                 <div className="col-span-3 flex items-center">
                   <Link href={`/user/${bid.bidder_wallet}`} className="font-mono text-sm hover:text-(--accent) transition-colors" onClick={(e) => e.stopPropagation()}>
-                    {bid.bidder_wallet.slice(-7)}
+                    {bid.bidder_wallet?.slice(-7)}
                   </Link>
                 </div>
 

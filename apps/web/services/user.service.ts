@@ -1,4 +1,4 @@
-// services/listing.service.ts
+// services/user.service.ts
 import { SupabaseClient } from "@supabase/supabase-js"
 import { Address } from "viem"
 
@@ -40,7 +40,7 @@ export class UserService {
   }
 
   /**
-   * NFTs del usuario con paginación — delega en NFTService para evitar duplicación.
+   * User NFTs with pagination — delegates to NFTService to avoid duplication.
    */
   static async getUserNFTsPaginated(
     supabase: SupabaseClient,
@@ -54,13 +54,13 @@ export class UserService {
       sortDir?: "asc" | "desc"
     },
   ) {
-    // Importar aquí evita dependencia circular si los servicios están en el mismo bundle
+    // Import here to avoid a circular dependency when services share a bundle
     const { NFTService } = await import("./nft.service")
     return NFTService.getNFTsByOwner(userAddress, options)
   }
 
   /**
-   * Listings activos del usuario.
+   * The user's active listings.
    */
   static async getUserListings(supabase: SupabaseClient, userAddress: Address): Promise<UserListing[]> {
     const { data, error } = await supabase.from("listings").select("*").eq("seller_wallet", userAddress.toLowerCase()).eq("is_active", true).order("created_at", { ascending: false })
@@ -70,7 +70,7 @@ export class UserService {
   }
 
   /**
-   * Collection bids activos del usuario.
+   * The user's active collection bids.
    */
   static async getUserCollectionBids(supabase: SupabaseClient, userAddress: Address): Promise<UserCollectionBid[]> {
     const { data, error } = await supabase.from("collection_bids").select("*").eq("bidder_wallet", userAddress.toLowerCase()).eq("is_active", true).order("created_at", { ascending: false })
@@ -80,7 +80,7 @@ export class UserService {
   }
 
   /**
-   * Token bids activos del usuario.
+   * The user's active token bids.
    */
   static async getUserTokenBids(supabase: SupabaseClient, userAddress: Address): Promise<UserTokenBid[]> {
     const { data, error } = await supabase.from("token_bids").select("*").eq("bidder_wallet", userAddress.toLowerCase()).eq("is_active", true).order("created_at", { ascending: false })
@@ -90,7 +90,7 @@ export class UserService {
   }
 
   /**
-   * Colecciones relacionadas con el usuario (NFTs owned, bids placed).
+   * Collections related to the user (owned NFTs, placed bids).
    */
   static async getUserCollections(supabase: SupabaseClient, userAddress: Address): Promise<any[]> {
     const addr = userAddress.toLowerCase()
@@ -157,7 +157,7 @@ export class UserService {
   }
 
   /**
-   * Actividad del usuario.
+   * The user's activity.
    */
   static async getUserActivity(
     supabase: SupabaseClient,

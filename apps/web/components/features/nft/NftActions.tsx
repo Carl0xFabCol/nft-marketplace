@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Address } from "viem"
 import { useAccount } from "wagmi"
 import { useRouter } from "next/navigation"
 import { FaEthereum, FaShoppingCart, FaGavel, FaTag, FaTimes } from "react-icons/fa"
@@ -12,22 +11,10 @@ import { useBidToken, useBidTokenBatch } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { BidCard } from "../collections/collection/BidCard"
 import { useBatchOperations } from "@/hooks/useBatchOperations"
-import { UserNFT } from "@/types/user.types"
+import { NFTDetail, UserNFT } from "@/types/user.types"
 
 interface NFTActionsProps {
-  nft: UserNFT & {
-    listing?: {
-      id: string
-      price: string
-      seller_wallet: Address
-      is_active: boolean
-      expires_at?: string
-    }
-    collection?: {
-      name: string
-      royalty_fee?: number
-    }
-  }
+  nft: NFTDetail
 }
 
 export function NFTActions({ nft }: NFTActionsProps) {
@@ -44,9 +31,11 @@ export function NFTActions({ nft }: NFTActionsProps) {
 
   const isOwner = userAddress?.toLowerCase() === nft.owner_wallet.toLowerCase()
   const isListed = Boolean(nft.listing?.is_active)
-  const isSeller = userAddress?.toLowerCase() === nft.listing?.seller_wallet.toLowerCase()
+  const isSeller = userAddress?.toLowerCase() === nft.listing?.seller_wallet?.toLowerCase()
+  // The bid batch stores tokens as UserNFT; NFTDetail is a superset.
+  const nftForBatch = nft as unknown as UserNFT
 
-  // Handler para comprar NFT
+  // Handler for buying the NFT
   const handleBuy = async () => {
     if (!nft.listing || !userAddress) return
 
@@ -88,7 +77,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
 
   const formatDate = (timestamp: any) => {
     const date = new Date(timestamp)
-    return new Intl.DateTimeFormat("es-ES", {
+    return new Intl.DateTimeFormat("en-US", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -98,7 +87,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
     }).format(date)
   }
 
-  // Handler para cancelar listing
+  // Handler for cancelling the listing
   const handleCancelListing = async () => {
     if (!nft.listing || !userAddress) return
 
@@ -147,7 +136,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
               <span className="text-4xl font-bold">{(Number(nft.listing!.price) / 1e18).toFixed(4)}</span>
             </div>
 
-            {/* Detalles del precio */}
+            {/* Price details */}
             {nft.collection?.royalty_fee && (
               <div className="text-xs opacity-75 mt-2 flex justify-between">
                 <div>Expires at: {formatDate(nft.listing!.expires_at)}</div>
@@ -181,7 +170,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
                 <button
                   onClick={() => {
                     setShowBidModal(true)
-                    addToBatch(nft, "bid")
+                    addToBatch(nftForBatch, "bid")
                   }}
                   className="flex items-center w-full justify-center gap-2 border-2 border-(--accent) text-(--accent) py-4 px-6 rounded-xl font-bold text-lg hover:bg-(--accent) hover:text-(--bg-secondary) transition-all"
                 >
@@ -232,7 +221,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
                   <button
                     onClick={() => {
                       setShowBidModal(true)
-                      addToBatch(nft, "bid")
+                      addToBatch(nftForBatch, "bid")
                     }}
                     className="flex items-center w-full justify-center gap-2 border-2 border-(--accent) text-(--accent) py-2 px-6 rounded-xl font-bold hover:bg-(--accent) hover:text-(--bg-secondary)"
                   >
@@ -323,7 +312,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
             setShowBidModal(false)
             clearBatch("bid")
           }}
-          onRemoveItem={() => removeFromBatch(nft, "bid")}
+          onRemoveItem={() => removeFromBatch(nftForBatch, "bid")}
         />
       )}
     </div>

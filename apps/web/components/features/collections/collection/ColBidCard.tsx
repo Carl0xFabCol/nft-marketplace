@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { FaGavel, FaTimes, FaEthereum } from "react-icons/fa"
+import { FaGavel, FaEthereum } from "react-icons/fa"
 import { useBidCollection } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { usePublicClient } from "wagmi"
 import { Address } from "viem"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
+import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
 
 interface ColBidCardProps {
@@ -82,38 +82,14 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
   const canBid = price && quantity && Number(price) > 0 && Number(quantity) > 0
 
   return (
-    <AnimatePresence>
-      <motion.div
-        id="col-bid-card-bg"
-        onClick={(e: any) => {
-          if (e.target.id === "col-bid-card-bg") {
-            onClose()
-          }
-        }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50"
-      >
-        <motion.div
-          initial={{ opacity: 0, translateY: 50 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          exit={{ opacity: 0, translateY: 50 }}
-          transition={{ duration: 0.2 }}
-          className="flex flex-col card rounded-2xl border border-(--text)/20 min-w-[60%] "
-        >
-          {/* Header */}
-          <div className="p-4 flex justify-between items-center border-b border-(--text)/20">
-            <div className="flex items-center gap-3">
-              <FaGavel className="text-3xl" />
-              <span className="font-bold text-2xl">Place Collection Bid</span>
-            </div>
-            <button onClick={onClose} className="bg-transparent! text-(--text)! hover:opacity-75">
-              <FaTimes className="opacity-75" />
-            </button>
-          </div>
-
+    <Modal
+      id="col-bid-card"
+      onClose={onClose}
+      title="Place Collection Bid"
+      icon={<FaGavel className="text-3xl" />}
+      panelClassName="min-w-[60%]"
+      headerClassName="border-b border-(--text)/20"
+    >
           {/* Table header */}
           <div className="flex justify-between px-6 py-3 border-b border-(--text)/20 font-bold bg-(--bg)/50">
             <div className="flex-1 text-center">
@@ -188,8 +164,6 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
               <span>PLACE BID</span>
             </button>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    </Modal>
   )
 }

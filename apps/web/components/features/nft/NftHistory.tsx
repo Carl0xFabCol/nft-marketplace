@@ -4,20 +4,11 @@ import { Address } from "viem"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { explorerTokenInstanceUrl, explorerTxUrl } from "@/lib/chains"
-
-interface ActivityItem {
-  id: string
-  event: "COLLECTION_BID_CREATED" | "TRANSFER" | "LISTING" | "LISTING_CANCELLED" | "LISTING_SOLD" | "TOKEN_BID" | "TOKEN_BID_CANCELLED" | "COLLECTION_BID" | "COLLECTION_BID_CANCELLED"
-  from: Address
-  to: Address
-  price?: string
-  tx_hash: string
-  created_at: string
-}
+import { Tables } from "@/lib/supabase/types"
 
 interface NFTHistoryProps {
   nft: {
-    history?: ActivityItem[]
+    history?: Tables<"activity">[]
     token_id: string
     collection_address: Address
   }
@@ -26,9 +17,8 @@ interface NFTHistoryProps {
 export function NFTHistory({ nft }: NFTHistoryProps) {
   const history = nft.history || []
 
-  // Función para obtener icono según tipo de actividad.
-  // Los eventos vienen en mayúsculas (p.ej. "SALE", "LISTING_CANCELLED",
-  // "TOKEN_BID_PLACED") — comparar por mayúsculas / subcadenas, no exacto.
+  // Map an activity event to an icon. Events arrive uppercase (e.g. "SALE",
+  // "LISTING_CANCELLED", "TOKEN_BID_PLACED") — compare on uppercase/substrings.
   const getActivityIcon = (type: string) => {
     const t = String(type).toUpperCase()
     if (t === "SALE" || t.includes("BID_ACCEPTED")) return <MdShoppingCart className="text-green-500" />
@@ -39,14 +29,14 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
     return <MdSwapHoriz className="text-gray-500" />
   }
 
-  // Función para formatear label del tipo
+  // Format the event type into a human label ("LISTING_CANCELLED" → "Listing cancelled").
   const getActivityLabel = (type: string) => {
     let formatted = type.replaceAll("_", " ")
     return formatted.charAt(0) + formatted.slice(1).toLowerCase()
   }
 
-  // Función para formatear dirección
-  const formatAddress = (address: Address) => {
+  // Shorten an address for display ("0x1234…abcd").
+  const formatAddress = (address: string | null) => {
     if (!address) return "-"
     return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
@@ -74,7 +64,7 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
       {/* Activity items */}
       <div className="flex flex-col max-h-96 overflow-y-auto">
         {history.map((activity) => {
-          const timeAgo = formatDistanceToNow(new Date(activity.created_at), {
+          const timeAgo = formatDistanceToNow(new Date(activity.created_at ?? ""), {
             addSuffix: true,
           })
 
@@ -82,8 +72,8 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
             <div key={activity.id} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-(--accent)/5 border-b border-(--text)/10 transition-colors">
               {/* Event type */}
               <div className="col-span-3 flex items-center gap-2">
-                <div className="text-xl">{getActivityIcon(activity.event)}</div>
-                <span className="font-semibold">{getActivityLabel(activity.event)}</span>
+                <div className="text-xl">{getActivityIcon(activity.event ?? "")}</div>
+                <span className="font-semibold">{getActivityLabel(activity.event ?? "")}</span>
               </div>
 
               {/* Price */}

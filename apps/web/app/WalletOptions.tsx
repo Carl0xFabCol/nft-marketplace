@@ -27,7 +27,7 @@ export function WalletOptions({ onConnect }: Props) {
           <div className="flex flex-1 items-center justify-center">
             {connector.name == "Injected" && <LuWallet />}
             {connector.name == "Rabby Wallet" && <img src={"https://raw.githubusercontent.com/RabbyHub/logo/refs/heads/master/symbol.png"} className="w-8 " />}
-            {connector.name == "Cartera Brave" && <img src={"https://avatars.githubusercontent.com/u/12301619?s=200&v=4"} className="w-8 p-1 " />}
+            {connector.name == "Brave Wallet" && <img src={"https://avatars.githubusercontent.com/u/12301619?s=200&v=4"} className="w-8 p-1 " />}
             {connector.name == "Phantom" && (
               <div className="rounded-full overflow-hidden flex items-center justify-center w-8 h-8">
                 <Image src="/phantom.png" alt="Phantom" width="20" height="20" />

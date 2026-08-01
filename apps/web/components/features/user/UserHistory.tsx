@@ -31,7 +31,7 @@ function eventLabel(event: string) {
   return event.replace(/_/g, " ")
 }
 
-const dateFormatter = new Intl.DateTimeFormat("es-ES", {
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "2-digit",
   month: "2-digit",
   year: "numeric",

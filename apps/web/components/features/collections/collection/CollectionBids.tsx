@@ -4,27 +4,57 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FaEthereum, FaInbox } from "react-icons/fa"
 import { useAccount } from "wagmi"
+import { Address } from "viem"
 import { UserCollectionBid } from "@/types/user.types"
+import { useRealtimeTable } from "@/hooks/useRealtimeTable"
+import { toUserCollectionBid, upsertCollectionBid, deactivateCollectionBid } from "@/lib/bidMerge"
 
 interface CollectionBidsProps {
   collectionBids: UserCollectionBid[]
   allBids?: boolean
+  /** Used for the realtime subscription filter. */
+  collectionAddress: Address
 }
 
-export default function CollectionBids({ collectionBids, allBids = true }: CollectionBidsProps) {
+export default function CollectionBids({ collectionBids, allBids = true, collectionAddress }: CollectionBidsProps) {
+  const [bids, setBids] = useState<UserCollectionBid[]>(collectionBids)
   const [totalSize, setTotalSize] = useState<number>(0)
   const [sorted, setSorted] = useState<UserCollectionBid[]>([])
   const { address } = useAccount()
+
+  // Sync when the server re-delivers fresh bids (e.g. router.refresh()).
   useEffect(() => {
-    if (!collectionBids) return
-    const _collectionBids = allBids ? collectionBids : collectionBids.filter((bid) => String(bid.bidder_wallet).toLowerCase() === String(address).toLowerCase())
+    setBids(collectionBids)
+  }, [collectionBids])
+
+  // Live bid updates: a new collection bid shows up instantly; a cancelled one
+  // disappears without a reload.
+  useRealtimeTable<UserCollectionBid>({
+    table: "collection_bids",
+    filter: `collection_address=eq.${collectionAddress.toLowerCase()}`,
+    onChange: (change) => {
+      if (change.eventType === "DELETE") {
+        const old = change.old
+        if (old) setBids((prev) => deactivateCollectionBid(prev, toUserCollectionBid(old)))
+        return
+      }
+      const row = change.new
+      if (!row) return
+      const bid = toUserCollectionBid(row)
+      setBids((prev) => (bid.is_active === false ? deactivateCollectionBid(prev, bid) : upsertCollectionBid(prev, bid)))
+    },
+  })
+
+  useEffect(() => {
+    if (!bids) return
+    const _collectionBids = allBids ? bids : bids.filter((bid) => String(bid.bidder_wallet).toLowerCase() === String(address).toLowerCase())
     setTotalSize(
       _collectionBids.reduce((size, bid) => {
         return size + Number(bid.quantity)
       }, 0),
     )
     setSorted([..._collectionBids].sort((a, b) => Number(b.price) - Number(a.price)))
-  }, [collectionBids, allBids, address])
+  }, [bids, allBids, address])
 
   return (
     <div className="w-full flex pb-4 ">

@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { motion } from "framer-motion"
 import { Address, erc721Abi, parseEther } from "viem"
 import { useConnection, useWriteContract, useReadContracts, usePublicClient } from "wagmi"
-import { FaEthereum, FaTrash, FaTimes } from "react-icons/fa"
+import { FaEthereum, FaTrash } from "react-icons/fa"
 import { MdOutlineLocalOffer } from "react-icons/md"
 import { RiNftFill } from "react-icons/ri"
 import { MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
@@ -17,6 +16,7 @@ import { useTx } from "@/app/context/TxContext"
 import { saveBatchListingToDB } from "@/actions/listings/createBatch"
 import { failListingsByTxHash } from "@/actions/listings/failBatch"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
+import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
 import { useAuth } from "@/components/AuthProvider"
 
@@ -248,37 +248,14 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
   const canList = listItems.some((item) => item.price && item.price > BigInt(0))
 
   return (
-    <motion.div
-      onClick={(e: any) => {
-        if (e.target.id === "list-card-bg") {
-          onClose()
-        }
-      }}
-      id="list-card-bg"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="fixed bg-black/50 justify-center items-center flex backdrop-blur-sm pt-10 h-full w-full left-0 top-0 z-50"
+    <Modal
+      id="list-card"
+      onClose={onClose}
+      title="List items"
+      icon={<MdOutlineLocalOffer className="text-3xl" />}
+      panelClassName="min-w-[80%] max-h-[75vh]"
+      backdropClassName="fixed bg-black/50 justify-center items-center flex backdrop-blur-sm pt-10 h-full w-full left-0 top-0 z-50"
     >
-      <motion.div
-        initial={{ opacity: 0, translateY: 100 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        exit={{ opacity: 0, translateY: 100 }}
-        transition={{ duration: 0.2 }}
-        className="flex flex-col rounded-2xl border border-(--text)/20 min-w-[80%] max-h-[75vh] overflow-hidden card"
-      >
-        {/* Header */}
-        <div className="p-4 flex w-full justify-between items-center ">
-          <div className="flex items-center gap-3">
-            <MdOutlineLocalOffer className="text-3xl" />
-            <span className="font-bold text-2xl">List items</span>
-          </div>
-          <button onClick={onClose} className="bg-transparent! text-(--text)! hover:opacity-75">
-            <FaTimes className="opacity-75" />
-          </button>
-        </div>
-
         {/* Table header */}
         <div className="flex w-full justify-between px-6 font-bold  py-3">
           <div className="flex flex-2 gap-2 items-center">
@@ -439,7 +416,6 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
             </div>
           </div>
         </div>
-      </motion.div>
-    </motion.div>
+    </Modal>
   )
 }

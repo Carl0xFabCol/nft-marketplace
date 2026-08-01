@@ -1,13 +1,13 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
-import { FaShoppingCart, FaTimes, FaTrash, FaEthereum } from "react-icons/fa"
+import { FaShoppingCart, FaTrash, FaEthereum } from "react-icons/fa"
 import { RiNftFill } from "react-icons/ri"
 import { useBuy, useBuyBatch } from "@/hooks/useBuyActions"
 import { useTx } from "@/app/context/TxContext"
 import { UserNFT } from "@/types/user.types"
 import { Address } from "viem"
 import { usePublicClient } from "wagmi"
+import { Modal } from "@/components/ui/Modal"
 
 interface BuyCardProps {
   items: UserNFT[]
@@ -76,38 +76,13 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
   }
 
   return (
-    <AnimatePresence>
-      <motion.div
-        id="buy-card-bg"
-        onClick={(e: any) => {
-          if (e.target.id === "buy-card-bg") {
-            onClose()
-          }
-        }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50"
-      >
-        <motion.div
-          initial={{ opacity: 0, translateY: 50 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          exit={{ opacity: 0, translateY: 50 }}
-          transition={{ duration: 0.2 }}
-          className="flex flex-col card rounded-2xl overflow-hidden border border-(--text)/20 min-w-[50%] max-w-[90%] max-h-[80vh]"
-        >
-          {/* Header */}
-          <div className="p-4 flex justify-between items-center ">
-            <div className="flex items-center gap-3">
-              <FaShoppingCart className="text-3xl" />
-              <span className="font-bold text-2xl">Buy items</span>
-            </div>
-            <button onClick={onClose} className="bg-transparent! text-(--text)! hover:opacity-75">
-              <FaTimes className="opacity-75" />
-            </button>
-          </div>
-
+    <Modal
+      id="buy-card"
+      onClose={onClose}
+      title="Buy items"
+      icon={<FaShoppingCart className="text-3xl" />}
+      panelClassName="min-w-[50%] max-w-[90%] max-h-[80vh]"
+    >
           {/* Table header */}
           <div className="flex justify-between px-6 py-3  font-bold ">
             <div className="flex-2">
@@ -172,8 +147,6 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
               <span>{items.length === 1 ? "ITEM" : "ITEMS"}</span>
             </button>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    </Modal>
   )
 }
