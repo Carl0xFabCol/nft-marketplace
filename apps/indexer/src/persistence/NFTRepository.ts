@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Address } from "viem"
 import { logger } from "../utils/logger"
-
+import { CHAIN_IDS } from "@marketplace/shared"
 // ═══════════════════════════════════════════════════════════════════════════════
 // NFT REPOSITORY
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -42,6 +41,32 @@ export class NFTRepository {
 
     if (error) {
       logger.error({ error, collectionAddress: params.collectionAddress, tokenId: params.tokenId }, "❌ Failed to upsert NFT")
+      throw error
+    }
+  }
+
+  async updateOwner(collectionAddress: string, tokenId: string, ownerWallet: string, lastSynced: Date): Promise<void> {
+    const { error } = await this.supabase
+      .from("nfts")
+      .update({
+        owner_wallet: ownerWallet.toLowerCase(),
+        last_synced: lastSynced,
+      })
+      .eq("collection_address", collectionAddress.toLowerCase())
+      .eq("token_id", tokenId)
+      .eq("chain_id", CHAIN_IDS.SEPOLIA)
+
+    if (error) {
+      logger.error(
+        {
+          error,
+          collectionAddress,
+          tokenId,
+          ownerWallet,
+        },
+        "❌ Failed to update NFT owner",
+      )
+
       throw error
     }
   }

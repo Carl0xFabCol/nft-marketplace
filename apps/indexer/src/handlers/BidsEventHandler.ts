@@ -54,6 +54,25 @@ abstract class BaseBidsHandler<TArgs = Record<string, unknown>> implements IEven
   }
 
   /**
+   * Helper: Update NFT owner via repository
+   */
+  protected async updateNFTOwner(collectionAddress: string, tokenId: string, ownerWallet: string, timestamp: number): Promise<void> {
+    try {
+      await this.nftRepo.updateOwner(collectionAddress, tokenId, ownerWallet, new Date(timestamp * 1000))
+    } catch (error) {
+      logger.warn(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          collectionAddress,
+          tokenId,
+          ownerWallet,
+        },
+        "⚠️ NFT owner update failed, continuing...",
+      )
+    }
+  }
+
+  /**
    * Helper: Upsert NFT with metadata via repository
    */
   protected async upsertNFT(collectionAddress: string, tokenId: string, ownerWallet: string, timestamp: number): Promise<void> {
@@ -182,8 +201,7 @@ export class CollectionBidAcceptedHandler extends BaseBidsHandler<CollectionBidA
 
     // Update NFT owners for all tokens
     for (const tokenId of tokenIds) {
-      await this.upsertNFT(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), event.blockTimestamp)
-
+      await this.updateNFTOwner(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), event.blockTimestamp)
       // Cancel any active listings for this token
       await this.listingsRepo.deactivate(`${collection.toLowerCase()}-${tokenId}`, new Date(event.blockTimestamp * 1000))
     }
@@ -329,8 +347,7 @@ export class TokenBidAcceptedHandler extends BaseBidsHandler<TokenBidAcceptedArg
     await this.listingsRepo.deactivate(`${collection.toLowerCase()}-${tokenId}`, new Date(event.blockTimestamp * 1000))
 
     // Update NFT owner
-    await this.upsertNFT(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), event.blockTimestamp)
-
+    await this.updateNFTOwner(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), event.blockTimestamp)
     await this.insertActivity({
       event: "TOKEN_BID_ACCEPTED",
       collectionAddress: String(collection).toLowerCase(),
