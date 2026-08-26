@@ -32,13 +32,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
   const { acceptTokenBid } = useAcceptTokenBid()
   const { addTx, removeTx, updateTx } = useTx()
   const handleNFTClick = (nft: NftCardToken, e: React.MouseEvent) => {
-    const target = e.target as HTMLElement
-
     if (isUserPage) {
-      if (target.id != "nft-img") {
-        return
-      }
-
       const isApproved = approvalMap?.get(nft.collection_address.toLowerCase())
 
       if (!isInBatch(nft, "list") && !isInBatch(nft, "approve") && !isInBatch(nft, "delist")) {
@@ -60,23 +54,28 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
           removeFromBatch(nft, "delist")
         }
       }
-    } else {
-      if (target.id === "col_link") return
 
-      const isListed = Boolean(nft.price)
+      return
+    }
 
-      if (isListed) {
-        if (batchOps.isInBatch(nft, "buy")) {
-          batchOps.removeFromBatch(nft, "buy")
-        } else {
-          batchOps.addToBatch(nft, "buy")
-        }
-      }
-      if (batchOps.isInBatch(nft, "bid")) {
-        batchOps.removeFromBatch(nft, "bid")
+    if (e.target instanceof HTMLElement && e.target.id === "col_link") {
+      return
+    }
+
+    const isListed = Boolean(nft.price)
+
+    if (isListed) {
+      if (batchOps.isInBatch(nft, "buy")) {
+        batchOps.removeFromBatch(nft, "buy")
       } else {
-        batchOps.addToBatch(nft, "bid")
+        batchOps.addToBatch(nft, "buy")
       }
+    }
+
+    if (batchOps.isInBatch(nft, "bid")) {
+      batchOps.removeFromBatch(nft, "bid")
+    } else {
+      batchOps.addToBatch(nft, "bid")
     }
   }
 
@@ -144,13 +143,14 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
     }
   }
 
+  console.log(token)
+
   return (
     <motion.div
       key={token.token_id + token.collection_address}
       initial={{ filter: "blur(5px)", opacity: 0.3 }}
       animate={{ filter: "blur(0px)", opacity: 1 }}
       transition={{ duration: 0.2, delay: (index ?? 0) * 0.03 }}
-      onClick={(e) => handleNFTClick(token, e)}
       className={`
                          relative border-2 
                         bg-(--accent)/10 rounded-lg
@@ -165,6 +165,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
           className="relative w-full aspect-square cursor-pointer overflow-hidden"
           onMouseEnter={() => setHovered(token.token_id + token.collection_address)}
           onMouseLeave={() => setHovered(null)}
+          onClick={(e) => handleNFTClick(token, e)}
         >
           {getBadgeLabel(token) && (
             <div
@@ -184,9 +185,9 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
         <div className="transition-opacity flex flex-col w-full flex-1 card">
           <div className="flex flex-col     w-full justify-between lg:text-sm text-xs">
             <div className="flex flex-col gap-1 items-start p-2 border-b border-(--text)/20">
-              <Link id="col_link " href={`/collection/${token.collection_address}/${token.token_id}`} className="flex gap-2 opacity-72 hover:opacity-50!">
+              <Link href={`/collection/${token.collection_address}/${token.token_id}`} onClick={(e) => e.stopPropagation()} className="flex gap-2 opacity-72 hover:opacity-50!">
                 <span id="col_link" className="  ">
-                  {token.metadata.name || token.name || "-"}
+                  {token.name || token.metadata?.name || "-"}
                 </span>
               </Link>
               <div className="flex gap-2  text-xs lg:text-sm items-center ">
