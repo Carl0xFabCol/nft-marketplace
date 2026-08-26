@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import ConnectWallet from "./ConnectWallet"
 import { useEffect, useState } from "react"
 import { useAccount } from "wagmi"
+import { useAuth } from "./AuthProvider"
 
 interface Props {
   openWalletModal: () => void
@@ -12,6 +13,7 @@ interface Props {
 export default function Header({ openWalletModal }: Props) {
   const [mounted, setMounted] = useState<boolean>(false)
 
+  const { session } = useAuth()
   const pathname = usePathname()
   const { address } = useAccount()
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function Header({ openWalletModal }: Props) {
 
   return (
     <header className=" flex justify-center items-center card z-100 relative">
-      <div className="   py-2 px-4 card  w-full items-center fixed top-0 z-20">
+      <div className={` px-4 card  w-full items-center fixed top-0 z-20 ${address && session ? " py-2 " : " py-3.5 "}`}>
         <div className="flex  w-full items-center">
           <h1 className="text-xl font-bold justify-center flex  ">HYPERMARKET</h1>
 

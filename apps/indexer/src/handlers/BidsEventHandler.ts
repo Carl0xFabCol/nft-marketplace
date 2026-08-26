@@ -113,8 +113,7 @@ export class CollectionBidPlacedHandler extends BaseBidsHandler<CollectionBidPla
     )
 
     // Cancel previous active bids for this bidder on this collection
-    await this.bidsRepo.cancelActiveCollectionBids(String(collection).toLowerCase(), String(bidder).toLowerCase())
-
+    await this.bidsRepo.cancelActiveCollectionBids(String(collection).toLowerCase(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
     // Insert new collection bid
     await this.bidsRepo.insertCollectionBid({
       collectionAddress: String(collection).toLowerCase(),
@@ -271,8 +270,7 @@ export class TokenBidPlacedHandler extends BaseBidsHandler<TokenBidPlacedArgs> {
     )
 
     // Cancel previous active bids for this bidder on this token
-    await this.bidsRepo.cancelActiveTokenBids(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase())
-
+    await this.bidsRepo.cancelActiveTokenBids(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
     // Insert new token bid
     await this.bidsRepo.insertTokenBid({
       collectionAddress: String(collection).toLowerCase(),

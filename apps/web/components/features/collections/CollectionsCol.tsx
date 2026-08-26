@@ -4,6 +4,7 @@
 import Link from "next/link"
 import { FaEthereum } from "react-icons/fa"
 import { Collection } from "@/types/user.types"
+import { MdOutlineVerified } from "react-icons/md"
 
 interface CollectionsColProps {
   collections: Collection[]
@@ -34,16 +35,20 @@ export default function CollectionsCol({ collections }: CollectionsColProps) {
           <Link href={`/collection/${collection.contract_address}`} key={collection.contract_address} className="flex group justify-between items-center w-full p-2">
             <div className="flex justify-between items-center w-full p-2 transition-all duration-200 group-hover:bg-(--accent)/20 rounded">
               {/* Collection info */}
-              <div className="flex flex-2 flex-col">
-                <div className="flex items-center gap-2">
-                  {collection.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={collection.image_url} alt={name} className="w-6 h-6 rounded-full object-cover" />
-                  )}
-                  <span className="font-medium truncate max-w-[150px]">{name}</span>
-                  {collection.is_verified && <span className="text-blue-400 text-xs">✓</span>}
+              <div className="flex flex-2 items-center gap-2">
+                {collection.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={collection.image_url} alt={name} className="w-8 h-8 rounded object-cover" />
+                )}
+                <div className="flex items-start flex-col">
+                  <span className="font-medium truncate ">{name}</span>
+                  <span className="text-xs opacity-50">{collection.symbol}</span>
                 </div>
-                <span className="text-xs opacity-50">{collection.symbol}</span>
+                {collection.is_verified && (
+                  <span className="text-blue-400 ">
+                    <MdOutlineVerified />
+                  </span>
+                )}
               </div>
 
               {/* Floor price */}

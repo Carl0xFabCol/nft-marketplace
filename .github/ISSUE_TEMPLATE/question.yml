@@ -1,0 +1,33 @@
+name: Question
+description: Ask a question about the codebase or architecture
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Need help understanding something about the marketplace? Ask here!
+        Before opening a new question, please check existing [discussions](https://github.com/Carl0xFabCol/nft-marketplace/discussions)
+        and the [architecture docs](docs/ARCHITECTURE.md).
+  - type: input
+    id: title
+    attributes:
+      label: Question Title
+      placeholder: "e.g., How does the provider pool failover work?"
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      placeholder: |
+        Be as specific as possible — include file names, functions, or concepts
+        you're asking about.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional context, screenshots, or relevant links
+    validations:
+      required: false

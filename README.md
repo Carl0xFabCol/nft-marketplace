@@ -1,4 +1,4 @@
-# Marketplace
+# Marketplace — Production-Grade NFT Marketplace
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![Version](https://img.shields.io/badge/version-0.0.0-blue)
@@ -6,8 +6,12 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![Turborepo](https://img.shields.io/badge/Turborepo-2.0-orange)
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres-green)
+![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636)
+![Foundry](https://img.shields.io/badge/Foundry-1c9a73)
+![Viem](https://img.shields.io/badge/Viem-4d4dfb)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178c6)
 
-A production-grade, high-performance NFT marketplace featuring a decoupled blockchain indexer and a modern Next.js frontend. This project implements a robust architecture designed for scalability, type safety, and efficient blockchain data retrieval.
+A production-grade, high-performance NFT marketplace with a modular three-contract architecture (Core + Bids + Router), a Viem-based event indexer with provider pooling, and a Next.js 16 frontend with optimistic UI and Supabase Realtime. Deployed on Sepolia.
 
 ## 🎯 Why This Project Exists
 
@@ -29,6 +33,14 @@ This ensures an instantaneous UI while maintaining the decentralization and secu
 - 🏗️ **Modular Monorepo**: Powered by Turborepo for optimized build pipelines and shared configuration.
 - 🌐 **Sepolia Integration**: Fully deployed and tested on the Ethereum Sepolia testnet.
 - ⚡ **Modern Frontend**: Built with Next.js 16 App Router, Wagmi, and React Query for a seamless Web3 experience.
+
+## 🏗️ Deployed Contracts (Sepolia)
+
+| Contract | Address | Etherscan |
+|----------|---------|-----------|
+| `Marketplace` (router) | `0x55495153De44570DFC37B2daC4Bc13241B3C2e87` | [View](https://sepolia.etherscan.io/address/0x55495153De44570DFC37B2daC4Bc13241B3C2e87) |
+| `MarketplaceCore` | `0x36052B33e4f10E3264B89961EC3873374Fedc793` | [View](https://sepolia.etherscan.io/address/0x36052B33e4f10E3264B89961EC3873374Fedc793) |
+| `MarketplaceBids` | `0x613CeD51Fd25F67FEcc0c5C22981d42397eddFb1` | [View](https://sepolia.etherscan.io/address/0x613CeD51Fd25F67FEcc0c5C22981d42397eddFb1) |
 
 ## 🛠 Tech Stack
 
@@ -166,6 +178,33 @@ To start the entire stack:
 ```bash
 pnpm dev
 ```
+
+### Docker (One-Command Local Dev)
+
+For a full local environment (web + indexer + local Supabase), use Docker Compose:
+
+```bash
+cp apps/web/.env.example apps/web/.env.local
+cp apps/indexer/.env.example apps/indexer/.env
+docker-compose up --build
+# Web: http://localhost:3000
+# Indexer logs: docker-compose logs -f indexer
+```
+
+The Docker setup includes a local Supabase stack (Postgres + Realtime) for development.
+See `docker-compose.yml` for configuration details.
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | Full system architecture, data flows, trade-offs |
+| [Smart Contracts](docs/CONTRACTS.md) | Three-contract design, security patterns, gas optimizations |
+| [Indexer](docs/INDEXER.md) | Provider pooling, batching, handler registry, crash recovery |
+| [Frontend](docs/FRONTEND.md) | Optimistic UI, realtime, batch operations, SIWE auth |
+| [ADR-001](docs/adr/001-modular-contracts.md) | Why three contracts (Core/Bids/Router) |
+| [ADR-002](docs/adr/002-event-indexing.md) | Event-driven indexing strategy |
+| [ADR-003](docs/adr/003-optimistic-ui.md) | Optimistic UI with idempotent reconciliation |
 
 ## 🗺 Roadmap
 

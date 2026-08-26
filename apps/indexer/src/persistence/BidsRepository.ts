@@ -19,16 +19,28 @@ export class BidsRepository {
   /**
    * Cancel all active collection bids for a bidder on a collection.
    */
-  async cancelActiveCollectionBids(collectionAddress: string, bidderWallet: string): Promise<void> {
+  async cancelActiveCollectionBids(collectionAddress: string, bidderWallet: string, updatedAt: Date): Promise<void> {
     const { error } = await this.supabase
       .from("collection_bids")
-      .update({ is_active: false })
+      .update({
+        is_active: false,
+        updated_at: updatedAt,
+      })
       .eq("collection_address", collectionAddress.toLowerCase())
       .eq("bidder_wallet", bidderWallet.toLowerCase())
       .eq("is_active", true)
 
     if (error) {
-      logger.debug({ error, collectionAddress, bidderWallet }, "⚠️  No previous collection bid to cancel (or error)")
+      logger.error(
+        {
+          error,
+          collectionAddress,
+          bidderWallet,
+        },
+        "❌ Failed to cancel previous collection bid",
+      )
+
+      throw error
     }
   }
 
@@ -117,17 +129,22 @@ export class BidsRepository {
   /**
    * Cancel all active token bids for a bidder on a specific token.
    */
-  async cancelActiveTokenBids(collectionAddress: string, tokenId: string, bidderWallet: string): Promise<void> {
+  async cancelActiveTokenBids(collectionAddress: string, tokenId: string, bidderWallet: string, updatedAt: Date): Promise<void> {
     const { error } = await this.supabase
       .from("token_bids")
-      .update({ is_active: false })
+      .update({
+        is_active: false,
+        updated_at: updatedAt,
+      })
       .eq("collection_address", collectionAddress.toLowerCase())
       .eq("token_id", tokenId)
       .eq("bidder_wallet", bidderWallet.toLowerCase())
       .eq("is_active", true)
 
     if (error) {
-      logger.debug({ error, collectionAddress, tokenId, bidderWallet }, "⚠️  No previous token bid to cancel (or error)")
+      logger.error({ error, collectionAddress, tokenId, bidderWallet }, "❌ Failed to cancel previous token bid")
+
+      throw error
     }
   }
 

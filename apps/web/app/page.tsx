@@ -9,7 +9,7 @@ export default async function Home() {
   const collections24 = await CollectionService.getTopCollectionsByVolume24h(supabase)
 
   return (
-    <section className="w-full  grow   relative  h-full  flex flex-col gap-4 pt-15 ">
+    <section className="w-full  grow   relative  h-full  flex flex-col gap-4  pt-15">
       <TopCols24 initialCollections={collections} initialCollections24={collections24} />
     </section>
   )

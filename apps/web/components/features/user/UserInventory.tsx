@@ -15,13 +15,7 @@ import { SortBy, SortDir } from "@/lib/constants"
 import { UserService } from "@/services/user.service"
 import { supabase } from "@/lib/supabase/client"
 import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
-import {
-  toUserListing,
-  upsertListingIntoNfts,
-  deactivateListingInNfts,
-  upsertListingIntoListings,
-  deactivateListingInListings,
-} from "@/lib/listingMerge"
+import { toUserListing, upsertListingIntoNfts, deactivateListingInNfts, upsertListingIntoListings, deactivateListingInListings } from "@/lib/listingMerge"
 
 interface UserInventoryProps {
   userAddress: Address
@@ -306,7 +300,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
       )}
 
       <div className="grow min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 pr-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 pr-2">
           {isLoading &&
             sortedNFTs.length === 0 &&
             [...Array(6)].map((_, i) => (
@@ -314,7 +308,6 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
                 <div className="absolute w-full h-full bg-(--accent) opacity-20 rounded" />
               </div>
             ))}
-
           <AnimatePresence>
             {sortedNFTs.map((nft: EnrichedUserNFT, i) => (
               <NFTCard
@@ -331,7 +324,6 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
               />
             ))}
           </AnimatePresence>
-
           {hasMore && (
             <div ref={observerRef} className="w-full h-10 col-span-full flex items-center justify-center">
               {isLoading && <span>Loading more...</span>}

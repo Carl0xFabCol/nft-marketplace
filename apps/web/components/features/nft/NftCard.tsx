@@ -8,6 +8,7 @@ import { useState } from "react"
 import { FaEthereum, FaUser } from "react-icons/fa"
 import { useConnection, usePublicClient } from "wagmi"
 import { Address } from "viem"
+import { IpfsImage } from "@/components/features/nft/IpfsImage"
 
 type NftCardToken = EnrichedUserNFT & {
   price?: number
@@ -26,7 +27,6 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
   const [bidHovered, setBidHovered] = useState<boolean>(false)
   const [hovered, setHovered] = useState<string | null>(null)
   const { addToBatch, isInBatch, removeFromBatch } = batchOps
-
   const { address } = useConnection()
   const publicClient = usePublicClient()
   const { acceptTokenBid } = useAcceptTokenBid()
@@ -159,26 +159,29 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
                         ${getBorderClass(token)}
                       `}
     >
-      <div className="flex rounded flex-col overflow-hidden justify-between h-full">
-        <div id="nft-img" className="w-full  cursor-pointer" onMouseEnter={() => setHovered(token.token_id + token.collection_address)} onMouseLeave={() => setHovered(null)}>
+      <div className="flex flex-col h-full overflow-hidden rounded">
+        <div
+          id="nft-img"
+          className="relative w-full aspect-square cursor-pointer overflow-hidden"
+          onMouseEnter={() => setHovered(token.token_id + token.collection_address)}
+          onMouseLeave={() => setHovered(null)}
+        >
           {getBadgeLabel(token) && (
             <div
-              id="nft-img"
               className={`
-                      absolute left-3 top-3 z-10
-                      bg-(--bg-secondary) rounded text-xs border px-2 py-1
-                      font-bold shadow-lg
-                      ${getBadgeClass(token)}
-                    `}
+        absolute left-3 top-3 z-10
+        bg-(--bg-secondary) rounded text-xs border px-2 py-1
+        font-bold shadow-lg
+        ${getBadgeClass(token)}
+      `}
             >
               {getBadgeLabel(token)}
             </div>
           )}
-          {token.image_url && <img id="nft-img" src={token.image_url} alt="" />}
-          {!token.image_url && <span>No image</span>}
-        </div>
 
-        <div className=" transition-opacity flex flex-col   w-full card">
+          <IpfsImage src={token.image_url} alt={token.metadata?.name || token.name || "NFT"} className="w-full h-full object-cover transition-transform duration-300" />
+        </div>
+        <div className="transition-opacity flex flex-col w-full flex-1 card">
           <div className="flex flex-col     w-full justify-between lg:text-sm text-xs">
             <div className="flex flex-col gap-1 items-start p-2 border-b border-(--text)/20">
               <Link id="col_link " href={`/collection/${token.collection_address}/${token.token_id}`} className="flex gap-2 opacity-72 hover:opacity-50!">

@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { FiChevronLeft, FiChevronRight, FiImage } from "react-icons/fi"
 import { Collection } from "@/types/user.types"
+import { MdOutlineVerified } from "react-icons/md"
 
 interface TopCollectionsSliderProps {
   collections: Collection[]
@@ -49,29 +50,31 @@ export function TopCollectionsSlider({ collections }: TopCollectionsSliderProps)
   }
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <div className="absolute z-10 w-full top-[170px]">
-        {collections.length > itemsPerView && (
-          <div className="flex items-center justify-between px-2">
-            <button
-              onClick={prevSlide}
-              disabled={currentIndex === 0}
-              className="p-2 rounded-full text-(--accent)! bg-transparent!  disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              aria-label="Previous slide"
-            >
-              <FiChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={nextSlide}
-              disabled={currentIndex >= collections.length - itemsPerView}
-              className="p-2 rounded-full  text-(--accent)! bg-transparent! disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              aria-label="Next slide"
-            >
-              <FiChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="w-full flex flex-col items-center ">
+      {collections.length > itemsPerView && (
+        <div className="  px-2 absolute z-10 left-5 top-[262px]">
+          <button
+            onClick={prevSlide}
+            disabled={currentIndex === 0}
+            className="p-2 rounded-full text-(--accent)! bg-transparent!  disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            aria-label="Previous slide"
+          >
+            <FiChevronLeft className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+      {collections.length > itemsPerView && (
+        <div className="  px-2 absolute z-10 right-5  top-[262px]">
+          <button
+            onClick={nextSlide}
+            disabled={currentIndex >= collections.length - itemsPerView}
+            className="p-2 rounded-full text-(--accent)! bg-transparent!   disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            aria-label="Next slide"
+          >
+            <FiChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       <div className="relative overflow-hidden w-full bg-white">
         <div
@@ -86,13 +89,13 @@ export function TopCollectionsSlider({ collections }: TopCollectionsSliderProps)
                 {/* Rank Badge */}
                 <div className="relative">
                   {/* Collection Image */}
-                  <div className="relative w-full h-68 bg-gray-100 dark:bg-gray-800  overflow-hidden">
+                  <div className="relative w-full h-121 bg-gray-100 dark:bg-gray-800  overflow-hidden">
                     {collection.image_url && !imagesError[collection.contract_address] ? (
                       <Image
-                        src={collection.image_url}
+                        src={collection.banner_url as string}
                         alt={collection.name || collection.symbol || "Collection"}
                         fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                        sizes="100vw"
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={() => handleImageError(collection.contract_address)}
                       />
@@ -105,9 +108,7 @@ export function TopCollectionsSlider({ collections }: TopCollectionsSliderProps)
                     {/* Verified Badge */}
                     {collection.is_verified && (
                       <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812z" />
-                        </svg>
+                        <MdOutlineVerified />
                       </div>
                     )}
                   </div>

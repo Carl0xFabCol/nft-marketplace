@@ -1,0 +1,117 @@
+# docker-compose.yml
+# One-command local development environment for the marketplace.
+# Spins up: web, indexer, and a local Supabase instance.
+#
+# Usage:
+#   docker-compose up --build
+#   docker-compose down             # stop & remove
+#   docker-compose logs -f web      # follow web logs
+#
+# NOTE: The indexer requires a Sepolia RPC URL to function. In local dev,
+#       the indexer will poll a public RPC for Sepolia events. Set FAST_RPC_URL
+#       in your .env file or use the default public endpoint.
+
+services:
+  # ─────────────────────────────────────────────────────────────────
+  # Supabase (local Postgres + Realtime + Auth)
+  # Uses the official Supabase docker-compose for local dev
+  # ─────────────────────────────────────────────────────────────────
+  supabase-db:
+    image: supabase/postgres:15.4.0
+    container_name: marketplace-supabase-db
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    command: >
+      postgres -c wal_level=logical -c max_replication_slots=0 -c max_wal_senders=0
+
+  supabase-realtime:
+    image: supabase/realtime:v2.8.0
+    container_name: marketplace-supabase-realtime
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    ports:
+      - "9999:9999"
+    environment:
+      DB_HOST: supabase-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      REALTIME_API_SECRET: supabase-realtime-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9999/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────────
+  # Frontend: Next.js web app
+  # ─────────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: runner
+    container_name: marketplace-web
+    depends_on:
+      - supabase-db
+    ports:
+      - "3000:3000"
+    env_file:
+      - apps/web/.env.local
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:9999
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-anonymous}
+    volumes:
+      # Hot reload in dev
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────
+  # Indexer: Viem-based event indexer
+  # ─────────────────────────────────────────────────────────────────
+  indexer:
+    build:
+      context: .
+      dockerfile: apps/indexer/Dockerfile
+    container_name: marketplace-indexer
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    env_file:
+      - apps/indexer/.env
+    volumes:
+      - ./apps/indexer:/app
+      - /app/node_modules
+    environment:
+      SUPABASE_URL: http://host.docker.internal:9999
+      # Use the public Sepolia RPC by default
+      FAST_RPC_URL: https://ethereum-sepolia-rpc.publicnode.com
+      # Fallback provider for resilience
+      FALLBACK_RPC_URL: https://ethereum-sepolia-rpc.publicnode.com
+      # Reduce batch size for local dev
+      BATCH_SIZE: 1000
+      POLLING_INTERVAL_MS: 15000
+    # Restart policy for long-running indexer
+    restart: unless-stopped
+    command: pnpm dev
+
+volumes:
+  supabase-db-data:

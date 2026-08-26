@@ -301,7 +301,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
         {/* Content */}
         {collectionCard === "items" && (
           <div>
-            <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4 pb-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 pr-2">
               <AnimatePresence>
                 {sortedNFTs.map((nft: any) => (
                   <NFTCard
