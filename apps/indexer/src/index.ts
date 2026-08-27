@@ -20,11 +20,14 @@ import { ListingsRepository } from "./persistence/ListingsRepository"
 import { BidsRepository } from "./persistence/BidsRepository"
 import { NFTRepository } from "./persistence/NFTRepository"
 import { IndexerStateRepository } from "./persistence/IndexerStateRepository"
+import { ContractIndexerStateRepository } from "./persistence/ContractIndexerStateRepository"
 
 // Handlers
 import { HandlerRegistry } from "./handlers/HandlerRegistry"
 import { createCoreEventHandlers } from "./handlers/CoreEventHandler"
 import { createBidsEventHandlers } from "./handlers/BidsEventHandler"
+import { TransferHandler } from "./handlers/TransferHandler"
+import type { IEventHandler } from "./handlers/IEventHandler"
 
 // Orchestrator
 import { IndexerOrchestrator } from "./services/IndexerOrchestrator"
@@ -82,8 +85,29 @@ async function main() {
   const bidsRepo = new BidsRepository(supabase)
   const nftRepo = new NFTRepository(supabase)
   const stateRepo = new IndexerStateRepository(supabase)
+  const contractStateRepo = new ContractIndexerStateRepository(supabase)
 
   logger.info("✅ Repositories initialized")
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3a. SEED CONTRACT INDEXER STATE FOR EXISTING COLLECTIONS
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Initialize per-contract block tracking for all registered collections.
+  // If a collection has no state entry, seed it with its indexer_block as the starting point.
+  // This is idempotent — running it multiple times has no side effects.
+  const existingCollections = await collectionsRepo.getAll()
+  for (const collection of existingCollections) {
+    const contractAddress = collection.contract_address as string
+    const indexerBlock = collection.indexer_block as number
+
+    const existingState = await contractStateRepo.getContractState(contractAddress, CHAIN_IDS.SEPOLIA)
+    if (!existingState) {
+      await contractStateRepo.upsertContractState(contractAddress, CHAIN_IDS.SEPOLIA, indexerBlock)
+      logger.info({ contractAddress, lastBlock: indexerBlock }, "🌱 Seeded contract indexer state for collection")
+    }
+  }
+
+  logger.info({ collectionsSeeded: existingCollections.length }, "✅ Contract indexer state seeded")
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 4. INITIALIZE HANDLER REGISTRY
@@ -105,11 +129,15 @@ async function main() {
     handlerRegistry.register(handler)
   }
 
+  // Register NFT Transfer handler (for dynamically-registered collection contracts)
+  const transferHandler = new TransferHandler(activityRepo, nftRepo) as IEventHandler<any>
+  handlerRegistry.register(transferHandler)
+
   logger.info(
     {
       coreHandlers: coreHandlers.length,
       bidsHandlers: bidsHandlers.length,
-      totalHandlers: coreHandlers.length + bidsHandlers.length,
+      totalHandlers: coreHandlers.length + bidsHandlers.length + 1,
     },
     "✅ Event handlers registered",
   )
@@ -118,7 +146,7 @@ async function main() {
   // 5. INITIALIZE ORCHESTRATOR
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const orchestrator = new IndexerOrchestrator(providerPool, eventFetcher, handlerRegistry, stateRepo, CONTRACTS_TO_INDEX, {
+  const orchestrator = new IndexerOrchestrator(providerPool, eventFetcher, handlerRegistry, stateRepo, contractStateRepo, collectionsRepo, CONTRACTS_TO_INDEX, {
     pollingIntervalMs: env.pollingIntervalMs,
     batchSize: env.batchSize,
     chainId: CHAIN_IDS.SEPOLIA,

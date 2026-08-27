@@ -2,7 +2,7 @@ import { decodeEventLog } from "viem"
 import pMap from "p-map"
 import type { IEventFetcher } from "./IEventFetcher"
 import type { IRpcProvider } from "../providers/IRpcProvider"
-import type { ContractConfig, ParsedEvent, RawContractEvent } from "../types/indexer.types"
+import type { ContractConfig, ContractFetchRequest, ParsedEvent, RawContractEvent } from "../types/indexer.types"
 import { BlockRangeUtil } from "../utils/BlockRange"
 import { logger, loggerHelpers } from "../utils/logger"
 import { env } from "../config/env"
@@ -44,20 +44,46 @@ export class BatchEventFetcher implements IEventFetcher {
   /**
    * Fetch all events from multiple contracts within a block range.
    * Implements parallel fetching and automatic chunking for large ranges.
+   * @deprecated Use fetchEventsForContracts() for per-contract block ranges.
    */
   async fetchEventsInRange(contracts: ContractConfig[], fromBlock: bigint, toBlock: bigint): Promise<ParsedEvent[]> {
+    // Delegate to the new implementation with per-contract fromBlock
+    const requests: ContractFetchRequest[] = contracts.map((c) => ({
+      contract: c,
+      fromBlock,
+    }))
+    return this.fetchEventsForContracts(requests, toBlock)
+  }
+
+  /**
+   * Fetch events from multiple contracts, each with its own fromBlock.
+   * This allows dynamically-registered collection contracts to start from
+   * their deployment block while static contracts (core, bids) use the
+   * global indexer state.
+   *
+   * Ranges are chunked by the global fromBlock (minimum of all contract
+   * fromBlocks), and each contract is fetched from its own fromBlock
+   * within each chunk.
+   */
+  async fetchEventsForContracts(requests: ContractFetchRequest[], toBlock: bigint): Promise<ParsedEvent[]> {
     const startTime = Date.now()
 
-    // Split large ranges into chunks
-    const ranges = BlockRangeUtil.chunk(fromBlock, toBlock, this.batchSize)
+    // Use the minimum fromBlock across all contracts as the range start
+    const minFromBlock = requests.reduce(
+      (min, req) => (req.fromBlock < min ? req.fromBlock : min),
+      requests[0]?.fromBlock ?? 0n,
+    )
 
-    loggerHelpers.batchProcessing(fromBlock, toBlock, ranges.length)
+    // Split large ranges into chunks
+    const ranges = BlockRangeUtil.chunk(minFromBlock, toBlock, this.batchSize)
+
+    loggerHelpers.batchProcessing(minFromBlock, toBlock, ranges.length)
 
     // Fetch events from all contracts across all ranges (parallel)
     const allEvents = await pMap(
       ranges,
       async (range) => {
-        return await this.fetchEventsForRange(contracts, range.from, range.to)
+        return await this.fetchEventsForRange(requests, range.from, range.to)
       },
       { concurrency: 1 }, // Process ranges sequentially to avoid overwhelming RPC
     )
@@ -68,12 +94,13 @@ export class BatchEventFetcher implements IEventFetcher {
 
     const duration = Date.now() - startTime
 
+    const requestCount = requests.length
     logger.info(
       {
         provider: this.provider.name,
-        fromBlock: fromBlock.toString(),
+        fromBlock: minFromBlock.toString(),
         toBlock: toBlock.toString(),
-        contracts: contracts.length,
+        contracts: requestCount,
         chunks: ranges.length,
         totalEvents: sortedEvents.length,
         durationMs: duration,
@@ -87,16 +114,19 @@ export class BatchEventFetcher implements IEventFetcher {
 
   /**
    * Fetch events from all contracts for a specific block range.
-   * Contracts are fetched in parallel.
+   * Each contract uses its own fromBlock, but the range is bounded by
+   * the chunk's from/to blocks.
    */
-  private async fetchEventsForRange(contracts: ContractConfig[], fromBlock: bigint, toBlock: bigint): Promise<ParsedEvent[]> {
+  private async fetchEventsForRange(requests: ContractFetchRequest[], rangeFromBlock: bigint, rangeToBlock: bigint): Promise<ParsedEvent[]> {
     const startTime = Date.now()
 
     // Fetch all contracts in parallel
     const contractEvents = await pMap(
-      contracts,
-      async (contract) => {
-        return await this.fetchContractEvents(contract, fromBlock, toBlock)
+      requests,
+      async (req) => {
+        // Each contract starts from its own fromBlock, but no further back than the chunk start
+        const contractFromBlock = req.fromBlock > rangeFromBlock ? req.fromBlock : rangeFromBlock
+        return await this.fetchContractEvents(req.contract, contractFromBlock, rangeToBlock)
       },
       { concurrency: this.maxParallelRequests },
     )
@@ -107,9 +137,9 @@ export class BatchEventFetcher implements IEventFetcher {
     logger.debug(
       {
         provider: this.provider.name,
-        fromBlock: fromBlock.toString(),
-        toBlock: toBlock.toString(),
-        contracts: contracts.length,
+        fromBlock: rangeFromBlock.toString(),
+        toBlock: rangeToBlock.toString(),
+        contracts: requests.length,
         events: flatEvents.length,
         durationMs: duration,
       },

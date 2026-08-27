@@ -28,19 +28,22 @@ export class ActivityRepository {
     logIndex: number
     sourceContract: string
   }): Promise<void> {
-    const { error } = await this.supabase.from("activity").insert({
-      event: params.event,
-      collection_address: params.collectionAddress.toLowerCase(),
-      token_id: params.tokenId,
-      from: params.from?.toLowerCase(),
-      to: params.to?.toLowerCase(),
-      price: params.price,
-      quantity: params.quantity,
-      tx_hash: params.txHash.toLowerCase(),
-      created_at: params.createdAt,
-      log_index: params.logIndex,
-      source_contract: params.sourceContract,
-    })
+    const { error } = await this.supabase.from("activity").upsert(
+      {
+        event: params.event,
+        collection_address: params.collectionAddress.toLowerCase(),
+        token_id: params.tokenId,
+        from: params.from?.toLowerCase(),
+        to: params.to?.toLowerCase(),
+        price: params.price,
+        quantity: params.quantity,
+        tx_hash: params.txHash.toLowerCase(),
+        created_at: params.createdAt,
+        log_index: params.logIndex,
+        source_contract: params.sourceContract,
+      },
+      { onConflict: "tx_hash,log_index,source_contract", ignoreDuplicates: true },
+    )
 
     if (error) {
       logger.error({ error, params }, "❌ Failed to insert activity")

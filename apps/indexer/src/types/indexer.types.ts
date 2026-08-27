@@ -37,6 +37,16 @@ export interface ContractConfig {
   events: readonly string[]
 }
 
+/**
+ * A contract config paired with its starting block for this batch.
+ * Used to allow dynamic collection contracts to start from their
+ * deployment/registration block independently of the global indexer state.
+ */
+export interface ContractFetchRequest {
+  contract: ContractConfig
+  fromBlock: bigint
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // BLOCK RANGE
 // ═══════════════════════════════════════════════════════════════════════════════
