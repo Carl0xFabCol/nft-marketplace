@@ -9,7 +9,6 @@ import type { ActivityRepository } from "../persistence/ActivityRepository"
 import type { CollectionsRepository } from "../persistence/CollectionsRepository"
 import type { ListingsRepository } from "../persistence/ListingsRepository"
 import type { NFTRepository } from "../persistence/NFTRepository"
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // CORE CONTRACT EVENT HANDLERS - FULLY REFACTORED WITH REPOSITORIES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -76,6 +75,24 @@ abstract class BaseCoreHandler<TArgs = Record<string, unknown>> implements IEven
           tokenId,
         },
         "⚠️  NFT upsert encountered error, continuing...",
+      )
+    }
+  }
+  /**
+   * Helper: Update NFT owner via repository
+   */
+  protected async updateNFTOwner(collectionAddress: string, tokenId: string, ownerWallet: string, timestamp: number): Promise<void> {
+    try {
+      await this.nftRepo.updateOwner(collectionAddress, tokenId, ownerWallet, new Date(timestamp * 1000))
+    } catch (error) {
+      logger.warn(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          collectionAddress,
+          tokenId,
+          ownerWallet,
+        },
+        "⚠️ NFT owner update failed, continuing...",
       )
     }
   }
@@ -322,7 +339,7 @@ export class SaleHandler extends BaseCoreHandler<SaleArgs> {
     await this.listingsRepo.deactivate(`${collection.toLowerCase()}-${tokenId}`, new Date(event.blockTimestamp * 1000), String(buyer).toLowerCase())
 
     // Update NFT owner
-    await this.upsertNFT(String(collection).toLowerCase(), tokenId.toString(), String(buyer), event.blockTimestamp)
+    await this.updateNFTOwner(String(collection).toLowerCase(), tokenId.toString(), String(buyer).toLowerCase(), event.blockTimestamp)
 
     // Insert activity
     await this.insertActivity({
