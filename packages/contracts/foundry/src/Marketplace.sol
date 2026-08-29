@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 interface IMarketplaceCore {
     // Structs
@@ -53,7 +53,8 @@ interface IMarketplaceCore {
     function buyBatch(address collection, uint256[] calldata tokenIds, address buyer) external payable;
 
     // Collection management
-    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver) external;
+    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address sender) external;
+    function emergencyUpdateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external;
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external;
 
@@ -73,9 +74,15 @@ interface IMarketplaceCore {
     function owner() external view returns (address);
 
     function transferOwnership(address newOwner) external;
+    function pendingOwner() external view returns (address);
+    function acceptOwnership() external;
 
     // View functions
     function getCollectionStats(address collection) external view returns (uint256, uint32, bool, bool);
+    function pendingWithdrawals(address account) external view returns (uint256);
+    function withdrawFor(address account) external returns (bool);
+    function withdraw() external;
+    function sweepExcessETH(address payable recipient) external;
 
     function paused() external view returns (bool);
 }
@@ -120,6 +127,13 @@ interface IMarketplaceBids {
     function owner() external view returns (address);
 
     function transferOwnership(address newOwner) external;
+    function pendingOwner() external view returns (address);
+    function acceptOwnership() external;
+    function pendingWithdrawals(address account) external view returns (uint256);
+    function withdrawFor(address account) external returns (bool);
+    function withdraw() external;
+    function sweepExcessETH(address payable recipient) external;
+    function setMarketplaceAddress(address _marketplace) external;
 
     function pause() external;
 
@@ -131,7 +145,7 @@ interface IMarketplaceBids {
  * @notice Main marketplace contract - maintains original API, delegates to Core and Bids
  * @dev Acts as a proxy/router to maintain backwards compatibility
  */
-contract Marketplace {
+contract Marketplace is Ownable2Step {
     // ═══════════════════════════════════════════════════════════════════════════════
     // IMMUTABLES
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -185,10 +199,18 @@ contract Marketplace {
     // CONSTRUCTOR
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    constructor(address _core, address _bids) {
-        require(_core != address(0) && _bids != address(0), "Invalid addresses");
+    constructor(address _core, address _bids) Ownable(msg.sender) {
+        if (_core == address(0) || _bids == address(0)) revert("Invalid addresses");
         core = IMarketplaceCore(_core);
         bids = IMarketplaceBids(_bids);
+    }
+
+    // The deployer transfers Core and Bids ownership to this router first.
+    // The router owner then calls this once so both components accept ownership.
+    function acceptComponentOwnership() external onlyOwner {
+        if (core.pendingOwner() == address(this)) core.acceptOwnership();
+        if (bids.pendingOwner() == address(this)) bids.acceptOwnership();
+        require(core.owner() == address(this) && bids.owner() == address(this), "Components not owned");
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -237,10 +259,6 @@ contract Marketplace {
 
     function getCollectionStats(address collection) external view returns (uint256, uint32, bool, bool) {
         return core.getCollectionStats(collection);
-    }
-
-    function owner() external view returns (address) {
-        return core.owner();
     }
 
     function paused() external view returns (bool) {
@@ -328,14 +346,14 @@ contract Marketplace {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver) external {
-        core.registerCollection(collection, royaltyFee, royaltyReceiver);
+        core.registerCollection(collection, royaltyFee, royaltyReceiver, msg.sender);
     }
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external {
         core.updateCollectionRoyalty(collection, royaltyReceiver, royaltyFee, msg.sender);
     }
 
-    function verifyCollection(address collection) external {
+    function verifyCollection(address collection) external onlyOwner {
         core.verifyCollection(collection);
     }
 
@@ -343,27 +361,50 @@ contract Marketplace {
     // ADMIN FUNCTIONS - Delegate to Core/Bids
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function updateMarketplaceFee(uint16 newFee) external {
+    function updateMarketplaceFee(uint16 newFee) external onlyOwner {
         core.updateMarketplaceFee(newFee);
     }
 
-    function updateFeeReceiver(address newReceiver) external {
+    function updateFeeReceiver(address newReceiver) external onlyOwner {
         core.updateFeeReceiver(newReceiver);
     }
 
-    function pause() external {
+    function pause() external onlyOwner {
         core.pause();
         bids.pause();
     }
 
-    function unpause() external {
+    function unpause() external onlyOwner {
         core.unpause();
         bids.unpause();
     }
 
-    function transferOwnership(address newOwner) external {
-        core.transferOwnership(newOwner);
-        bids.transferOwnership(newOwner);
+
+    function emergencyUpdateCollectionRoyalty(
+        address collection,
+        address royaltyReceiver,
+        uint16 royaltyFee
+    ) external onlyOwner {
+        core.emergencyUpdateCollectionRoyalty(collection, royaltyReceiver, royaltyFee);
+    }
+
+    function configureBidsMarketplace() external onlyOwner {
+        bids.setMarketplaceAddress(address(this));
+    }
+
+    function pendingWithdrawals(address account) external view returns (uint256 coreAmount, uint256 bidsAmount) {
+        coreAmount = core.pendingWithdrawals(account);
+        bidsAmount = bids.pendingWithdrawals(account);
+    }
+
+    function withdraw() external {
+        core.withdrawFor(msg.sender);
+        bids.withdrawFor(msg.sender);
+    }
+
+    function sweepExcessETH(address payable recipient) external onlyOwner {
+        core.sweepExcessETH(recipient);
+        bids.sweepExcessETH(recipient);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

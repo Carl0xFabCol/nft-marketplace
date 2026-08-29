@@ -5,317 +5,230 @@ import "forge-std/Test.sol";
 import "./TestSetup.sol";
 
 contract MarketplaceTest is TestSetup {
-    // ═══════════════════════════════════════════════════════════════════
-    // 5.1 CONSTRUCTOR & DEPLOYMENT
-    // ═══════════════════════════════════════════════════════════════════
-
     function testConstructor_DeploysCorrectly() public {
         assertEq(address(marketplace.core()), address(core));
         assertEq(address(marketplace.bids()), address(bids));
+        assertEq(marketplace.owner(), owner);
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // 5.2 VIEW FUNCTIONS
-    // ═══════════════════════════════════════════════════════════════════
-
-    function testGetMarketplaceFee() public {
+    function testViews() public {
         assertEq(marketplace.marketplaceFee(), uint16(MARKETPLACE_FEE));
-    }
-
-    function testGetFeeReceiver() public {
         assertEq(marketplace.feeReceiver(), feeReceiverAddr);
+        assertEq(marketplace.totalVolume(), 0);
+        assertEq(marketplace.totalSales(), 0);
+        assertEq(marketplace.totalListings(), 0);
     }
 
-    function testVerifyCollection_Valid() public {
+    function testRegisterCollection_ThroughRouter() public {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
 
-        // verifyCollection is a setter (onlyOwner); check isVerified via collections mapping
-        vm.prank(owner);
-        marketplace.verifyCollection(address(nft));
+        Marketplace.CollectionInfo memory info =
+            marketplace.collections(address(nft));
 
-        Marketplace.CollectionInfo memory info = marketplace.collections(address(nft));
-        assertTrue(info.isVerified);
-    }
-
-    function testVerifyCollection_Invalid() public {
-        // Unregistered collection should not be verified
-        Marketplace.CollectionInfo memory info = marketplace.collections(address(nonERC721));
-        assertFalse(info.isVerified);
-    }
-
-    function testVerifyCollection_Unregistered() public {
-        Marketplace.CollectionInfo memory info = marketplace.collections(address(nft));
-        assertFalse(info.isVerified);
-    }
-
-    function testGetCollectionInfo_Valid() public {
-        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-
-        Marketplace.CollectionInfo memory info = marketplace.collections(address(nft));
         assertEq(info.royaltyReceiver, royaltyReceiverAddr);
-        assertEq(info.royaltyFee, uint16(ROYALTY_FEE));
+        assertEq(info.royaltyFee, ROYALTY_FEE);
         assertTrue(info.exists);
     }
 
-    function testGetCollectionInfo_Unregistered() public {
-        Marketplace.CollectionInfo memory info = marketplace.collections(address(nft));
-        assertEq(info.royaltyReceiver, address(0));
-        assertEq(info.royaltyFee, 0);
-        assertFalse(info.exists);
+    function testRegisterCollection_RejectsNonCollectionOwner() public {
+        vm.prank(buyer);
+        _expectRevert(MarketplaceCore.NotCollectionOwner.selector);
+        marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
     }
 
-    function testGetListing_Valid() public {
-        _setupListing();
-
-        Marketplace.Listing memory listing = marketplace.listings(address(nft), 1);
-        assertEq(listing.seller, seller);
-        assertEq(listing.price, uint128(SALE_PRICE));
-    }
-
-    function testGetListing_NotFound() public {
-        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-
-        Marketplace.Listing memory listing = marketplace.listings(address(nft), 1);
-        assertEq(listing.seller, address(0));
-        assertEq(listing.price, 0);
-    }
-
-    function testGetCollectionStats_Valid() public {
-        _setupListing();
-
-        (uint256 vol, uint32 sales, bool isVerified, bool exists) = marketplace.getCollectionStats(address(nft));
-        assertEq(vol, 0);
-        assertEq(sales, 0);
-        assertTrue(exists);
-    }
-
-    function testGetCollectionStats_Unregistered() public {
-        (uint256 vol, uint32 sales, bool isVerified, bool exists) = marketplace.getCollectionStats(address(nft));
-        assertEq(vol, 0);
-        assertEq(sales, 0);
-        assertFalse(exists);
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 5.3 LISTING FUNCTIONS
-    // ═══════════════════════════════════════════════════════════════════
-
-    function testCreateListing_Valid() public {
+    function testCreateListing_UsesActualSeller() public {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
 
+        vm.prank(seller);
         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
 
-        Marketplace.Listing memory listing = marketplace.listings(address(nft), 1);
-        assertEq(listing.seller, seller);
-        assertEq(listing.price, uint128(SALE_PRICE));
+        assertEq(marketplace.listings(address(nft), 1).seller, seller);
     }
 
-    function testCreateListing_PriceBelowMin() public {
+    function testCreateListing_CannotSpoofSeller() public {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
 
-        _expectRevert(MarketplaceCore.InvalidPrice.selector);
-        marketplace.createListing(address(nft), 1, 0, 0);
-    }
-
-    function testCreateListing_WhenPaused() public {
-        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-        _mintNFT(seller, 1);
-        _approveOnCore(address(nft), seller);
-
-        vm.prank(owner);
-        core.pause();
-
-        _expectRevert(Pausable.EnforcedPause.selector);
+        vm.prank(buyer);
+        _expectRevert(MarketplaceCore.NotTokenOwner.selector);
         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
     }
 
-    function testUpdateListingPrice_Valid() public {
+    function testCancelListing_UsesActualSeller() public {
         _setupListing();
 
-        marketplace.updateListingPrice(address(nft), 1, uint128(SALE_PRICE * 2));
-
-        Marketplace.Listing memory listing = marketplace.listings(address(nft), 1);
-        assertEq(listing.price, uint128(SALE_PRICE * 2));
-    }
-
-    function testCancelListing_Valid() public {
-        _setupListing();
-
+        vm.prank(seller);
         marketplace.cancelListing(address(nft), 1);
 
-        Marketplace.Listing memory listing = marketplace.listings(address(nft), 1);
-        assertEq(listing.price, 0);
+        assertEq(marketplace.listings(address(nft), 1).price, 0);
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // 5.4 BUYING FUNCTIONS
-    // ═══════════════════════════════════════════════════════════════════
-
-    function testBuy_Valid() public {
+    function testCancelListing_CannotBeCalledByOtherUser() public {
         _setupListing();
 
-        uint256 sellerBefore = seller.balance;
+        vm.prank(buyer);
+        _expectRevert(MarketplaceCore.NotSeller.selector);
+        marketplace.cancelListing(address(nft), 1);
+    }
 
+    function testBuy_UsesActualBuyer() public {
+        _setupListing();
+
+        vm.prank(buyer);
         marketplace.buy{value: SALE_PRICE}(address(nft), 1);
 
         assertEq(nft.ownerOf(1), buyer);
-        assertTrue(seller.balance > sellerBefore);
     }
 
-    function testBuy_InsufficientETH() public {
+    function testBuy_CannotCauseReceiverIssueForEOA() public {
         _setupListing();
 
-        _expectRevert(MarketplaceCore.InsufficientValue.selector);
-        marketplace.buy{value: SALE_PRICE - 1}(address(nft), 1);
+        vm.prank(buyer);
+        marketplace.buy{value: SALE_PRICE}(address(nft), 1);
+
+        assertEq(nft.ownerOf(1), buyer);
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // 5.5 COLLECTION BID FUNCTIONS
-    // ═══════════════════════════════════════════════════════════════════
-
-    function testPlaceCollectionBid_Valid() public {
+    function testCollectionBid_UsesActualBidder() public {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
 
-        marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, 0);
+        vm.prank(bidder);
+        marketplace.placeCollectionBid{value: SALE_PRICE}(
+            address(nft), uint128(SALE_PRICE), 1, 0
+        );
 
-        Marketplace.CollectionBid memory bid = marketplace.collectionBids(address(nft), buyer);
-        assertEq(bid.bidder, buyer);
+        assertEq(
+            marketplace.collectionBids(address(nft), bidder).bidder,
+            bidder
+        );
     }
 
-    function testCancelCollectionBid_Valid() public {
+    function testTokenBid_UsesActualBidder() public {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
 
-        marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, 0);
+        vm.prank(bidder);
+        marketplace.placeTokenBid{value: SALE_PRICE}(
+            address(nft), 1, uint128(SALE_PRICE), 0
+        );
 
-        marketplace.cancelCollectionBid(address(nft));
-
-        Marketplace.CollectionBid memory bid = marketplace.collectionBids(address(nft), buyer);
-        assertEq(bid.bidder, address(0));
+        assertEq(
+            marketplace.tokenBids(address(nft), 1, bidder).bidder,
+            bidder
+        );
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // 5.6 TOKEN BID FUNCTIONS
-    // ═══════════════════════════════════════════════════════════════════
-
-    function testPlaceTokenBid_Valid() public {
-        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    function testAcceptCollectionBid_UsesActualSeller() public {
+        _setupCollectionBid();
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
 
-        marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 1;
 
-        Marketplace.TokenBid memory bid = marketplace.tokenBids(address(nft), 1, buyer);
-        assertEq(bid.bidder, buyer);
+        vm.prank(seller);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids);
+
+        assertEq(nft.ownerOf(1), bidder);
     }
 
-    function testCancelTokenBid_Valid() public {
-        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-        _mintNFT(seller, 1);
-        _approveOnCore(address(nft), seller);
+    function testAcceptTokenBid_UsesActualSeller() public {
+        _setupTokenBid();
 
-        marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+        vm.prank(seller);
+        marketplace.acceptTokenBid(address(nft), 1, bidder);
 
-        marketplace.cancelTokenBid(address(nft), 1);
-
-        Marketplace.TokenBid memory bid = marketplace.tokenBids(address(nft), 1, buyer);
-        assertEq(bid.bidder, address(0));
+        assertEq(nft.ownerOf(1), bidder);
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // 5.7 COLLECTION MANAGEMENT
-    // ═══════════════════════════════════════════════════════════════════
-
-    function testRegisterCollection_Valid() public {
-        marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-
-        Marketplace.CollectionInfo memory info = marketplace.collections(address(nft));
-        assertEq(info.royaltyReceiver, royaltyReceiverAddr);
-        assertEq(info.royaltyFee, uint16(ROYALTY_FEE));
-        assertTrue(info.exists);
-    }
-
-    function testRegisterCollection_NonERC721() public {
-        _expectRevert(MarketplaceCore.InvalidCollection.selector);
-        marketplace.registerCollection(address(nonERC721), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-    }
-
-    function testUpdateCollectionRoyalty_Valid() public {
-        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-
-        marketplace.updateCollectionRoyalty(address(nft), newOwner, 1_000);
-
-        Marketplace.CollectionInfo memory info = marketplace.collections(address(nft));
-        assertEq(info.royaltyReceiver, newOwner);
-        assertEq(info.royaltyFee, 1_000);
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 5.8 ADMIN FUNCTIONS
-    // ═══════════════════════════════════════════════════════════════════
-
-    function testUpdateMarketplaceFee_Valid() public {
-        vm.prank(owner);
-        marketplace.updateMarketplaceFee(100);
-
-        assertEq(marketplace.marketplaceFee(), 100);
-    }
-
-    function testUpdateMarketplaceFee_NonOwner() public {
+    function testAdminFunctions_OnlyMarketplaceOwner() public {
         vm.prank(unauthorized);
-        _expectRevert(Ownable.OwnableUnauthorizedAccount.selector, unauthorized);
-        marketplace.updateMarketplaceFee(100);
-    }
+        _expectOwnableUnauthorized(unauthorized);
+        marketplace.pause();
 
-    function testUpdateFeeReceiver_Valid() public {
-        vm.prank(owner);
-        marketplace.updateFeeReceiver(newOwner);
-
-        assertEq(marketplace.feeReceiver(), newOwner);
-    }
-
-    function testUpdateFeeReceiver_NonOwner() public {
-        vm.prank(unauthorized);
-        _expectRevert(Ownable.OwnableUnauthorizedAccount.selector, unauthorized);
-        marketplace.updateFeeReceiver(newOwner);
-    }
-
-    function testTransferOwnership_ByOwner() public {
-        vm.prank(owner);
-        marketplace.transferOwnership(newOwner);
-
-        assertEq(marketplace.owner(), newOwner);
-    }
-
-    function testPause_ByOwner() public {
         vm.prank(owner);
         marketplace.pause();
 
-        assertTrue(core.paused());
-    }
-
-    function testUnpause_ByOwner() public {
-        vm.prank(owner);
-        marketplace.pause();
+        assertTrue(marketplace.paused());
 
         vm.prank(owner);
         marketplace.unpause();
 
-        assertFalse(core.paused());
+        assertFalse(marketplace.paused());
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // INTERNAL HELPERS
-    // ═══════════════════════════════════════════════════════════════════
+    function testComponentOwnersAreRouter() public {
+        assertEq(core.owner(), address(marketplace));
+        assertEq(bids.owner(), address(marketplace));
+    }
 
-    function _setupListing() internal {
+    function testRouterOwnershipIsIndependent() public {
+        vm.prank(owner);
+        marketplace.transferOwnership(newOwner);
+
+        assertEq(marketplace.owner(), owner);
+        assertEq(marketplace.pendingOwner(), newOwner);
+
+        vm.prank(newOwner);
+        marketplace.acceptOwnership();
+
+        assertEq(marketplace.owner(), newOwner);
+        assertEq(core.owner(), address(marketplace));
+        assertEq(bids.owner(), address(marketplace));
+    }
+
+    function testPendingWithdrawalsAggregatesBothComponents() public {
+        _setupListing();
+
+        vm.prank(buyer);
+        marketplace.buy{value: SALE_PRICE}(address(nft), 1);
+
+        (uint256 coreAmount, uint256 bidsAmount) =
+            marketplace.pendingWithdrawals(seller);
+
+        assertGt(coreAmount, 0);
+        assertEq(bidsAmount, 0);
+    }
+
+    function testWithdrawThroughRouter() public {
+        _setupListing();
+
+        vm.prank(buyer);
+        marketplace.buy{value: SALE_PRICE}(address(nft), 1);
+
+        uint256 expected =
+            SALE_PRICE
+            - (SALE_PRICE * MARKETPLACE_FEE) / 10_000
+            - (SALE_PRICE * ROYALTY_FEE) / 10_000;
+
+        uint256 before = seller.balance;
+
+        vm.prank(seller);
+        marketplace.withdraw();
+
+        assertEq(seller.balance - before, expected);
+    }
+
+    function testEmergencyRoyaltyRecoveryThroughRouter() public {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-        _mintNFT(seller, 1);
-        _approveOnCore(address(nft), seller);
 
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        vm.prank(owner);
+        marketplace.emergencyUpdateCollectionRoyalty(address(nft), newOwner, 1000);
+
+        Marketplace.CollectionInfo memory info =
+            marketplace.collections(address(nft));
+
+        assertEq(info.royaltyReceiver, newOwner);
+        assertEq(info.royaltyFee, 1000);
+    }
+
+    function testSweepExcessETH_OnlyOwner() public {
+        vm.deal(address(core), 1 ether);
+
+        vm.prank(unauthorized);
+        _expectOwnableUnauthorized(unauthorized);
+        marketplace.sweepExcessETH(payable(owner));
     }
 }

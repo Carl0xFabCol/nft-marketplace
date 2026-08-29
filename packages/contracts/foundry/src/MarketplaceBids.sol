@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
-interface IMarketplaceCore {
+interface IMarketplaceCoreForBids {
     function collections(address) external view returns (address royaltyReceiver, uint16 royaltyFee, uint256 totalVolume, uint32 totalSales, bool isVerified, bool exists);
 
     function executeSaleFromBid(
@@ -25,7 +26,7 @@ interface IMarketplaceCore {
  * @title MarketplaceBids
  * @notice Handles collection-wide and token-specific bidding
  */
-contract MarketplaceBids is ReentrancyGuard, Pausable {
+contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
     // CONSTANTS
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -53,12 +54,14 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
     // STATE VARIABLES
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    IMarketplaceCore public immutable core;
-    address public owner;
+    IMarketplaceCoreForBids public immutable core;
     address public marketplace;
 
     mapping(address => mapping(address => CollectionBid)) public collectionBids;
     mapping(address => mapping(uint256 => mapping(address => TokenBid))) public tokenBids;
+
+    mapping(address => uint256) public pendingWithdrawals;
+    uint256 public totalPendingWithdrawals;
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // EVENTS
@@ -70,6 +73,9 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
     event TokenBidPlaced(address indexed collection, uint256 indexed tokenId, address indexed bidder, uint128 price, uint64 expiresAt);
     event TokenBidAccepted(address indexed collection, uint256 indexed tokenId, address indexed bidder, address seller, uint128 price);
     event TokenBidCancelled(address indexed collection, uint256 indexed tokenId, address indexed bidder);
+    event MarketplaceAddressUpdated(address indexed oldMarketplace, address indexed newMarketplace);
+    event Withdrawal(address indexed account, uint256 amount);
+    event ExcessETHSwept(address indexed recipient, uint256 amount);
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // ERRORS
@@ -88,15 +94,14 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
     error ArrayLengthMismatch();
     error OnlyOwner();
     error OnlyMarketplace();
+    error InvalidAddress();
+    error NoWithdrawal();
+    error InsufficientExcess();
+    error DuplicateTokenId();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
     // ═══════════════════════════════════════════════════════════════════════════════
-
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert OnlyOwner();
-        _;
-    }
 
     modifier whenCoreNotPaused() {
         require(!core.paused(), "Core paused");
@@ -112,9 +117,9 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
     // CONSTRUCTOR
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    constructor(address _core) {
-        core = IMarketplaceCore(_core);
-        owner = msg.sender;
+    constructor(address _core) Ownable(msg.sender) {
+        if (_core == address(0)) revert InvalidAddress();
+        core = IMarketplaceCoreForBids(_core);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -134,7 +139,7 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
         CollectionBid storage existingBid = collectionBids[collection][bidder];
         if (existingBid.quantity > 0) {
             uint256 refund = uint256(existingBid.pricePerItem) * existingBid.quantity;
-            _refund(bidder, refund);
+            _credit(bidder, refund);
         }
 
         collectionBids[collection][bidder] = CollectionBid({bidder: bidder, pricePerItem: pricePerItem, quantity: quantity, expiresAt: expiresAt});
@@ -200,10 +205,10 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
     }
 
     function _distributePayments(address seller, uint128 sellerProceeds, uint128 marketplaceFee, address royaltyReceiver, uint256 royaltyAmount) internal {
-        _safeTransferETH(core.feeReceiver(), marketplaceFee);
-        _safeTransferETH(seller, sellerProceeds);
+        _credit(core.feeReceiver(), marketplaceFee);
+        _credit(seller, sellerProceeds);
         if (royaltyAmount > 0) {
-            _safeTransferETH(royaltyReceiver, royaltyAmount);
+            _credit(royaltyReceiver, royaltyAmount);
         }
     }
 
@@ -214,7 +219,7 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
         delete collectionBids[collection][bidder];
 
         uint256 refund = uint256(bid.pricePerItem) * bid.quantity;
-        _refund(bidder, refund);
+        _credit(bidder, refund);
 
         emit CollectionBidCancelled(collection, bidder);
     }
@@ -232,7 +237,7 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
 
         TokenBid storage existingBid = tokenBids[collection][tokenId][bidder];
         if (existingBid.price > 0) {
-            _refund(bidder, existingBid.price);
+            _credit(bidder, existingBid.price);
         }
 
         tokenBids[collection][tokenId][bidder] = TokenBid({bidder: bidder, price: price, expiresAt: expiresAt});
@@ -254,6 +259,16 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
         uint256 totalRefunds;
 
         for (uint256 i; i < length; ) {
+            if (prices[i] < MIN_LISTING_PRICE) revert InvalidPrice();
+            if (expiresAts[i] != 0 && expiresAts[i] <= block.timestamp) revert BidExpired();
+
+            for (uint256 j; j < i; ) {
+                if (tokenIds[j] == tokenIds[i]) revert DuplicateTokenId();
+                unchecked {
+                    ++j;
+                }
+            }
+
             totalNewValue += prices[i];
             TokenBid storage existingBid = tokenBids[collection][tokenIds[i]][bidder];
             if (existingBid.price > 0) {
@@ -267,30 +282,23 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
         uint256 netRequired = totalNewValue > totalRefunds ? totalNewValue - totalRefunds : 0;
         if (msg.value != netRequired) revert InsufficientValue();
 
-        uint256 excessRefund = totalRefunds > totalNewValue ? totalRefunds - totalNewValue : 0;
-
         for (uint256 i; i < length; ) {
-            _placeTokenBidNoRefund(collection, tokenIds[i], prices[i], expiresAts[i], bidder);
+            TokenBid memory existingBid = tokenBids[collection][tokenIds[i]][bidder];
+            if (existingBid.price > 0) {
+                _credit(bidder, existingBid.price);
+            }
+
+            tokenBids[collection][tokenIds[i]][bidder] = TokenBid({bidder: bidder, price: prices[i], expiresAt: expiresAts[i]});
+
+            emit TokenBidPlaced(collection, tokenIds[i], bidder, prices[i], expiresAts[i]);
+
             unchecked {
                 ++i;
             }
         }
 
-        if (excessRefund > 0) {
-            _safeTransferETH(bidder, excessRefund);
-        }
-    }
-
-    function _placeTokenBidNoRefund(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address bidder) internal {
-        (, , , , , bool exists) = core.collections(collection);
-        if (!exists) revert CollectionNotRegistered();
-        if (price < MIN_LISTING_PRICE) revert InvalidPrice();
-        if (expiresAt != 0 && expiresAt <= block.timestamp) revert BidExpired();
-
-        // ✅ Sobreescribir sin refund (ya se calculó y gestionó en el batch)
-        tokenBids[collection][tokenId][bidder] = TokenBid({bidder: bidder, price: price, expiresAt: expiresAt});
-
-        emit TokenBidPlaced(collection, tokenId, bidder, price, expiresAt);
+        // Any old-bid value not needed for the new batch is represented by
+        // the withdrawal credits above; no ETH push is required.
     }
 
     function acceptTokenBid(address collection, uint256 tokenId, address bidder, address seller) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
@@ -308,7 +316,11 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
         (uint128 marketplaceFeeAmount, address royaltyReceiver, uint256 royaltyAmount) = core.executeSaleFromBid(collection, tokenId, seller, bidder, price);
 
         uint128 sellerProceeds = price - marketplaceFeeAmount - uint128(royaltyAmount);
-        _distributePayments(seller, sellerProceeds, marketplaceFeeAmount, royaltyReceiver, royaltyAmount);
+        _credit(seller, sellerProceeds);
+        _credit(core.feeReceiver(), marketplaceFeeAmount);
+        if (royaltyAmount > 0) {
+            _credit(royaltyReceiver, royaltyAmount);
+        }
 
         emit TokenBidAccepted(collection, tokenId, bidder, seller, price);
     }
@@ -318,7 +330,7 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
         if (bid.price == 0) revert BidNotFound();
 
         delete tokenBids[collection][tokenId][bidder];
-        _refund(bidder, bid.price);
+        _credit(bidder, bid.price);
 
         emit TokenBidCancelled(collection, tokenId, bidder);
     }
@@ -331,7 +343,7 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
             TokenBid memory bid = tokenBids[collections_[i]][tokenIds[i]][bidder];
             if (bid.price > 0) {
                 delete tokenBids[collections_[i]][tokenIds[i]][bidder];
-                _refund(bidder, bid.price);
+                _credit(bidder, bid.price);
                 emit TokenBidCancelled(collections_[i], tokenIds[i], bidder);
             }
             unchecked {
@@ -352,28 +364,66 @@ contract MarketplaceBids is ReentrancyGuard, Pausable {
         _unpause();
     }
 
-    function transferOwnership(address _owner) external onlyOwner {
-        require(_owner != address(0), "Invalid address");
-        owner = _owner;
-    }
-
     function setMarketplaceAddress(address _marketplace) external onlyOwner {
-        require(_marketplace != address(0), "Invalid address");
+        if (_marketplace == address(0)) revert InvalidAddress();
+
+        address oldMarketplace = marketplace;
         marketplace = _marketplace;
+        emit MarketplaceAddressUpdated(oldMarketplace, _marketplace);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // INTERNAL HELPERS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function _refund(address _user, uint256 _amount) internal {
-        _safeTransferETH(_user, _amount);
+    function _credit(address account, uint256 amount) internal {
+        if (amount == 0) return;
+        if (account == address(0)) revert InvalidAddress();
+
+        pendingWithdrawals[account] += amount;
+        totalPendingWithdrawals += amount;
     }
 
-    function _safeTransferETH(address to, uint256 amount) internal {
-        if (amount == 0) return;
-        (bool success, ) = to.call{value: amount}("");
+    function withdrawFor(address account) external nonReentrant onlyMarketplace returns (bool withdrawn) {
+        if (pendingWithdrawals[account] == 0) return false;
+        _withdraw(account);
+        return true;
+    }
+
+    function withdraw() external nonReentrant {
+        _withdraw(msg.sender);
+    }
+
+    function _withdraw(address account) internal {
+        uint256 amount = pendingWithdrawals[account];
+        if (amount == 0) revert NoWithdrawal();
+
+        pendingWithdrawals[account] = 0;
+        unchecked {
+            totalPendingWithdrawals -= amount;
+        }
+
+        (bool success, ) = payable(account).call{value: amount}("");
+        if (!success) {
+            pendingWithdrawals[account] = amount;
+            totalPendingWithdrawals += amount;
+            revert TransferFailed();
+        }
+
+        emit Withdrawal(account, amount);
+    }
+
+    function sweepExcessETH(address payable recipient) external onlyOwner {
+        if (recipient == address(0)) revert InvalidAddress();
+
+        uint256 balance = address(this).balance;
+        if (balance <= totalPendingWithdrawals) revert InsufficientExcess();
+
+        uint256 amount = balance - totalPendingWithdrawals;
+        (bool success, ) = recipient.call{value: amount}("");
         if (!success) revert TransferFailed();
+
+        emit ExcessETHSwept(recipient, amount);
     }
 
     receive() external payable {}

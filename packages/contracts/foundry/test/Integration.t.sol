@@ -5,12 +5,7 @@ import "forge-std/Test.sol";
 import "./TestSetup.sol";
 
 contract IntegrationTest is TestSetup {
-    // ═══════════════════════════════════════════════════════════════════
-    // 6.0 CROSS-CONTRACT INTEGRATION
-    // ═══════════════════════════════════════════════════════════════════
-
     function testEndToEnd_ListAndBuy() public {
-        // Register → mint → approve → list → buy → verify ownership
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
@@ -18,18 +13,19 @@ contract IntegrationTest is TestSetup {
         vm.prank(seller);
         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
 
-        uint256 sellerBefore = seller.balance;
-        uint256 feeBefore = feeReceiverAddr.balance;
-        uint256 royaltyBefore = royaltyReceiverAddr.balance;
-
+        vm.prank(buyer);
         marketplace.buy{value: SALE_PRICE}(address(nft), 1);
 
         assertEq(nft.ownerOf(1), buyer);
         assertEq(core.totalSales(), 1);
-        assertEq(core.totalVolume(), SALE_PRICE);
-        assertTrue(seller.balance > sellerBefore);
-        assertTrue(feeReceiverAddr.balance > feeBefore);
-        assertTrue(royaltyReceiverAddr.balance > royaltyBefore);
+
+        uint256 expectedFee = (SALE_PRICE * MARKETPLACE_FEE) / 10_000;
+        uint256 expectedRoyalty = (SALE_PRICE * ROYALTY_FEE) / 10_000;
+        uint256 expectedSeller = SALE_PRICE - expectedFee - expectedRoyalty;
+
+        assertEq(core.pendingWithdrawals(seller), expectedSeller);
+        assertEq(core.pendingWithdrawals(feeReceiverAddr), expectedFee);
+        assertEq(core.pendingWithdrawals(royaltyReceiverAddr), expectedRoyalty);
     }
 
     function testEndToEnd_CollectionBidAndAccept() public {
@@ -37,14 +33,21 @@ contract IntegrationTest is TestSetup {
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
 
-        marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, 0);
+        vm.prank(bidder);
+        marketplace.placeCollectionBid{value: SALE_PRICE}(
+            address(nft), uint128(SALE_PRICE), 1, 0
+        );
 
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = 1;
-        marketplace.acceptCollectionBid(address(nft), buyer, tokenIds);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 1;
 
-        assertEq(nft.ownerOf(1), buyer);
+        vm.prank(seller);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids);
+
+        assertEq(nft.ownerOf(1), bidder);
         assertEq(core.totalSales(), 1);
+        // Bid proceeds are credited by MarketplaceBids.
+        assertGt(bids.pendingWithdrawals(seller), 0);
     }
 
     function testEndToEnd_TokenBidAndAccept() public {
@@ -52,61 +55,89 @@ contract IntegrationTest is TestSetup {
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
 
-        marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+        vm.prank(bidder);
+        marketplace.placeTokenBid{value: SALE_PRICE}(
+            address(nft), 1, uint128(SALE_PRICE), 0
+        );
 
-        marketplace.acceptTokenBid(address(nft), 1, buyer);
+        vm.prank(seller);
+        marketplace.acceptTokenBid(address(nft), 1, bidder);
 
-        assertEq(nft.ownerOf(1), buyer);
+        assertEq(nft.ownerOf(1), bidder);
         assertEq(core.totalSales(), 1);
+        assertGt(bids.pendingWithdrawals(seller), 0);
     }
 
-    function testEndToEnd_PauseBlocksAllOperations() public {
+    function testEndToEnd_PauseBlocksMarketplaceOperations() public {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
 
+        vm.prank(seller);
         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
 
         vm.prank(owner);
         marketplace.pause();
 
-        _expectRevert(Pausable.EnforcedPause.selector);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
-
+        vm.prank(buyer);
         _expectRevert(Pausable.EnforcedPause.selector);
         marketplace.buy{value: SALE_PRICE}(address(nft), 1);
+
+        vm.prank(seller);
+        _expectRevert(Pausable.EnforcedPause.selector);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
     }
 
-    function testEndToEnd_BidThenCancel() public {
-        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    function testEndToEnd_RoyaltyERC2981UsesPendingWithdrawal() public {
+        _registerCollection(
+            address(nftWithRoyalty),
+            uint16(ROYALTY_FEE),
+            royaltyReceiverAddr
+        );
 
-        marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, 0);
-
-        marketplace.cancelCollectionBid(address(nft));
-
-        // collectionBids is a public mapping returning (address, uint128, uint32, uint64)
-        // After cancellation, the bid should be deleted (bidder == address(0))
-        (address bidder_, , , ) = bids.collectionBids(address(nft), buyer);
-        assertEq(bidder_, address(0));
-    }
-
-    function testEndToEnd_CollectionRoyaltyWithERC2981() public {
-        // Register collection with royalty
-        _registerCollection(address(nftWithRoyalty), uint16(ROYALTY_FEE), royaltyReceiverAddr);
-
-        // Set per-token royalty
-        nftWithRoyalty.setTokenRoyalty(1, royaltyReceiverAddr, uint96(ROYALTY_FEE));
+        nftWithRoyalty.setTokenRoyalty(
+            1,
+            royaltyReceiverAddr,
+            uint96(ROYALTY_FEE)
+        );
 
         _mintNFTWithRoyalty(seller, 1);
         _approveOnCore(address(nftWithRoyalty), seller);
 
-        marketplace.createListing(address(nftWithRoyalty), 1, uint128(SALE_PRICE), 0);
+        vm.prank(seller);
+        marketplace.createListing(
+            address(nftWithRoyalty), 1, uint128(SALE_PRICE), 0
+        );
 
-        uint256 royaltyBefore = royaltyReceiverAddr.balance;
-
-        marketplace.buy{value: SALE_PRICE}(address(nftWithRoyalty), 1);
+        vm.prank(buyer);
+        marketplace.buy{value: SALE_PRICE}(
+            address(nftWithRoyalty), 1
+        );
 
         assertEq(nftWithRoyalty.ownerOf(1), buyer);
-        assertEq(royaltyReceiverAddr.balance - royaltyBefore, (SALE_PRICE * ROYALTY_FEE) / 10_000);
+        assertEq(
+            core.pendingWithdrawals(royaltyReceiverAddr),
+            (SALE_PRICE * ROYALTY_FEE) / 10_000
+        );
+    }
+
+    function testEndToEnd_BidCancellationAndWithdrawal() public {
+        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+
+        vm.prank(bidder);
+        marketplace.placeCollectionBid{value: SALE_PRICE}(
+            address(nft), uint128(SALE_PRICE), 1, 0
+        );
+
+        vm.prank(bidder);
+        marketplace.cancelCollectionBid(address(nft));
+
+        uint256 before = bidder.balance;
+
+        vm.prank(bidder);
+        marketplace.withdraw();
+
+        assertEq(bidder.balance - before, SALE_PRICE);
+        assertEq(bids.pendingWithdrawals(bidder), 0);
     }
 }

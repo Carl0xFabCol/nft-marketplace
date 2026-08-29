@@ -2,16 +2,20 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
+interface IERC173 {
+    function owner() external view returns (address);
+}
 
 /**
  * @title MarketplaceCore
  * @notice Core marketplace functionality: listings, sales, and collection management
  */
-contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
+contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
     // CONSTANTS
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -58,6 +62,10 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
     // Authorized contracts (bids contract)
     mapping(address => bool) public authorizedContracts;
 
+    // Pull-payment ledger. Sales never push ETH to arbitrary recipients.
+    mapping(address => uint256) public pendingWithdrawals;
+    uint256 public totalPendingWithdrawals;
+
     // ═══════════════════════════════════════════════════════════════════════════════
     // EVENTS
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -71,6 +79,9 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
     event FeeReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
     event CollectionVerified(address indexed collection);
     event ContractAuthorized(address indexed contractAddr, bool authorized);
+    event CollectionRoyaltyUpdated(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee);
+    event Withdrawal(address indexed account, uint256 amount);
+    event ExcessETHSwept(address indexed recipient, uint256 amount);
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // ERRORS
@@ -92,6 +103,10 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
     error ArrayLengthMismatch();
     error SelfPurchase();
     error Unauthorized();
+    error InvalidAddress();
+    error NoWithdrawal();
+    error InsufficientExcess();
+    error CorePaused();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -158,8 +173,9 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
-    function updateListingPrice(address collection, uint256 tokenId, uint128 newPrice, address seller) external onlyAuthorized {
+    function updateListingPrice(address collection, uint256 tokenId, uint128 newPrice, address seller) external whenNotPaused onlyAuthorized {
         Listing storage listing = listings[collection][tokenId];
+        if (listing.price == 0) revert ListingNotFound();
         if (IERC721(collection).ownerOf(tokenId) != seller) revert NotTokenOwner();
         if (listing.seller != seller) revert NotSeller();
         if (newPrice < MIN_LISTING_PRICE) revert InvalidPrice();
@@ -168,7 +184,7 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
         emit ListingUpdated(collection, tokenId, newPrice);
     }
 
-    function cancelListing(address collection, uint256 tokenId, address seller) external {
+    function cancelListing(address collection, uint256 tokenId, address seller) external onlyAuthorized {
         _cancelListing(collection, tokenId, seller);
     }
 
@@ -218,6 +234,7 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
             Listing memory listing = listings[collection][tokenIds[i]];
             if (listing.price == 0) revert ListingNotFound();
             if (listing.expiresAt != 0 && listing.expiresAt < block.timestamp) revert ListingExpired();
+            if (buyer == listing.seller) revert SelfPurchase();
             totalPrice += listing.price;
             unchecked {
                 ++i;
@@ -242,17 +259,18 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
         (address royaltyReceiver, uint256 royaltyAmount) = _getRoyalty(collection, tokenId, uint256(listing.price));
         uint128 sellerProceeds = listing.price - marketplaceFeeAmount - uint128(royaltyAmount);
 
-        IERC721(collection).safeTransferFrom(listing.seller, buyer, tokenId);
-
+        // Effects before interaction: clear the listing before ERC721 receiver code runs.
         delete listings[collection][tokenId];
         unchecked {
             --totalListings;
         }
 
-        _safeTransferETH(feeReceiver, marketplaceFeeAmount);
-        _safeTransferETH(listing.seller, sellerProceeds);
+        IERC721(collection).safeTransferFrom(listing.seller, buyer, tokenId);
+
+        _credit(feeReceiver, marketplaceFeeAmount);
+        _credit(listing.seller, sellerProceeds);
         if (royaltyAmount > 0) {
-            _safeTransferETH(royaltyReceiver, royaltyAmount);
+            _credit(royaltyReceiver, royaltyAmount);
         }
 
         unchecked {
@@ -278,18 +296,22 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
     ) external onlyAuthorized nonReentrant returns (uint128 marketplaceFeeAmount, address royaltyReceiver, uint256 royaltyAmount) {
         IERC721 nft = IERC721(collection);
         if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
+        if (!nft.isApprovedForAll(seller, address(this))) revert NotApproved();
 
         marketplaceFeeAmount = uint128((uint256(price) * marketplaceFee) / BASIS_POINTS);
         (royaltyReceiver, royaltyAmount) = _getRoyalty(collection, tokenId, uint256(price));
 
-        nft.safeTransferFrom(seller, buyer, tokenId);
-
+        // Effects before interaction.
         if (listings[collection][tokenId].price > 0) {
+            address listedSeller = listings[collection][tokenId].seller;
             delete listings[collection][tokenId];
             unchecked {
                 --totalListings;
             }
+            emit ListingCancelled(collection, tokenId, listedSeller);
         }
+
+        nft.safeTransferFrom(seller, buyer, tokenId);
 
         unchecked {
             totalVolume += price;
@@ -305,7 +327,7 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
     // COLLECTION MANAGEMENT
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver) external onlyAuthorized {
+    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address sender) external onlyAuthorized {
         if (collection == address(0)) revert InvalidCollection();
         if (collections[collection].exists) revert CollectionAlreadyRegistered();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
@@ -316,26 +338,40 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
             revert InvalidCollection();
         }
 
-        collections[collection] = CollectionInfo({royaltyReceiver: royaltyReceiver, royaltyFee: royaltyFee, totalVolume: 0, totalSales: 0, isVerified: false, exists: true});
+        // Prevent public front-running. ERC-173/Ownable collections must be
+        // registered by their actual owner. Collections without an ownership
+        // interface can only be registered by the marketplace admin.
+        (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
+        if (hasOwner) {
+            if (collectionOwner != sender) revert NotCollectionOwner();
+        } else {
+            if (sender != owner()) revert NotCollectionOwner();
+        }
 
-        emit CollectionRegistered(collection, royaltyReceiver, royaltyFee, false);
+        if (royaltyReceiver == address(0) && royaltyFee != 0) revert InvalidAddress();
+
+        collections[collection] = CollectionInfo({
+            royaltyReceiver: royaltyReceiver,
+            royaltyFee: royaltyFee,
+            totalVolume: 0,
+            totalSales: 0,
+            isVerified: false,
+            exists: true
+        });
+
+        emit CollectionRegistered(collection, sender, royaltyFee, false);
     }
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external onlyAuthorized {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
 
-        address collectionOwner;
-        try Ownable(collection).owner() returns (address owner) {
-            collectionOwner = owner;
-        } catch {
-            revert NotCollectionOwner();
-        }
-
-        if (collectionOwner != sender) revert NotCollectionOwner();
+        (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
+        if (!hasOwner || collectionOwner != sender) revert NotCollectionOwner();
 
         collections[collection].royaltyReceiver = royaltyReceiver;
         collections[collection].royaltyFee = royaltyFee;
+        emit CollectionRoyaltyUpdated(collection, royaltyReceiver, royaltyFee);
     }
 
 
@@ -343,6 +379,21 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
     // ADMIN FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════════════
+
+    // Admin recovery path for a bad/non-ownable registration.
+    function emergencyUpdateCollectionRoyalty(
+        address collection,
+        address royaltyReceiver,
+        uint16 royaltyFee
+    ) external onlyOwner {
+        if (!collections[collection].exists) revert CollectionNotRegistered();
+        if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
+        if (royaltyReceiver == address(0) && royaltyFee != 0) revert InvalidAddress();
+
+        collections[collection].royaltyReceiver = royaltyReceiver;
+        collections[collection].royaltyFee = royaltyFee;
+        emit CollectionRoyaltyUpdated(collection, royaltyReceiver, royaltyFee);
+    }
 
     function verifyCollection(address collection) external onlyOwner {
         if (!collections[collection].exists) revert CollectionNotRegistered();
@@ -357,7 +408,7 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
     }
 
     function updateFeeReceiver(address newReceiver) external onlyOwner {
-        if (newReceiver == address(0)) revert InvalidCollection();
+        if (newReceiver == address(0)) revert InvalidAddress();
         address oldReceiver = feeReceiver;
         feeReceiver = newReceiver;
         emit FeeReceiverUpdated(oldReceiver, newReceiver);
@@ -389,10 +440,68 @@ contract MarketplaceCore is Ownable, ReentrancyGuard, Pausable {
     // INTERNAL HELPERS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function _safeTransferETH(address to, uint256 amount) internal {
+    function _credit(address account, uint256 amount) internal {
         if (amount == 0) return;
-        (bool success, ) = to.call{value: amount}("");
+        if (account == address(0)) revert InvalidAddress();
+
+        pendingWithdrawals[account] += amount;
+        totalPendingWithdrawals += amount;
+    }
+
+    function withdrawFor(address account) external nonReentrant onlyAuthorized returns (bool withdrawn) {
+        if (pendingWithdrawals[account] == 0) return false;
+        _withdraw(account);
+        return true;
+    }
+
+    function withdraw() external nonReentrant {
+        _withdraw(msg.sender);
+    }
+
+    function _withdraw(address account) internal {
+        uint256 amount = pendingWithdrawals[account];
+        if (amount == 0) revert NoWithdrawal();
+
+        pendingWithdrawals[account] = 0;
+        unchecked {
+            totalPendingWithdrawals -= amount;
+        }
+
+        (bool success, ) = payable(account).call{value: amount}("");
+        if (!success) {
+            pendingWithdrawals[account] = amount;
+            totalPendingWithdrawals += amount;
+            revert TransferFailed();
+        }
+
+        emit Withdrawal(account, amount);
+    }
+
+    function sweepExcessETH(address payable recipient) external onlyOwner {
+        if (recipient == address(0)) revert InvalidAddress();
+
+        uint256 balance = address(this).balance;
+        if (balance <= totalPendingWithdrawals) revert InsufficientExcess();
+
+        uint256 amount = balance - totalPendingWithdrawals;
+        (bool success, ) = recipient.call{value: amount}("");
         if (!success) revert TransferFailed();
+
+        emit ExcessETHSwept(recipient, amount);
+    }
+
+    function _tryCollectionOwner(address collection)
+        internal
+        view
+        returns (bool hasOwner, address collectionOwner)
+    {
+        (bool success, bytes memory data) =
+            collection.staticcall(abi.encodeWithSelector(IERC173.owner.selector));
+
+        if (success && data.length >= 32) {
+            collectionOwner = abi.decode(data, (address));
+            hasOwner = true;
+        }
     }
 
     function _getRoyalty(address collection, uint256 tokenId, uint256 salePrice) internal view returns (address receiver, uint256 amount) {
