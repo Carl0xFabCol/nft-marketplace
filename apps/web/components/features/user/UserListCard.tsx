@@ -83,7 +83,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     query: {
       enabled: Boolean(collections.length),
     },
-  })
+  } as any)
 
   const floors = useMemo<Record<string, bigint>>(() => {
     if (!listings?.length) return {}
@@ -256,166 +256,166 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
       panelClassName="min-w-[80%] max-h-[75vh]"
       backdropClassName="fixed bg-black/50 justify-center items-center flex backdrop-blur-sm pt-10 h-full w-full left-0 top-0 z-50"
     >
-        {/* Table header */}
-        <div className="flex w-full justify-between px-6 font-bold  py-3">
-          <div className="flex flex-2 gap-2 items-center">
-            <span>{listItems.length} items</span>
-          </div>
-          <div className="flex flex-1 gap-2 items-center">
-            <span>Floor</span>
-          </div>
-          <div className="flex flex-1 gap-2 items-center">
-            <span>Royalty</span>
-          </div>
-          <div className="flex flex-1 gap-2 items-center">
-            <span>Price</span>
-          </div>
-          <div className="flex flex-1 gap-2 items-center">
-            <span>Expires At</span>
-          </div>
-          <div className="flex flex-[0.2] gap-2 items-center" />
+      {/* Table header */}
+      <div className="flex w-full justify-between px-6 font-bold  py-3">
+        <div className="flex flex-2 gap-2 items-center">
+          <span>{listItems.length} items</span>
         </div>
-
-        {/* Items list - scrollable */}
-        <div className="flex flex-col w-full overflow-y-auto max-h-[50vh]">
-          {listItems.map((item, index) => {
-            const floor = floors[item.collection_address.toLowerCase()]
-            const collectionName = getCollectionName(item.collection_address)
-            const colData = getCollectionData(item.collection_address)
-            const royaltyPercent = colData ? Number(colData.royaltyFee) / 100 : 0
-            const royaltyAmount = item.priceEth ? (Number(item.priceEth) * royaltyPercent) / 100 : 0
-
-            return (
-              <div className="flex items-center px-6 justify-between w-full py-6 " key={`${item.collection_address}-${item.token_id}`}>
-                {/* NFT Info */}
-                <div className="flex flex-2 items-center gap-3">
-                  <RiNftFill className="text-xl opacity-75" />
-                  <div className="flex flex-col items-start">
-                    <span className="font-bold">#{item.token_id}</span>
-                    <span className="text-sm opacity-65">{collectionName}</span>
-                  </div>
-                </div>
-
-                {/* Floor */}
-                <div className="flex gap-2 items-center flex-1">
-                  <div className="flex gap-1 items-center">
-                    <span>{floor ? (Number(floor) / 1e18).toFixed(4) : "-"}</span>
-                    {floor && <FaEthereum className="text-sm" />}
-                  </div>
-                </div>
-
-                {/* Royalty */}
-                <div className="flex-1 flex items-center gap-2">
-                  <span className="flex items-center gap-1">
-                    {royaltyAmount ? royaltyAmount.toFixed(4) : "-"}
-                    {royaltyAmount > 0 && <FaEthereum className="text-sm" />}
-                  </span>
-                  <span className="text-sm opacity-65">({royaltyPercent ? `${royaltyPercent}%` : "-%"})</span>
-                </div>
-
-                {/* Price input */}
-                <div className="flex flex-1">
-                  <div>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={item.priceEth ?? ""}
-                      onChange={(e) => updateItemPrice(item.token_id, item.collection_address, e.target.value)}
-                      className="rounded flex-1 p-3 text-sm w-[80%]"
-                      placeholder="0.00 ETH"
-                    />
-                  </div>
-                </div>
-
-                {/* Expiration date input */}
-
-                <div className="flex flex-1">
-                  <ExpirationPicker onChange={(date: Date) => updateItemExpirationDate(item.token_id, item.collection_address, date)} />
-                </div>
-
-                {/* Remove button */}
-                <div className="flex flex-[0.2] justify-center gap-2 items-center">
-                  <button onClick={() => removeListItem(item.token_id, item.collection_address)} className="p-2 bg-transparent! text-(--text)! hover:opacity-75">
-                    <FaTrash className="opacity-75" />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+        <div className="flex flex-1 gap-2 items-center">
+          <span>Floor</span>
         </div>
+        <div className="flex flex-1 gap-2 items-center">
+          <span>Royalty</span>
+        </div>
+        <div className="flex flex-1 gap-2 items-center">
+          <span>Price</span>
+        </div>
+        <div className="flex flex-1 gap-2 items-center">
+          <span>Expires At</span>
+        </div>
+        <div className="flex flex-[0.2] gap-2 items-center" />
+      </div>
 
-        {/* Footer - Summary and List button */}
-        <div className="w-full flex flex-col border-t border-(--text)/20 p-4 bg-(--bg)/50">
-          <div className="flex justify-between items-center">
-            <div className="flex flex-col gap-2">
-              {/* Total estimated */}
-              <div className="flex items-center gap-4">
-                <span className="font-bold text-xl">Total estimated:</span>
-                <div className="flex gap-2 items-center text-xl">
-                  <span>{totalEstimated ? (totalEstimated / 1e18).toFixed(4) : "0.00"}</span>
-                  <FaEthereum />
+      {/* Items list - scrollable */}
+      <div className="flex flex-col w-full overflow-y-auto max-h-[50vh]">
+        {listItems.map((item, index) => {
+          const floor = floors[item.collection_address.toLowerCase()]
+          const collectionName = getCollectionName(item.collection_address)
+          const colData = getCollectionData(item.collection_address)
+          const royaltyPercent = colData ? Number(colData.royaltyFee) / 100 : 0
+          const royaltyAmount = item.priceEth ? (Number(item.priceEth) * royaltyPercent) / 100 : 0
+
+          return (
+            <div className="flex items-center px-6 justify-between w-full py-6 " key={`${item.collection_address}-${item.token_id}`}>
+              {/* NFT Info */}
+              <div className="flex flex-2 items-center gap-3">
+                <RiNftFill className="text-xl opacity-75" />
+                <div className="flex flex-col items-start">
+                  <span className="font-bold">#{item.token_id}</span>
+                  <span className="text-sm opacity-65">{collectionName}</span>
                 </div>
               </div>
 
-              {/* Fees breakdown */}
-              <div className="flex items-center gap-4 text-sm opacity-75">
-                {/* Royalties */}
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">Royalties:</span>
-                  <div className="flex gap-2 items-center">
-                    <span>{totalRoyalties ? (totalRoyalties / 1e18).toFixed(4) : "0.00"}</span>
-                    <span>
-                      ({totalRoyalties ? ((totalRoyalties / (totalEstimated + totalMarketplaceFee + totalRoyalties)) * 100).toFixed(2) : "0"}
-                      %)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Marketplace fee */}
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">Marketplace:</span>
-                  <div className="flex gap-2 items-center">
-                    <span>{totalMarketplaceFee ? (totalMarketplaceFee / 1e18).toFixed(4) : "0.00"}</span>
-                    <span>
-                      ({totalMarketplaceFee ? ((totalMarketplaceFee / (totalEstimated + totalMarketplaceFee + totalRoyalties)) * 100).toFixed(2) : "0"}
-                      %)
-                    </span>
-                  </div>
+              {/* Floor */}
+              <div className="flex gap-2 items-center flex-1">
+                <div className="flex gap-1 items-center">
+                  <span>{floor ? (Number(floor) / 1e18).toFixed(4) : "-"}</span>
+                  {floor && <FaEthereum className="text-sm" />}
                 </div>
               </div>
-            </div>
-            <div className="flex  gap-4 items-center justify-end">
-              {/* Set all price */}
-              <div className=" flex ">
-                <div className="flex gap-2 items-center">
-                  <span className="text-sm">Set all to:</span>
+
+              {/* Royalty */}
+              <div className="flex-1 flex items-center gap-2">
+                <span className="flex items-center gap-1">
+                  {royaltyAmount ? royaltyAmount.toFixed(4) : "-"}
+                  {royaltyAmount > 0 && <FaEthereum className="text-sm" />}
+                </span>
+                <span className="text-sm opacity-65">({royaltyPercent ? `${royaltyPercent}%` : "-%"})</span>
+              </div>
+
+              {/* Price input */}
+              <div className="flex flex-1">
+                <div>
                   <input
                     type="text"
                     inputMode="decimal"
-                    value={priceAll}
-                    onChange={(e) => updateAllPrices(e.target.value)}
-                    className="text-sm rounded w-32 p-2 border border-(--text)/20"
+                    value={item.priceEth ?? ""}
+                    onChange={(e) => updateItemPrice(item.token_id, item.collection_address, e.target.value)}
+                    className="rounded flex-1 p-3 text-sm w-[80%]"
                     placeholder="0.00 ETH"
                   />
                 </div>
               </div>
 
-              {/* List button */}
-              <button
-                onClick={handleList}
-                disabled={!canList}
-                className={`
+              {/* Expiration date input */}
+
+              <div className="flex flex-1">
+                <ExpirationPicker onChange={(date: Date) => updateItemExpirationDate(item.token_id, item.collection_address, date)} />
+              </div>
+
+              {/* Remove button */}
+              <div className="flex flex-[0.2] justify-center gap-2 items-center">
+                <button onClick={() => removeListItem(item.token_id, item.collection_address)} className="p-2 bg-transparent! text-(--text)! hover:opacity-75">
+                  <FaTrash className="opacity-75" />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Footer - Summary and List button */}
+      <div className="w-full flex flex-col border-t border-(--text)/20 p-4 bg-(--bg)/50">
+        <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-2">
+            {/* Total estimated */}
+            <div className="flex items-center gap-4">
+              <span className="font-bold text-xl">Total estimated:</span>
+              <div className="flex gap-2 items-center text-xl">
+                <span>{totalEstimated ? (totalEstimated / 1e18).toFixed(4) : "0.00"}</span>
+                <FaEthereum />
+              </div>
+            </div>
+
+            {/* Fees breakdown */}
+            <div className="flex items-center gap-4 text-sm opacity-75">
+              {/* Royalties */}
+              <div className="flex items-center gap-2">
+                <span className="font-bold">Royalties:</span>
+                <div className="flex gap-2 items-center">
+                  <span>{totalRoyalties ? (totalRoyalties / 1e18).toFixed(4) : "0.00"}</span>
+                  <span>
+                    ({totalRoyalties ? ((totalRoyalties / (totalEstimated + totalMarketplaceFee + totalRoyalties)) * 100).toFixed(2) : "0"}
+                    %)
+                  </span>
+                </div>
+              </div>
+
+              {/* Marketplace fee */}
+              <div className="flex items-center gap-2">
+                <span className="font-bold">Marketplace:</span>
+                <div className="flex gap-2 items-center">
+                  <span>{totalMarketplaceFee ? (totalMarketplaceFee / 1e18).toFixed(4) : "0.00"}</span>
+                  <span>
+                    ({totalMarketplaceFee ? ((totalMarketplaceFee / (totalEstimated + totalMarketplaceFee + totalRoyalties)) * 100).toFixed(2) : "0"}
+                    %)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex  gap-4 items-center justify-end">
+            {/* Set all price */}
+            <div className=" flex ">
+              <div className="flex gap-2 items-center">
+                <span className="text-sm">Set all to:</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={priceAll}
+                  onChange={(e) => updateAllPrices(e.target.value)}
+                  className="text-sm rounded w-32 p-2 border border-(--text)/20"
+                  placeholder="0.00 ETH"
+                />
+              </div>
+            </div>
+
+            {/* List button */}
+            <button
+              onClick={handleList}
+              disabled={!canList}
+              className={`
                   px-8 py-3 rounded flex gap-2 items-center font-bold
                   ${canList ? "bg-(--accent) text-(--bg-secondary) hover:opacity-90" : "bg-(--accent)/30 text-(--text)/50 cursor-not-allowed"}
                 `}
-              >
-                <span>List</span>
-                <span>{listItems.length}</span>
-                <span>items</span>
-              </button>
-            </div>
+            >
+              <span>List</span>
+              <span>{listItems.length}</span>
+              <span>items</span>
+            </button>
           </div>
         </div>
+      </div>
     </Modal>
   )
 }

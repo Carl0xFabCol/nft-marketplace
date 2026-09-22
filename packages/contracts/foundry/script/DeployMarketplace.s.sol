@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
 import "../src/MarketplaceCore.sol";
-import {MarketplaceBids} from "../src/MarketplaceBids.sol";
+import "../src/MarketplaceBids.sol";
 import "../src/Marketplace.sol";
 
 contract DeployMarketplace is Script {
@@ -12,99 +12,109 @@ contract DeployMarketplace is Script {
 
         address deployer = vm.addr(deployerPrivateKey);
         address feeReceiver = vm.envOr("FEE_RECEIVER", deployer);
-        uint16 marketplaceFee = uint16(vm.envOr("MARKETPLACE_FEE", uint256(100))); // 1%
+        uint16 marketplaceFee = uint16(vm.envOr("MARKETPLACE_FEE", uint256(100)));
+
+        // Safety check: this deployment is intended for Sepolia.
+        require(block.chainid == 11155111, "Wrong network: expected Sepolia");
 
         vm.startBroadcast(deployerPrivateKey);
 
         console.log("=================================");
         console.log("DEPLOYING MARKETPLACE");
         console.log("=================================");
+        console.log("Network: Sepolia");
         console.log("Deployer:", deployer);
         console.log("Fee Receiver:", feeReceiver);
         console.log("Marketplace Fee:", marketplaceFee, "basis points");
 
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
         // 1. Deploy Core
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
 
         console.log("\n1. Deploying MarketplaceCore...");
 
         MarketplaceCore core = new MarketplaceCore(marketplaceFee, feeReceiver);
 
-        console.log("MarketplaceCore deployed at:", address(core));
+        console.log("MarketplaceCore:", address(core));
 
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
         // 2. Deploy Bids
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
 
         console.log("\n2. Deploying MarketplaceBids...");
 
         MarketplaceBids bids = new MarketplaceBids(address(core));
 
-        console.log("MarketplaceBids deployed at:", address(bids));
+        console.log("MarketplaceBids:", address(bids));
 
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
         // 3. Deploy Router
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
 
         console.log("\n3. Deploying Marketplace...");
 
         Marketplace marketplace = new Marketplace(address(core), address(bids));
 
-        console.log("Marketplace deployed at:", address(marketplace));
+        console.log("Marketplace:", address(marketplace));
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // 4. Authorize Bids + Marketplace in Core
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
+        // 4. Authorize Bids + Router in Core
+        // ================================================================
 
         console.log("\n4. Authorizing contracts in Core...");
 
         core.setAuthorizedContract(address(bids), true);
-
-        console.log("Bids authorized");
-
         core.setAuthorizedContract(address(marketplace), true);
 
+        require(core.authorizedContracts(address(bids)), "Bids authorization failed");
+
+        require(core.authorizedContracts(address(marketplace)), "Marketplace authorization failed");
+
+        console.log("Bids authorized");
         console.log("Marketplace authorized");
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // 5. Transfer Core ownership -> Marketplace
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
+        // 5. Transfer Core ownership -> Router
+        // ================================================================
 
-        console.log("\n5. Transferring Core ownership to Marketplace...");
+        console.log("\n5. Transferring Core ownership...");
 
         core.transferOwnership(address(marketplace));
 
+        require(core.pendingOwner() == address(marketplace), "Core pending owner incorrect");
+
         console.log("Core ownership transfer initiated");
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // 6. Transfer Bids ownership -> Marketplace
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
+        // 6. Transfer Bids ownership -> Router
+        // ================================================================
 
-        console.log("\n6. Transferring Bids ownership to Marketplace...");
+        console.log("\n6. Transferring Bids ownership...");
 
         bids.transferOwnership(address(marketplace));
 
+        require(bids.pendingOwner() == address(marketplace), "Bids pending owner incorrect");
+
         console.log("Bids ownership transfer initiated");
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // 7. Accept both ownership transfers
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
+        // 7. Router accepts ownership of Core + Bids
+        // ================================================================
 
         console.log("\n7. Accepting component ownership...");
 
         marketplace.acceptComponentOwnership();
 
-        console.log("Core owner:", core.owner());
-        console.log("Bids owner:", bids.owner());
-
         require(core.owner() == address(marketplace), "Core ownership transfer failed");
 
         require(bids.owner() == address(marketplace), "Bids ownership transfer failed");
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // 8. Configure Bids -> Marketplace
-        // ═══════════════════════════════════════════════════════════════════════
+        console.log("Core owner:", core.owner());
+        console.log("Bids owner:", bids.owner());
+
+        // ================================================================
+        // 8. Configure Bids -> Router
+        // ================================================================
 
         console.log("\n8. Configuring Bids marketplace address...");
 
@@ -112,18 +122,46 @@ contract DeployMarketplace is Script {
 
         require(bids.marketplace() == address(marketplace), "Bids marketplace configuration failed");
 
-        console.log("Bids marketplace configured");
+        console.log("Bids marketplace:", bids.marketplace());
+
+        // ================================================================
+        // 9. Final security/configuration checks
+        // ================================================================
+
+        console.log("\n9. Running final checks...");
+
+        require(marketplace.owner() == deployer, "Marketplace owner is not deployer");
+
+        require(core.owner() == address(marketplace), "Core owner incorrect");
+
+        require(bids.owner() == address(marketplace), "Bids owner incorrect");
+
+        require(core.authorizedContracts(address(bids)), "Bids is not authorized in Core");
+
+        require(core.authorizedContracts(address(marketplace)), "Marketplace is not authorized in Core");
+
+        require(bids.marketplace() == address(marketplace), "Bids marketplace incorrect");
+
+        require(address(marketplace.core()) == address(core), "Router Core address incorrect");
+
+        require(address(marketplace.bids()) == address(bids), "Router Bids address incorrect");
+
+        console.log("All checks passed.");
 
         vm.stopBroadcast();
 
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
         // Summary
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
 
         console.log("\n=================================");
         console.log("DEPLOYMENT COMPLETE");
         console.log("=================================");
 
+        console.log("Network: Sepolia");
+        console.log("Chain ID:", block.chainid);
+
+        console.log("\nContracts:");
         console.log("MarketplaceCore:", address(core));
         console.log("MarketplaceBids:", address(bids));
         console.log("Marketplace:", address(marketplace));
@@ -140,14 +178,14 @@ contract DeployMarketplace is Script {
 
         console.log("\nIMPORTANT:");
         console.log("- Users interact with:", address(marketplace));
-        console.log("- NFT approvals must be granted to:", address(core));
-        console.log("- Core and Bids are owned by Marketplace");
-        console.log("- Marketplace admin is:", deployer);
-        console.log("=================================");
+        console.log("- NFT approvals go to:", address(core));
+        console.log("- Core owner:", address(marketplace));
+        console.log("- Bids owner:", address(marketplace));
+        console.log("- Marketplace admin:", deployer);
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // Save addresses
-        // ═══════════════════════════════════════════════════════════════════════
+        // ================================================================
+        // Save deployment
+        // ================================================================
 
         string memory json = string(
             abi.encodePacked(
@@ -167,28 +205,17 @@ contract DeployMarketplace is Script {
                 '  "marketplaceFee": ',
                 vm.toString(marketplaceFee),
                 ",\n",
-                '  "network": "',
-                getChainName(),
-                '"\n',
+                '  "chainId": ',
+                vm.toString(block.chainid),
+                ",\n",
+                '  "network": "sepolia"\n',
                 "}"
             )
         );
 
-        // Write the deployment information.
         vm.writeJson(json, "deployments/latest.json");
 
         console.log("\nDeployment saved to deployments/latest.json");
-    }
-
-    function getChainName() internal view returns (string memory) {
-        uint256 chainId = block.chainid;
-
-        if (chainId == 1) return "mainnet";
-        if (chainId == 11155111) return "sepolia";
-        if (chainId == 5) return "goerli";
-        if (chainId == 137) return "polygon";
-        if (chainId == 80001) return "mumbai";
-
-        return vm.toString(chainId);
+        console.log("=================================");
     }
 }

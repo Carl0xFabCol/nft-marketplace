@@ -6,25 +6,64 @@
 export const MarketplaceBidsABI = [
   {
     type: "constructor",
-    inputs: [{ name: "_core", type: "address", internalType: "address" }],
+    inputs: [
+      {
+        name: "_core",
+        type: "address",
+        internalType: "address",
+      },
+    ],
     stateMutability: "nonpayable",
   },
-  { type: "receive", stateMutability: "payable" },
+  {
+    type: "receive",
+    stateMutability: "payable",
+  },
   {
     type: "function",
     name: "MIN_LISTING_PRICE",
     inputs: [],
-    outputs: [{ name: "", type: "uint128", internalType: "uint128" }],
+    outputs: [
+      {
+        name: "",
+        type: "uint128",
+        internalType: "uint128",
+      },
+    ],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "acceptCollectionBid",
     inputs: [
-      { name: "collection", type: "address", internalType: "address" },
-      { name: "bidder", type: "address", internalType: "address" },
-      { name: "tokenIds", type: "uint256[]", internalType: "uint256[]" },
+      {
+        name: "collection",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "tokenIds",
+        type: "uint256[]",
+        internalType: "uint256[]",
+      },
+      {
+        name: "seller",
+        type: "address",
+        internalType: "address",
+      },
     ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "acceptOwnership",
+    inputs: [],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -32,9 +71,26 @@ export const MarketplaceBidsABI = [
     type: "function",
     name: "acceptTokenBid",
     inputs: [
-      { name: "collection", type: "address", internalType: "address" },
-      { name: "tokenId", type: "uint256", internalType: "uint256" },
-      { name: "bidder", type: "address", internalType: "address" },
+      {
+        name: "collection",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "tokenId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "seller",
+        type: "address",
+        internalType: "address",
+      },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -42,7 +98,18 @@ export const MarketplaceBidsABI = [
   {
     type: "function",
     name: "cancelCollectionBid",
-    inputs: [{ name: "collection", type: "address", internalType: "address" }],
+    inputs: [
+      {
+        name: "collection",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
+    ],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -50,8 +117,21 @@ export const MarketplaceBidsABI = [
     type: "function",
     name: "cancelTokenBid",
     inputs: [
-      { name: "collection", type: "address", internalType: "address" },
-      { name: "tokenId", type: "uint256", internalType: "uint256" },
+      {
+        name: "collection",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "tokenId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -60,8 +140,21 @@ export const MarketplaceBidsABI = [
     type: "function",
     name: "cancelTokenBidBatch",
     inputs: [
-      { name: "collections_", type: "address[]", internalType: "address[]" },
-      { name: "tokenIds", type: "uint256[]", internalType: "uint256[]" },
+      {
+        name: "collections_",
+        type: "address[]",
+        internalType: "address[]",
+      },
+      {
+        name: "tokenIds",
+        type: "uint256[]",
+        internalType: "uint256[]",
+      },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -70,14 +163,38 @@ export const MarketplaceBidsABI = [
     type: "function",
     name: "collectionBids",
     inputs: [
-      { name: "", type: "address", internalType: "address" },
-      { name: "", type: "address", internalType: "address" },
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
     ],
     outputs: [
-      { name: "bidder", type: "address", internalType: "address" },
-      { name: "pricePerItem", type: "uint128", internalType: "uint128" },
-      { name: "quantity", type: "uint32", internalType: "uint32" },
-      { name: "expiresAt", type: "uint64", internalType: "uint64" },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "pricePerItem",
+        type: "uint128",
+        internalType: "uint128",
+      },
+      {
+        name: "quantity",
+        type: "uint32",
+        internalType: "uint32",
+      },
+      {
+        name: "expiresAt",
+        type: "uint64",
+        internalType: "uint64",
+      },
     ],
     stateMutability: "view",
   },
@@ -86,7 +203,24 @@ export const MarketplaceBidsABI = [
     name: "core",
     inputs: [],
     outputs: [
-      { name: "", type: "address", internalType: "contract IMarketplaceCore" },
+      {
+        name: "",
+        type: "address",
+        internalType: "contract IMarketplaceCoreForBids",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "marketplace",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
     ],
     stateMutability: "view",
   },
@@ -94,7 +228,13 @@ export const MarketplaceBidsABI = [
     type: "function",
     name: "owner",
     inputs: [],
-    outputs: [{ name: "", type: "address", internalType: "address" }],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
     stateMutability: "view",
   },
   {
@@ -108,17 +248,76 @@ export const MarketplaceBidsABI = [
     type: "function",
     name: "paused",
     inputs: [],
-    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "pendingOwner",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "pendingWithdrawals",
+    inputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "placeCollectionBid",
     inputs: [
-      { name: "collection", type: "address", internalType: "address" },
-      { name: "pricePerItem", type: "uint128", internalType: "uint128" },
-      { name: "quantity", type: "uint32", internalType: "uint32" },
-      { name: "expiresAt", type: "uint64", internalType: "uint64" },
+      {
+        name: "collection",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "pricePerItem",
+        type: "uint128",
+        internalType: "uint128",
+      },
+      {
+        name: "quantity",
+        type: "uint32",
+        internalType: "uint32",
+      },
+      {
+        name: "expiresAt",
+        type: "uint64",
+        internalType: "uint64",
+      },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
     ],
     outputs: [],
     stateMutability: "payable",
@@ -127,10 +326,31 @@ export const MarketplaceBidsABI = [
     type: "function",
     name: "placeTokenBid",
     inputs: [
-      { name: "collection", type: "address", internalType: "address" },
-      { name: "tokenId", type: "uint256", internalType: "uint256" },
-      { name: "price", type: "uint128", internalType: "uint128" },
-      { name: "expiresAt", type: "uint64", internalType: "uint64" },
+      {
+        name: "collection",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "tokenId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "price",
+        type: "uint128",
+        internalType: "uint128",
+      },
+      {
+        name: "expiresAt",
+        type: "uint64",
+        internalType: "uint64",
+      },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
     ],
     outputs: [],
     stateMutability: "payable",
@@ -139,33 +359,130 @@ export const MarketplaceBidsABI = [
     type: "function",
     name: "placeTokenBidBatch",
     inputs: [
-      { name: "collection", type: "address", internalType: "address" },
-      { name: "tokenIds", type: "uint256[]", internalType: "uint256[]" },
-      { name: "prices", type: "uint128[]", internalType: "uint128[]" },
-      { name: "expiresAts", type: "uint64[]", internalType: "uint64[]" },
+      {
+        name: "collection",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "tokenIds",
+        type: "uint256[]",
+        internalType: "uint256[]",
+      },
+      {
+        name: "prices",
+        type: "uint128[]",
+        internalType: "uint128[]",
+      },
+      {
+        name: "expiresAts",
+        type: "uint64[]",
+        internalType: "uint64[]",
+      },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
     ],
     outputs: [],
     stateMutability: "payable",
   },
   {
     type: "function",
+    name: "renounceOwnership",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setMarketplaceAddress",
+    inputs: [
+      {
+        name: "_marketplace",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "sweepExcessETH",
+    inputs: [
+      {
+        name: "recipient",
+        type: "address",
+        internalType: "address payable",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "tokenBids",
     inputs: [
-      { name: "", type: "address", internalType: "address" },
-      { name: "", type: "uint256", internalType: "uint256" },
-      { name: "", type: "address", internalType: "address" },
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
     ],
     outputs: [
-      { name: "bidder", type: "address", internalType: "address" },
-      { name: "price", type: "uint128", internalType: "uint128" },
-      { name: "expiresAt", type: "uint64", internalType: "uint64" },
+      {
+        name: "bidder",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "price",
+        type: "uint128",
+        internalType: "uint128",
+      },
+      {
+        name: "expiresAt",
+        type: "uint64",
+        internalType: "uint64",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "totalPendingWithdrawals",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
     ],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "transferOwnership",
-    inputs: [{ name: "newOwner", type: "address", internalType: "address" }],
+    inputs: [
+      {
+        name: "newOwner",
+        type: "address",
+        internalType: "address",
+      },
+    ],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -174,6 +491,32 @@ export const MarketplaceBidsABI = [
     name: "unpause",
     inputs: [],
     outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "withdraw",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "withdrawFor",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "withdrawn",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
     stateMutability: "nonpayable",
   },
   {
@@ -265,6 +608,82 @@ export const MarketplaceBidsABI = [
         type: "uint64",
         indexed: false,
         internalType: "uint64",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "ExcessETHSwept",
+    inputs: [
+      {
+        name: "recipient",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "MarketplaceAddressUpdated",
+    inputs: [
+      {
+        name: "oldMarketplace",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "newMarketplace",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "OwnershipTransferStarted",
+    inputs: [
+      {
+        name: "previousOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "newOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "OwnershipTransferred",
+    inputs: [
+      {
+        name: "previousOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "newOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address",
       },
     ],
     anonymous: false,
@@ -394,19 +813,145 @@ export const MarketplaceBidsABI = [
     ],
     anonymous: false,
   },
-  { type: "error", name: "ArrayLengthMismatch", inputs: [] },
-  { type: "error", name: "BidExpired", inputs: [] },
-  { type: "error", name: "BidNotFound", inputs: [] },
-  { type: "error", name: "CollectionNotRegistered", inputs: [] },
-  { type: "error", name: "EnforcedPause", inputs: [] },
-  { type: "error", name: "ExpectedPause", inputs: [] },
-  { type: "error", name: "InsufficientValue", inputs: [] },
-  { type: "error", name: "InvalidPrice", inputs: [] },
-  { type: "error", name: "InvalidQuantity", inputs: [] },
-  { type: "error", name: "NotApproved", inputs: [] },
-  { type: "error", name: "NotBidder", inputs: [] },
-  { type: "error", name: "NotTokenOwner", inputs: [] },
-  { type: "error", name: "OnlyOwner", inputs: [] },
-  { type: "error", name: "ReentrancyGuardReentrantCall", inputs: [] },
-  { type: "error", name: "TransferFailed", inputs: [] },
-] as const;
+  {
+    type: "event",
+    name: "Withdrawal",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "error",
+    name: "ArrayLengthMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "BidExpired",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "BidNotFound",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "CollectionNotRegistered",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "DuplicateTokenId",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "EnforcedPause",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ExpectedPause",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InsufficientExcess",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InsufficientValue",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidAddress",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidPrice",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidQuantity",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "NoWithdrawal",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "NotApproved",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "NotBidder",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "NotTokenOwner",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "OnlyMarketplace",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "OnlyOwner",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "OwnableInvalidOwner",
+    inputs: [
+      {
+        name: "owner",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+  {
+    type: "error",
+    name: "OwnableUnauthorizedAccount",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+  {
+    type: "error",
+    name: "ReentrancyGuardReentrantCall",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "TransferFailed",
+    inputs: [],
+  },
+] as const
