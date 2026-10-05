@@ -4,7 +4,7 @@ import { Address } from "viem"
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi"
 import { erc721Abi } from "viem"
 import { EnrichedUserNFT, Collection, UserNFT } from "@/types/user.types"
-import { CORE_CONTRACT_ADDRESS } from "@/lib/constants"
+import { useContractAddresses } from "@/hooks/useContractAddresses"
 import { useTx } from "@/app/context/TxContext"
 import { UseBatchOperationsReturn } from "./useBatchOperations"
 import { useCancelListBatch } from "./useListingActions"
@@ -26,6 +26,7 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
   const { writeContractAsync } = useWriteContract()
   const { cancelListBatch } = useCancelListBatch()
   const { address } = useAccount()
+  const { CORE_CONTRACT_ADDRESS } = useContractAddresses()
   const [approvalMap, setApprovalMap] = useState<Map<string, boolean>>(new Map())
 
   const { listTokensBatch, delistBatch, approveBatch, clearBatch } = batchOps

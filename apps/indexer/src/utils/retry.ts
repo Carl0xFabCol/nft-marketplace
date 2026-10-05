@@ -13,6 +13,7 @@ export interface RetryOptions {
 
 /**
  * Execute a function with exponential backoff retry logic.
+ * Includes jitter for rate limit errors (HTTP 429 / RPC code -32017).
  *
  * @param fn - The function to execute
  * @param options - Retry configuration
@@ -20,7 +21,12 @@ export interface RetryOptions {
  * @throws The last error if all attempts fail
  */
 export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
-  const { maxAttempts = Number(process.env.MAX_RETRY_ATTEMPTS) || 3, initialBackoffMs = Number(process.env.INITIAL_BACKOFF_MS) || 1000, maxBackoffMs = 30000, backoffMultiplier = 2 } = options
+  const {
+    maxAttempts = Number(process.env.MAX_RETRY_ATTEMPTS) || 3,
+    initialBackoffMs = Number(process.env.INITIAL_BACKOFF_MS) || 1000,
+    maxBackoffMs = 30000,
+    backoffMultiplier = 2,
+  } = options
 
   let lastError: Error | unknown
   let backoffMs = initialBackoffMs
@@ -31,11 +37,15 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
     } catch (error) {
       lastError = error
 
+      // Check if this is a rate limit error - apply jittered backoff
+      const isRateLimit = isRateLimitError(error)
+
       if (attempt === maxAttempts) {
         logger.error(
           {
             attempt,
             maxAttempts,
+            isRateLimit,
             error: error instanceof Error ? error.message : String(error),
           },
           "❌ All retry attempts exhausted",
@@ -43,17 +53,24 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
         break
       }
 
+      // Add jitter for rate limit errors to avoid thundering herd
+      const jitter = isRateLimit ? Math.random() * 1000 : 0
+      const delayWithJitter = backoffMs + jitter
+
       logger.warn(
         {
           attempt,
           maxAttempts,
           backoffMs,
+          jitter: isRateLimit ? jitter.toFixed(0) : 0,
+          totalDelayMs: delayWithJitter.toFixed(0),
+          isRateLimit,
           error: error instanceof Error ? error.message : String(error),
         },
         "⚠️  Retrying after error",
       )
 
-      await sleep(backoffMs)
+      await sleep(delayWithJitter)
       backoffMs = Math.min(backoffMs * backoffMultiplier, maxBackoffMs)
     }
   }
@@ -77,4 +94,28 @@ export function isRetryableError(error: unknown): boolean {
   const message = error.message.toLowerCase()
 
   return message.includes("timeout") || message.includes("network") || message.includes("econnreset") || message.includes("enotfound") || message.includes("rate limit")
+}
+
+/**
+ * Check if an error is specifically a rate limit error (HTTP 429 or RPC -32017).
+ * Conduit returns code -32017 for rate limiting.
+ * Returns true to trigger jittered backoff for these errors.
+ */
+export function isRateLimitError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+
+  const message = error.message
+
+  // Check for HTTP 429 status
+  if (message.includes("429") || message.toLowerCase().includes("rate limit")) {
+    return true
+  }
+
+  // Check for RPC code -32017 (rate limit exceeded)
+  // Viem wraps errors, so check common error message patterns
+  if (message.includes("-32017") || message.includes("rate limit exceeded")) {
+    return true
+  }
+
+  return false
 }

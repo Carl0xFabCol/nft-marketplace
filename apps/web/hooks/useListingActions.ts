@@ -2,10 +2,11 @@
 
 import { useWriteContract, usePublicClient } from "wagmi"
 import { MarketplaceABI } from "@/lib/abi"
-import { MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
+import { useContractAddresses } from "@/hooks/useContractAddresses"
 
 export function useCancelList() {
   const { writeContractAsync } = useWriteContract()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   const cancelList = async (collection: `0x${string}`, tokenId: number) => {
     const txHash = await writeContractAsync({
@@ -23,6 +24,7 @@ export function useCancelList() {
 export function useCancelListBatch() {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   const cancelListBatch = async (_collections: `0x${string}`[], _tokenIds: bigint[]) => {
     const txHash = await writeContractAsync({

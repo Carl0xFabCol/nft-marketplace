@@ -3,13 +3,16 @@ import type { IEventHandler } from "./IEventHandler"
 import type { ParsedEvent } from "../types/indexer.types"
 import type { MetadataFetcher } from "../fetchers/MetadataFetcher"
 import { logger } from "../utils/logger"
-import { CHAIN_IDS } from "@marketplace/shared"
-import { BIDS_CONTRACT_ADDRESS } from "@marketplace/contracts"
+import { getContractAddresses } from "@marketplace/contracts"
+import { env } from "../config/env"
 import type { ActivityRepository } from "../persistence/ActivityRepository"
 import type { BidsRepository } from "../persistence/BidsRepository"
 import type { CollectionsRepository } from "../persistence/CollectionsRepository"
 import type { ListingsRepository } from "../persistence/ListingsRepository"
 import type { NFTRepository } from "../persistence/NFTRepository"
+
+// Resolve the Bids contract address for whichever chain this process indexes.
+const BIDS_CONTRACT_ADDRESS = getContractAddresses(env.chainId).MARKETPLACE_BIDS
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BIDS CONTRACT EVENT HANDLERS - FULLY REFACTORED WITH REPOSITORIES
@@ -84,7 +87,7 @@ abstract class BaseBidsHandler<TArgs = Record<string, unknown>> implements IEven
         tokenId,
         ownerWallet: ownerWallet.toLowerCase(),
         lastSynced: new Date(timestamp * 1000),
-        chainId: CHAIN_IDS.SEPOLIA,
+        chainId: env.chainId,
         tokenUri: nftData.tokenUri,
         imageUrl: nftData.imageUrl,
         metadata: nftData.metadata,

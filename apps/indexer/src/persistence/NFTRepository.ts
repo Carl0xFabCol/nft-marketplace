@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { logger } from "../utils/logger"
-import { CHAIN_IDS } from "@marketplace/shared"
+import { env } from "../config/env"
 // ═══════════════════════════════════════════════════════════════════════════════
 // NFT REPOSITORY
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -54,7 +54,7 @@ export class NFTRepository {
       })
       .eq("collection_address", collectionAddress.toLowerCase())
       .eq("token_id", tokenId)
-      .eq("chain_id", CHAIN_IDS.SEPOLIA)
+      .eq("chain_id", env.chainId)
 
     if (error) {
       logger.error(

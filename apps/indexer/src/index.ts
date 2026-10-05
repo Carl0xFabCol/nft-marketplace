@@ -1,5 +1,4 @@
 import "dotenv/config"
-import { CHAIN_IDS } from "@marketplace/shared"
 import { supabase } from "./supabase"
 import { logger } from "./utils/logger"
 import { env } from "./config/env"
@@ -8,6 +7,7 @@ import { CONTRACTS_TO_INDEX } from "./config/contracts.config"
 // Providers
 import { ProviderPool } from "./providers/ProviderPool"
 import { ViemRpcProvider } from "./providers/ViemRpcProvider"
+import type { IRpcProvider } from "./providers/IRpcProvider"
 
 // Fetchers
 import { BatchEventFetcher } from "./fetchers/BatchEventFetcher"
@@ -43,16 +43,74 @@ async function main() {
   // 1. INITIALIZE PROVIDER POOL
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const providers = [new ViemRpcProvider({ name: "fast", url: env.fastRpcUrl, type: "fast" })]
+  // Helper to get the appropriate token for a given URL
+  const getTokenForUrl = (url: string): string | undefined => {
+    // If this is the fast URL, use fastRpcToken
+    if (url === env.fastRpcUrl) {
+      return env.fastRpcToken
+    }
+    // If this is the archive URL and different from fast, use archiveRpcToken, else fast token
+    if (url === env.archiveRpcUrl) {
+      return (url !== env.fastRpcUrl && env.archiveRpcToken) ? env.archiveRpcToken : env.fastRpcToken
+    }
+    // If this is the fallback URL and different from fast, use fallbackRpcToken, else fast token
+    if (url === env.fallbackRpcUrl) {
+      return (url !== env.fastRpcUrl && env.fallbackRpcToken) ? env.fallbackRpcToken : env.fastRpcToken
+    }
+    return env.fastRpcToken
+  }
+
+  // Conduit API key - use for all providers if set (takes precedence over individual tokens)
+  const conduitToken = env.conduitApiKey
+
+  // Helper to build provider config with optional headers
+  const buildProviderConfig = (
+    name: string,
+    url: string,
+    type: "fast" | "archive",
+    chainId: number,
+  ): { name: string; url: string; type: "fast" | "archive"; chainId: number; headers?: Record<string, string> } => {
+    const token = conduitToken || getTokenForUrl(url)
+    const config = {
+      name,
+      url,
+      type,
+      chainId,
+    } as { name: string; url: string; type: "fast" | "archive"; chainId: number; headers?: Record<string, string> }
+
+    if (token) {
+      config.headers = { "X-API-Key": token }
+    }
+
+    return config
+  }
+
+  // Check for duplicate URLs and log redundancy warnings
+  const providerUrls = [env.fastRpcUrl, env.archiveRpcUrl, env.fallbackRpcUrl].filter(Boolean) as string[]
+  const uniqueUrls = [...new Set(providerUrls)]
+  if (uniqueUrls.length < providerUrls.length) {
+    logger.warn(
+      {
+        totalProviders: providerUrls.length,
+        uniqueUrls: uniqueUrls.length,
+        duplicates: providerUrls.length - uniqueUrls.length,
+      },
+      "⚠️  Provider URL redundancy issue: Some providers share the same URL. No backup redundancy exists if this endpoint fails.",
+    )
+  }
+
+  const providers: IRpcProvider[] = [
+    new ViemRpcProvider(buildProviderConfig("fast", env.fastRpcUrl, "fast", env.chainId)),
+  ]
 
   // Add archive provider if configured
   if (env.archiveRpcUrl) {
-    providers.push(new ViemRpcProvider({ name: "archive", url: env.archiveRpcUrl, type: "archive" }))
+    providers.push(new ViemRpcProvider(buildProviderConfig("archive", env.archiveRpcUrl, "archive", env.chainId)))
   }
 
   // Add fallback provider if configured
   if (env.fallbackRpcUrl) {
-    providers.push(new ViemRpcProvider({ name: "fallback", url: env.fallbackRpcUrl, type: "fast" }))
+    providers.push(new ViemRpcProvider(buildProviderConfig("fallback", env.fallbackRpcUrl, "fast", env.chainId)))
   }
 
   const providerPool = new ProviderPool(providers)
@@ -100,9 +158,9 @@ async function main() {
     const contractAddress = collection.contract_address as string
     const indexerBlock = collection.indexer_block as number
 
-    const existingState = await contractStateRepo.getContractState(contractAddress, CHAIN_IDS.SEPOLIA)
+    const existingState = await contractStateRepo.getContractState(contractAddress, env.chainId)
     if (!existingState) {
-      await contractStateRepo.upsertContractState(contractAddress, CHAIN_IDS.SEPOLIA, indexerBlock)
+      await contractStateRepo.upsertContractState(contractAddress, env.chainId, indexerBlock)
       logger.info({ contractAddress, lastBlock: indexerBlock }, "🌱 Seeded contract indexer state for collection")
     }
   }
@@ -149,7 +207,7 @@ async function main() {
   const orchestrator = new IndexerOrchestrator(providerPool, eventFetcher, handlerRegistry, stateRepo, contractStateRepo, collectionsRepo, CONTRACTS_TO_INDEX, {
     pollingIntervalMs: env.pollingIntervalMs,
     batchSize: env.batchSize,
-    chainId: CHAIN_IDS.SEPOLIA,
+    chainId: env.chainId,
   })
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -179,7 +237,7 @@ async function main() {
   logger.info(
     {
       contracts: CONTRACTS_TO_INDEX.map((c) => c.name),
-      chainId: CHAIN_IDS.SEPOLIA,
+      chainId: env.chainId,
       pollingIntervalMs: env.pollingIntervalMs,
       batchSize: env.batchSize,
     },

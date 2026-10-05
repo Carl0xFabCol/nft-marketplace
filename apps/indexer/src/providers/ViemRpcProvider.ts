@@ -1,8 +1,8 @@
-import { createPublicClient, http, type PublicClient } from "viem"
-import { sepolia } from "viem/chains"
+import { createPublicClient, http, type Chain, type PublicClient } from "viem"
 import type { IRpcProvider } from "./IRpcProvider"
 import type { GetContractEventsParams, RawContractEvent, ReadContractParams, RpcProviderType } from "../types/indexer.types"
 import { logger } from "../utils/logger"
+import { getViemChain } from "./chains"
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VIEM RPC PROVIDER IMPLEMENTATION
@@ -17,13 +17,13 @@ export class ViemRpcProvider implements IRpcProvider {
   public readonly type: RpcProviderType
   private client: PublicClient
 
-  constructor(config: { name: string; url: string; type: RpcProviderType; headers?: Record<string, string> }) {
+  constructor(config: { name: string; url: string; type: RpcProviderType; headers?: Record<string, string>; chainId?: number; chain?: Chain }) {
     this.name = config.name
     this.type = config.type
 
     // Create viem client with optional custom headers (e.g., for authentication)
     this.client = createPublicClient({
-      chain: sepolia,
+      chain: config.chain ?? getViemChain(config.chainId ?? 11155111),
       transport: http(config.url, {
         timeout: 30_000, // 30s timeout
         ...(config.headers && {

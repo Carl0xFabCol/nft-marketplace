@@ -150,89 +150,63 @@ export class BatchEventFetcher implements IEventFetcher {
   }
 
   /**
-   * Fetch and parse events from a single contract.
-   * Iterates over each event name defined in the contract's events array.
+   * Fetch and parse events from a single contract in a single RPC call.
+   * Fetches all events from the block range, then filters by the contract's
+   * declared events array in-memory. This reduces RPC calls from N (events)
+   * to 1 per contract, avoiding rate limit pressure.
    */
   private async fetchContractEvents(contract: ContractConfig, fromBlock: bigint, toBlock: bigint): Promise<ParsedEvent[]> {
     try {
-      // If contract has specific events defined, fetch each one individually
-      // This is more reliable than fetching all events at once
-      if (contract.events && contract.events.length > 0) {
-        logger.debug(
-          {
-            contract: contract.name,
-            events: contract.events,
-            fromBlock: fromBlock.toString(),
-            toBlock: toBlock.toString(),
-          },
-          "📡 Fetching specific events from contract",
-        )
-
-        // Fetch each event type separately for better reliability
-        const allEventsByType = await Promise.all(
-          contract.events.map(async (eventName) => {
-            try {
-              const rawEvents = await this.provider.getContractEvents({
-                address: contract.address,
-                abi: contract.abi,
-                fromBlock,
-                toBlock,
-                eventName,
-              })
-
-              logger.debug(
-                {
-                  contract: contract.name,
-                  eventName,
-                  count: rawEvents.length,
-                  fromBlock: fromBlock.toString(),
-                  toBlock: toBlock.toString(),
-                },
-                "📥 Fetched events",
-              )
-
-              return rawEvents.map((rawEvent) => this.parseEvent(rawEvent, contract))
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : String(error)
-              logger.warn(
-                {
-                  contract: contract.name,
-                  eventName,
-                  error: errorMessage,
-                  fromBlock: fromBlock.toString(),
-                  toBlock: toBlock.toString(),
-                },
-                "⚠️  Failed to fetch specific event, continuing...",
-              )
-              return []
-            }
-          }),
-        )
-
-        return allEventsByType.flat()
-      }
-
-      // Fallback: fetch all events from contract ABI (no filter)
+      // Fetch ALL events from this contract in a single eth_getLogs call
+      // We filter in-memory by the events array, which is much more efficient
+      // than making N separate calls for N event types
       logger.debug(
         {
           contract: contract.name,
+          expectedEvents: contract.events?.length || "all",
           fromBlock: fromBlock.toString(),
           toBlock: toBlock.toString(),
         },
-        "📡 Fetching all events from contract (no specific event filter)",
+        "📡 Fetching all events from contract (single RPC call)",
       )
 
+      // Single RPC call to fetch all events
       const rawEvents = await this.provider.getContractEvents({
         address: contract.address,
         abi: contract.abi,
         fromBlock,
         toBlock,
+        // Note: NOT passing eventName to batch all events in one call
       })
+
+      // Filter to only the events we care about (declared in contract.events)
+      const targetEvents = new Set(contract.events || [])
 
       const parsedEvents = rawEvents
         .map((rawEvent) => {
           try {
-            return this.parseEvent(rawEvent, contract)
+            const decoded = decodeEventLog({
+              abi: contract.abi,
+              data: rawEvent.data,
+              topics: rawEvent.topics as [`0x${string}`, ...`0x${string}`[]],
+            })
+
+            // Filter: only include events that are in our target set
+            if (targetEvents.size > 0 && !targetEvents.has(decoded.eventName)) {
+              return null
+            }
+
+            return {
+              contractName: contract.name,
+              contractAddress: contract.address,
+              eventName: decoded.eventName,
+              args: decoded.args as Record<string, unknown>,
+              blockNumber: rawEvent.blockNumber,
+              blockTimestamp: Number(rawEvent.blockTimestamp || 0),
+              transactionHash: rawEvent.transactionHash,
+              logIndex: rawEvent.logIndex,
+              raw: rawEvent,
+            }
           } catch (error) {
             logger.warn(
               {
@@ -257,8 +231,9 @@ export class BatchEventFetcher implements IEventFetcher {
           toBlock: toBlock.toString(),
           rawEvents: rawEvents.length,
           parsedEvents: parsedEvents.length,
+          filteredOut: rawEvents.length - parsedEvents.length,
         },
-        "📄 Contract events parsed",
+        "📄 Contract events parsed and filtered",
       )
 
       return parsedEvents
@@ -277,31 +252,6 @@ export class BatchEventFetcher implements IEventFetcher {
 
       // Re-throw to allow upper layers to handle (e.g., provider fallback)
       throw error
-    }
-  }
-
-  /**
-   * Parse a raw event into a typed ParsedEvent.
-   * Decodes the event log using the contract's ABI.
-   */
-  private parseEvent(rawEvent: RawContractEvent, contract: ContractConfig): ParsedEvent {
-    // Decode using viem
-    const decoded = decodeEventLog({
-      abi: contract.abi,
-      data: rawEvent.data,
-      topics: rawEvent.topics as [`0x${string}`, ...`0x${string}`[]],
-    })
-
-    return {
-      contractName: contract.name,
-      contractAddress: contract.address,
-      eventName: decoded.eventName,
-      args: decoded.args as Record<string, unknown>,
-      blockNumber: rawEvent.blockNumber,
-      blockTimestamp: Number(rawEvent.blockTimestamp || 0),
-      transactionHash: rawEvent.transactionHash,
-      logIndex: rawEvent.logIndex,
-      raw: rawEvent,
     }
   }
 

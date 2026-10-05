@@ -1,15 +1,19 @@
 # docker-compose.yml
 # One-command local development environment for the marketplace.
-# Spins up: web, indexer, and a local Supabase instance.
+# Spins up: web, indexer(s), and a local Supabase instance.
 #
 # Usage:
-#   docker-compose up --build
+#   docker-compose up --build                  # Sepolia indexer only (default)
+#   docker-compose --profile elysium up --build # also start the Elysium indexer
 #   docker-compose down             # stop & remove
 #   docker-compose logs -f web      # follow web logs
 #
-# NOTE: The indexer requires a Sepolia RPC URL to function. In local dev,
-#       the indexer will poll a public RPC for Sepolia events. Set FAST_RPC_URL
-#       in your .env file or use the default public endpoint.
+# NOTE: The `indexer` service indexes Sepolia by default. The indexer is
+#       single-chain-per-process, so Elysium support is provided via a SECOND
+#       service, `indexer-elysium` (opt-in via the `elysium` compose profile),
+#       rather than modifying the existing Sepolia service. Each points its own
+#       RPC + CHAIN_ID at its respective network. Set FAST_RPC_URL in your .env
+#       file(s) or use the default public endpoints below.
 
 services:
   # ─────────────────────────────────────────────────────────────────
@@ -102,6 +106,8 @@ services:
       - /app/node_modules
     environment:
       SUPABASE_URL: http://host.docker.internal:9999
+      # This service always indexes Sepolia.
+      CHAIN_ID: 11155111
       # Use the public Sepolia RPC by default
       FAST_RPC_URL: https://ethereum-sepolia-rpc.publicnode.com
       # Fallback provider for resilience
@@ -110,6 +116,36 @@ services:
       BATCH_SIZE: 1000
       POLLING_INTERVAL_MS: 15000
     # Restart policy for long-running indexer
+    restart: unless-stopped
+    command: pnpm dev
+
+  # ─────────────────────────────────────────────────────────────────
+  # Indexer: Elysium instance (opt-in via `--profile elysium`)
+  # Elysium is a separate network, run as its own indexer process/service
+  # rather than mixed into the Sepolia `indexer` service above.
+  # ─────────────────────────────────────────────────────────────────
+  indexer-elysium:
+    profiles: ["elysium"]
+    build:
+      context: .
+      dockerfile: apps/indexer/Dockerfile
+    container_name: marketplace-indexer-elysium
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    env_file:
+      - apps/indexer/.env
+    volumes:
+      - ./apps/indexer:/app
+      - /app/node_modules
+    environment:
+      SUPABASE_URL: http://host.docker.internal:9999
+      # This service always indexes Elysium.
+      CHAIN_ID: 99801
+      FAST_RPC_URL: https://testnet-rpc.elysium.kinetiq.xyz
+      FALLBACK_RPC_URL: https://testnet-rpc.elysium.kinetiq.xyz
+      BATCH_SIZE: 1000
+      POLLING_INTERVAL_MS: 15000
     restart: unless-stopped
     command: pnpm dev
 

@@ -2,11 +2,12 @@
 
 import { useWriteContract, usePublicClient } from "wagmi"
 import { MarketplaceABI } from "@/lib/abi"
-import { MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
+import { useContractAddresses } from "@/hooks/useContractAddresses"
 import { Address } from "viem"
 
 export function useBidToken() {
   const { writeContractAsync } = useWriteContract()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   const bidToken = async (collection: Address, tokenId: bigint, price: bigint, expiresAt: number) => {
     const txHash = await writeContractAsync({
@@ -25,6 +26,7 @@ export function useBidToken() {
 export function useBidTokenBatch() {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
   const bidTokenBatch = async (collection: `0x${string}`, tokenIds: bigint[], prices: bigint[], totalValue: bigint, expiresAts: number[]) => {
     const txHash = await writeContractAsync({
       address: MARKETPLACE_CONTRACT_ADDRESS,
@@ -41,6 +43,7 @@ export function useBidTokenBatch() {
 
 export function useCancelTokenBid() {
   const { writeContractAsync } = useWriteContract()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   const cancelTokenBid = async (collection: `0x${string}`, tokenId: number) => {
     const txHash = await writeContractAsync({
@@ -57,6 +60,7 @@ export function useCancelTokenBid() {
 
 export function useCancelTokenBidBatch() {
   const { writeContractAsync } = useWriteContract()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   const cancelTokenBids = async (collections: `0x${string}`[], tokenIds: bigint[]) => {
     const txHash = await writeContractAsync({
@@ -73,6 +77,7 @@ export function useCancelTokenBidBatch() {
 
 export function useAcceptTokenBid() {
   const { writeContractAsync } = useWriteContract()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   const acceptTokenBid = async (collection: `0x${string}`, tokenId: number, bidder: `0x${string}`) => {
     const txHash = await writeContractAsync({
@@ -89,6 +94,7 @@ export function useAcceptTokenBid() {
 
 export function useBidCollection() {
   const { writeContractAsync } = useWriteContract()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   const bidCollection = async (collection: Address, price: bigint, quantity: number, expiresAt: number) => {
     const txHash = await writeContractAsync({
@@ -106,6 +112,7 @@ export function useBidCollection() {
 
 export function useCancelCollectionBid() {
   const { writeContractAsync } = useWriteContract()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   const cancelCollectionBid = async (collection: `0x${string}`) => {
     const txHash = await writeContractAsync({

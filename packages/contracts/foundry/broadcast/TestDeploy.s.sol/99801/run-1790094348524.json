@@ -1,0 +1,31 @@
+{
+  "transactions": [
+    {
+      "hash": "0x29fbdfa66398475faaa6fddfc8ca6d3d5e44c6bd664f58f8aa286b509374a673",
+      "transactionType": "CREATE",
+      "contractName": "TinyContract",
+      "contractAddress": "0x42e073365253ea8c85d04b4e6f5c7f015db39d31",
+      "function": null,
+      "arguments": [
+        "123"
+      ],
+      "transaction": {
+        "from": "0x13f1cdc39d462a2b48c93fc4875c3f761af26eb3",
+        "gas": "0x20697",
+        "value": "0x0",
+        "input": "0x60803461004f57601f6100dc38819003918201601f19168301916001600160401b038311848410176100535780849260209460405283398101031261004f57515f55604051607490816100688239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe60808060405260043610156011575f80fd5b5f3560e01c633fa4f245146023575f80fd5b34603a575f366003190112603a576020905f548152f35b5f80fdfea2646970667358221220f7f5bef695f13c22376bd877b148a0956651ed7099ec9702f5c1b42c14c48a6064736f6c63430008180033000000000000000000000000000000000000000000000000000000000000007b",
+        "nonce": "0x8",
+        "chainId": "0x185d9"
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [],
+  "returns": {},
+  "timestamp": 1790094348524,
+  "chain": 99801,
+  "commit": "4466314"
+}

@@ -1,5 +1,11 @@
 import "dotenv/config"
 import { CHAIN_IDS } from "@marketplace/shared"
+import { env } from "./config/env"
+
+// Chains Etherscan's V2 API is known to support. Brand-new/custom chains like
+// Elysium (chain id 99801) are NOT recognized by Etherscan, so lookups for
+// those chains are skipped gracefully instead of failing.
+const ETHERSCAN_SUPPORTED_CHAIN_IDS: number[] = [CHAIN_IDS.SEPOLIA, CHAIN_IDS.MAINNET]
 
 interface EtherscanResponse {
   status: string
@@ -19,6 +25,13 @@ interface EtherscanResponse {
  */
 export const getDeploymentBlock = async (contractAddress: string): Promise<number | null> => {
   try {
+    const chainId = env.chainId
+
+    if (!ETHERSCAN_SUPPORTED_CHAIN_IDS.includes(chainId)) {
+      console.warn(`⚠️ Etherscan does not support chainId ${chainId} (e.g. Elysium) — skipping deploy-block lookup. Configure DEPLOY_BLOCK manually if needed.`)
+      return null
+    }
+
     const apiKey = process.env.ETHERSCAN_API_KEY
     if (!apiKey) {
       console.error("ETHERSCAN_API_KEY no está configurada en .env")
@@ -27,7 +40,6 @@ export const getDeploymentBlock = async (contractAddress: string): Promise<numbe
 
     // ⚠️ IMPORTANT: Use API V2 with chainid
     const baseUrl = "https://api.etherscan.io/v2/api"
-    const chainId = CHAIN_IDS.SEPOLIA
 
     const url = `${baseUrl}?chainid=${chainId}&module=contract&action=getcontractcreation&contractaddresses=${contractAddress}&apikey=${apiKey}`
 

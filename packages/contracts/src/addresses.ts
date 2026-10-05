@@ -13,13 +13,43 @@ export const SEPOLIA_ADDRESSES = {
   MARKETPLACE_CORE: "0x80D414fAD89E471E46c97B66F2B567e1b970A5C0" as Address,
 } as const
 
+export const ELYSIUM_ADDRESSES = {
+  MARKETPLACE: "0x373cDd612dE9857DeA8cA360EFc302405dD82860" as Address,
+  MARKETPLACE_BIDS: "0xA499b7077FBF2c99451F58AD7d7F29fF1DFc42a5" as Address,
+  MARKETPLACE_CORE: "0x7Ba8Bb2631Db0cFD67A440EEDE810C5EF1A6d523" as Address,
+} as const
+
 /** Address map keyed by chain ID */
 export const CONTRACT_ADDRESSES: Record<number, typeof SEPOLIA_ADDRESSES> = {
   11155111: SEPOLIA_ADDRESSES,
+  99801: ELYSIUM_ADDRESSES,
 }
 
-// ─── Convenience named exports (current deployment: Sepolia) ─────────────────
+/** Chain ID used when no explicit chainId is provided to address lookups. */
+export const DEFAULT_ADDRESSES_CHAIN_ID = 99801 // Elysium
 
-export const MARKETPLACE_CONTRACT_ADDRESS = SEPOLIA_ADDRESSES.MARKETPLACE
-export const BIDS_CONTRACT_ADDRESS = SEPOLIA_ADDRESSES.MARKETPLACE_BIDS
-export const CORE_CONTRACT_ADDRESS = SEPOLIA_ADDRESSES.MARKETPLACE_CORE
+/**
+ * Resolve the deployed contract addresses for a given chain id.
+ * Falls back to DEFAULT_ADDRESSES_CHAIN_ID's addresses if the chain id is
+ * not recognized (with a console warning), so callers never get `undefined`.
+ */
+export function getContractAddresses(chainId?: number): typeof SEPOLIA_ADDRESSES {
+  const resolvedChainId = chainId ?? DEFAULT_ADDRESSES_CHAIN_ID
+  const addresses = CONTRACT_ADDRESSES[resolvedChainId]
+
+  if (!addresses) {
+    console.warn(`⚠️ No contract addresses configured for chainId ${resolvedChainId}. Falling back to default.`)
+    return CONTRACT_ADDRESSES[DEFAULT_ADDRESSES_CHAIN_ID]
+  }
+
+  return addresses
+}
+
+// ─── Convenience named exports (backward-compatible, default deployment: Elysium) ─
+// NEW consumers should prefer `getContractAddresses(chainId)` so both Sepolia and
+// Elysium are correctly supported side-by-side. These singletons remain for any
+// code that hasn't been updated yet and always resolve to the default chain.
+
+export const MARKETPLACE_CONTRACT_ADDRESS = ELYSIUM_ADDRESSES.MARKETPLACE
+export const BIDS_CONTRACT_ADDRESS = ELYSIUM_ADDRESSES.MARKETPLACE_BIDS
+export const CORE_CONTRACT_ADDRESS = ELYSIUM_ADDRESSES.MARKETPLACE_CORE

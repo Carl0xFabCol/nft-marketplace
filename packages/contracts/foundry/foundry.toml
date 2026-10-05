@@ -4,6 +4,7 @@ out = "out"
 libs = ["lib"]
 solc_version = "0.8.24"
 
+
 fs_permissions = [
     { access = "read-write", path = "./deployments" }
 ]
@@ -24,3 +25,4 @@ optimizer_runs = 1000000  # Optimize for gas efficiency in production
 
 [rpc_endpoints]
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
+elysium = "https://testnet-rpc.elysium.kinetiq.xyz"

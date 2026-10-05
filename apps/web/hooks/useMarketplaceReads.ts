@@ -2,7 +2,7 @@
 
 import { useReadContract } from "wagmi"
 import { nftAbi, MarketplaceABI } from "@/lib/abi"
-import { MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
+import { useContractAddresses } from "@/hooks/useContractAddresses"
 
 export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
   const { data: totalSupply } = useReadContract({
@@ -34,6 +34,8 @@ export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
 }
 
 export function useMarketplaceInfo() {
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+
   const { data: marketplaceFee }: any = useReadContract({
     address: MARKETPLACE_CONTRACT_ADDRESS,
     abi: MarketplaceABI,

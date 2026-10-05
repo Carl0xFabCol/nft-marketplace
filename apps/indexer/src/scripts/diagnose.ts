@@ -13,11 +13,10 @@
 
 import "dotenv/config"
 import { createPublicClient, http } from "viem"
-import { sepolia } from "viem/chains"
-import { CHAIN_IDS } from "@marketplace/shared"
 import { CONTRACTS_TO_INDEX } from "../config/contracts.config"
 import { env } from "../config/env"
 import { logger } from "../utils/logger"
+import { getViemChain } from "../providers/chains"
 
 // Override log level for script
 process.env.LOG_LEVEL = "debug"
@@ -26,7 +25,7 @@ process.env.LOG_LEVEL = "debug"
 const ALCHEMY_FREE_BLOCK_LIMIT = 10
 
 const client = createPublicClient({
-  chain: sepolia,
+  chain: getViemChain(env.chainId),
   transport: http(env.fastRpcUrl, {
     timeout: 30_000,
   }),
@@ -50,7 +49,7 @@ function chunkBlocks(fromBlock: bigint, toBlock: bigint, chunkSize: number): Arr
 }
 
 async function diagnose() {
-  logger.info({ chainId: CHAIN_IDS.SEPOLIA }, "🔬 Starting indexer diagnostics...")
+  logger.info({ chainId: env.chainId }, "🔬 Starting indexer diagnostics...")
 
   // 1. Check RPC connectivity
   logger.info("📡 Checking RPC connectivity...")

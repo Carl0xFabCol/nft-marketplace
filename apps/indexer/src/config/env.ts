@@ -11,11 +11,17 @@ import { logger } from "../utils/logger"
  */
 
 export interface EnvConfig {
+  // Chain
+  chainId: number
+
   // RPC Providers
   fastRpcUrl: string
   archiveRpcUrl?: string
   fallbackRpcUrl?: string
+  fastRpcToken?: string
   archiveRpcToken?: string
+  fallbackRpcToken?: string
+  conduitApiKey?: string
 
   // Performance
   batchSize: number
@@ -57,11 +63,21 @@ function loadEnv(): EnvConfig {
   }
 
   return {
+    // Chain
+    // Which network this indexer instance/process is indexing. Defaults to Sepolia
+    // (11155111) for backward compatibility with existing deployments that don't
+    // set CHAIN_ID. To index Elysium, set CHAIN_ID=99801 (run a separate instance
+    // per network — this indexer is single-chain-per-process).
+    chainId: optionalNumber("CHAIN_ID", 11155111),
+
     // RPC Providers
     fastRpcUrl: required("FAST_RPC_URL"),
     archiveRpcUrl: optional("ARCHIVE_RPC_URL"),
     fallbackRpcUrl: optional("FALLBACK_RPC_URL"),
+    fastRpcToken: optional("FAST_RPC_TOKEN"),
     archiveRpcToken: optional("ARCHIVE_RPC_TOKEN"),
+    fallbackRpcToken: optional("FALLBACK_RPC_TOKEN"),
+    conduitApiKey: optional("CONDUIT_API_KEY"),
 
     // Performance
     batchSize: optionalNumber("BATCH_SIZE", 5000),
@@ -89,6 +105,7 @@ export const env = loadEnv()
 
 logger.info(
   {
+    chainId: env.chainId,
     fastRpcUrl: env.fastRpcUrl,
     hasArchiveRpc: !!env.archiveRpcUrl,
     hasFallbackRpc: !!env.fallbackRpcUrl,

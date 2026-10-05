@@ -6,7 +6,7 @@ import { useConnection, useWriteContract, useReadContracts, usePublicClient } fr
 import { FaEthereum, FaTrash } from "react-icons/fa"
 import { MdOutlineLocalOffer } from "react-icons/md"
 import { RiNftFill } from "react-icons/ri"
-import { MARKETPLACE_CONTRACT_ADDRESS } from "@/lib/constants"
+import { useContractAddresses } from "@/hooks/useContractAddresses"
 import { CHAIN_ID } from "@/lib/chains"
 import { MarketplaceABI } from "@/lib/abi"
 import { EnrichedUserNFT, UserListing, Collection, UserNFT } from "@/types/user.types"
@@ -51,9 +51,10 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
   const [listItems, setListItems] = useState<any[]>(items)
   const { addTx, removeTx, updateTx } = useTx()
   const info = useMarketplaceInfo()
-  const { address } = useConnection()
+  const { address, chainId: connectedChainId } = useConnection()
   const { session } = useAuth()
   const token = session?.access_token
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
   useEffect(() => {
     setListItems(items)
@@ -144,7 +145,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
       const prices = validItems.map((i) => i.price!.toString())
       const expiresAts = validItems.map((i) => dateToEpochSeconds(i.expiresAt).toString())
       const seller = address!.toLowerCase() as Address
-      const chainId = CHAIN_ID
+      const chainId = connectedChainId ?? CHAIN_ID
 
       txHash = await writeContractAsync({
         address: MARKETPLACE_CONTRACT_ADDRESS,

@@ -27,17 +27,29 @@ export class ProviderFactory {
       name: "fast-primary",
       url: env.fastRpcUrl,
       type: "fast",
+      chainId: env.chainId,
+      ...(env.fastRpcToken && {
+        headers: {
+          "X-API-Key": env.fastRpcToken,
+        },
+      }),
     })
 
     // Archive provider (optional)
     if (env.archiveRpcUrl) {
+      // If archive URL differs from fast URL, use archive-specific token if available,
+      // otherwise fall back to fast token (Conduit API key covers multiple endpoints)
+      const archiveUsesSeparateToken = env.archiveRpcUrl !== env.fastRpcUrl && env.archiveRpcToken
+      const archiveToken = archiveUsesSeparateToken ? env.archiveRpcToken : env.fastRpcToken
+
       this.archiveProvider = new ViemRpcProvider({
         name: "archive",
         url: env.archiveRpcUrl,
         type: "archive",
-        ...(env.archiveRpcToken && {
+        chainId: env.chainId,
+        ...(archiveToken && {
           headers: {
-            "X-API-Key": env.archiveRpcToken,
+            "X-API-Key": archiveToken,
           },
         }),
       })
@@ -48,10 +60,21 @@ export class ProviderFactory {
 
     // Fallback provider (optional)
     if (env.fallbackRpcUrl) {
+      // If fallback URL differs from fast URL, use fallback-specific token if available,
+      // otherwise fall back to fast token (Conduit API key covers multiple endpoints)
+      const fallbackUsesSeparateToken = env.fallbackRpcUrl !== env.fastRpcUrl && env.fallbackRpcToken
+      const fallbackToken = fallbackUsesSeparateToken ? env.fallbackRpcToken : env.fastRpcToken
+
       this.fallbackProvider = new ViemRpcProvider({
         name: "fallback",
         url: env.fallbackRpcUrl,
         type: "fast",
+        chainId: env.chainId,
+        ...(fallbackToken && {
+          headers: {
+            "X-API-Key": fallbackToken,
+          },
+        }),
       })
       logger.info("✅ Fallback RPC provider configured")
     }

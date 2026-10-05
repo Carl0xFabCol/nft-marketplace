@@ -1,10 +1,16 @@
 import { Address } from "viem"
-import { BIDS_CONTRACT_ADDRESS, CORE_CONTRACT_ADDRESS, MarketplaceBidsABI, MarketplaceCoreABI } from "@marketplace/contracts"
+import { getContractAddresses, MarketplaceBidsABI, MarketplaceCoreABI } from "@marketplace/contracts"
 import type { ContractConfig } from "../types/indexer.types"
+import { env } from "./env"
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONTRACT CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Resolve addresses for whichever chain this indexer process is configured for
+// (via CHAIN_ID env var — defaults to Sepolia). This lets the same code index
+// either Sepolia or Elysium depending on how the process is launched.
+const addresses = getContractAddresses(env.chainId)
 
 /**
  * Centralized configuration for all contracts to index.
@@ -13,7 +19,7 @@ import type { ContractConfig } from "../types/indexer.types"
 export const CONTRACTS_TO_INDEX: ContractConfig[] = [
   {
     name: "core",
-    address: CORE_CONTRACT_ADDRESS as Address,
+    address: addresses.MARKETPLACE_CORE as Address,
     abi: MarketplaceCoreABI,
     events: [
       // Collection events
@@ -36,7 +42,7 @@ export const CONTRACTS_TO_INDEX: ContractConfig[] = [
   },
   {
     name: "bids",
-    address: BIDS_CONTRACT_ADDRESS as Address,
+    address: addresses.MARKETPLACE_BIDS as Address,
     abi: MarketplaceBidsABI,
     events: [
       // Collection bid events

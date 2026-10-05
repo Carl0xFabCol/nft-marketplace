@@ -1,9 +1,9 @@
 {
-  "core": "0x80D414fAD89E471E46c97B66F2B567e1b970A5C0",
-  "bids": "0x66759517050c84A1AC239C4D37FfB7A2de05F37f",
-  "marketplace": "0x880176caEd2C38F889e5E0AD6Ae55A871dd0f3B5",
+  "core": "0x7Ba8Bb2631Db0cFD67A440EEDE810C5EF1A6d523",
+  "bids": "0xA499b7077FBF2c99451F58AD7d7F29fF1DFc42a5",
+  "marketplace": "0x373cDd612dE9857DeA8cA360EFc302405dD82860",
   "feeReceiver": "0x13F1CDc39d462A2B48c93fc4875C3F761AF26EB3",
   "marketplaceFee": 100,
-  "chainId": 11155111,
-  "network": "sepolia"
+  "chainId": 99801,
+  "network": "elysium"
 }

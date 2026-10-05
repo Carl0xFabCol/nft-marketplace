@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { useDisconnect, useSwitchChain, useBalance, useSignMessage, useConnection } from "wagmi"
 import { LuWallet } from "react-icons/lu"
-import { CHAIN_ID } from "@/lib/chains"
+import { CHAIN_ID, SUPPORTED_CHAIN_IDS } from "@/lib/chains"
 import { FaEthereum } from "react-icons/fa"
 import { useAuth } from "@/components/AuthProvider"
 import { useRouter } from "next/navigation"
@@ -64,7 +64,7 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
 
   if (!mounted) return null
 
-  if (isConnected && chainId !== CHAIN_ID) {
+  if (isConnected && !SUPPORTED_CHAIN_IDS.includes(chainId ?? -1)) {
     return (
       <button onClick={() => switchChain({ chainId: CHAIN_ID })} className="px-3 py-1 rounded">
         Switch network
