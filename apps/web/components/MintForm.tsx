@@ -15,7 +15,7 @@ interface props {
   symbol: string
 }
 
-export default function MintForm({ contractAddress, name, symbol }: props) {
+export function MintForm({ contractAddress, name, symbol }: props) {
   const [amount, setAmount] = useState(1)
   const [status, setStatus] = useState<"idle" | "waiting" | "loading" | "success" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
@@ -93,6 +93,8 @@ export default function MintForm({ contractAddress, name, symbol }: props) {
     }
   }
 
+  const cost = mintPrice ? (amount * Number(mintPrice)) / 1e18 : 0
+
   return (
     <div className="flex flex-col items-center p-4 gap-2 relative justify-between">
       <div>
@@ -117,8 +119,8 @@ export default function MintForm({ contractAddress, name, symbol }: props) {
           +
         </button>
       </div>
-      <span className="text-[12px]">
-        Cost: <span className="">{(amount * (Number(mintPrice) || 0)) / 1e18} ETH</span>{" "}
+      <span className="text-[12px] text-(--muted)">
+        Cost: <span className="text-(--foreground) font-medium">{cost.toFixed(cost < 0.001 ? 6 : 4)} ETH</span>
       </span>
 
       {(address && (
