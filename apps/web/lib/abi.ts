@@ -14,5 +14,6 @@ export {
   MarketplaceABI,
   MarketplaceBidsABI,
   MarketplaceCoreABI,
+  LaunchPadABI,
   MockNFTAbi as MockAbi,
 } from "@marketplace/contracts";

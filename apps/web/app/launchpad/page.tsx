@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { CollectionService } from "@/services/collections.service"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { RegisterCollection } from "@/components/RegisterCollection"
+import { LaunchCollection } from "@/components/launchpad/LaunchCollection"
 import { CollectionCard } from "@/components/launchpad/CollectionCard"
 import { CollectionsSkeleton } from "@/components/launchpad/CollectionsSkeleton"
 import { EmptyState } from "@/components/launchpad/EmptyState"
@@ -15,7 +16,10 @@ export default function MintPage() {
           <h1 className="text-4xl font-bold mb-2">Launchpad</h1>
           <p className="text-(--muted) max-w-xl">Discover collections, mint new NFTs, and launch your own contract on the network.</p>
         </div>
-        <RegisterCollection />
+        <div className="flex flex-wrap items-center gap-3 self-start">
+          <LaunchCollection />
+          <RegisterCollection />
+        </div>
       </header>
 
       {/* Grid con Suspense */}
