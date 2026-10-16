@@ -5,6 +5,7 @@ import { useState } from "react"
 import { FaTimes } from "react-icons/fa"
 import { Plus } from "lucide-react"
 import { useRegisterCollection } from "../hooks/useCollectionActions"
+import { useIsMarketplaceAdmin } from "@/hooks/useMarketplaceReads"
 import { useTx } from "@/app/context/TxContext"
 import { useConnection } from "wagmi"
 
@@ -12,16 +13,26 @@ export function RegisterCollection() {
   const [open, setOpen] = useState(false)
   const [collectionAddress, setCollectionAddress] = useState("")
   const [royaltyFee, setRoyaltyFee] = useState("")
+  const [royaltyReceiver, setRoyaltyReceiver] = useState("")
 
   const { addTx, removeTx, updateTx } = useTx()
   const { registerCollection, publicClient } = useRegisterCollection()
   const { address } = useConnection()
+  const { isAdmin } = useIsMarketplaceAdmin()
+
+  // External collections can only be registered by the marketplace owner/admin.
+  // Collections launched through the Launchpad are registered automatically.
+  if (!isAdmin) return null
+
+  const isAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(value.trim())
+  const effectiveReceiver = royaltyReceiver.trim() || address || ""
+  const isValidReceiver = isAddress(effectiveReceiver)
 
   const handleRegister = async () => {
     let hash: `0x${string}` | undefined
     try {
       const _fee = BigInt(Number(royaltyFee) * 100)
-      hash = await registerCollection(collectionAddress as `0x${string}`, _fee, address as `0x${string}`)
+      hash = await registerCollection(collectionAddress as `0x${string}`, _fee, effectiveReceiver as `0x${string}`)
       addTx({ hash, status: "loading", label: "Register collection" })
       await publicClient?.waitForTransactionReceipt({ hash })
       updateTx(hash, { status: "success" })
@@ -77,9 +88,22 @@ export function RegisterCollection() {
                 />
               </label>
 
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm text-(--muted)">Royalty receiver</span>
+                <input
+                  type="text"
+                  value={royaltyReceiver}
+                  onChange={(e) => setRoyaltyReceiver(e.target.value)}
+                  placeholder={address ?? "0x1234..."}
+                  className="w-full rounded-lg border border-(--accent)/30 bg-(--accent)/5 px-3 py-2 focus:outline-none focus:border-(--accent)"
+                />
+                <span className="text-xs text-(--muted)">Defaults to your connected wallet.</span>
+                {!isValidReceiver && <span className="text-xs text-red-400">Enter a valid address.</span>}
+              </label>
+
               <button
                 onClick={handleRegister}
-                disabled={!collectionAddress || !royaltyFee}
+                disabled={!collectionAddress || !royaltyFee || !isValidReceiver}
                 className="rounded-lg bg-(--accent) text-black font-semibold py-2.5 hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Register

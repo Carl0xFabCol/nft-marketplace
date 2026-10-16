@@ -62,6 +62,10 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // Authorized contracts (bids contract)
     mapping(address => bool) public authorizedContracts;
 
+    // Authorized launchpad factories. Collections deployed by these contracts
+    // are registered with the creator auto-filled by the factory.
+    mapping(address => bool) public authorizedLaunchpads;
+
     // Pull-payment ledger. Sales never push ETH to arbitrary recipients.
     mapping(address => uint256) public pendingWithdrawals;
     uint256 public totalPendingWithdrawals;
@@ -79,6 +83,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     event FeeReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
     event CollectionVerified(address indexed collection);
     event ContractAuthorized(address indexed contractAddr, bool authorized);
+    event LaunchpadAuthorized(address indexed launchpad, bool authorized);
     event CollectionRoyaltyUpdated(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee);
     event Withdrawal(address indexed account, uint256 amount);
     event ExcessETHSwept(address indexed recipient, uint256 amount);
@@ -113,7 +118,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     modifier onlyAuthorized() {
-        if (!authorizedContracts[msg.sender] && msg.sender != owner()) revert Unauthorized();
+        if (!authorizedContracts[msg.sender] && !authorizedLaunchpads[msg.sender] && msg.sender != owner()) revert Unauthorized();
         _;
     }
 
@@ -327,7 +332,15 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // COLLECTION MANAGEMENT
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address sender) external onlyAuthorized {
+    /**
+     * @notice Registers a collection so it can be traded on the marketplace.
+     * @dev Two distinct paths, both gated by `onlyAuthorized`:
+     *      - Launchpad path (caller is an authorized launchpad): the `creator` is
+     *        auto-filled by the factory and must match the deployed collection owner.
+     *      - External path (caller is the marketplace router/admin): reserved for the
+     *        owner/admin. The `creator` is derived from the collection itself.
+     */
+    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyAuthorized {
         if (collection == address(0)) revert InvalidCollection();
         if (collections[collection].exists) revert CollectionAlreadyRegistered();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
@@ -338,17 +351,20 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             revert InvalidCollection();
         }
 
-        // Prevent public front-running. ERC-173/Ownable collections must be
-        // registered by their actual owner. Collections without an ownership
-        // interface can only be registered by the marketplace admin.
-        (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
-        if (hasOwner) {
-            if (collectionOwner != sender) revert NotCollectionOwner();
-        } else {
-            if (sender != owner()) revert NotCollectionOwner();
-        }
-
         if (royaltyReceiver == address(0) && royaltyFee != 0) revert InvalidAddress();
+
+        (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
+
+        if (authorizedLaunchpads[msg.sender]) {
+            // Launchpad-deployed collection: the factory auto-fills the creator.
+            if (creator == address(0)) revert InvalidAddress();
+            if (hasOwner && collectionOwner != creator) revert NotCollectionOwner();
+        } else {
+            // External collection: only the owner/admin (via the router) may register.
+            // The router enforces onlyOwner, so trust it; the creator is derived.
+            if (msg.sender != owner() && !authorizedContracts[msg.sender]) revert NotCollectionOwner();
+            creator = hasOwner ? collectionOwner : owner();
+        }
 
         collections[collection] = CollectionInfo({
             royaltyReceiver: royaltyReceiver,
@@ -359,7 +375,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             exists: true
         });
 
-        emit CollectionRegistered(collection, sender, royaltyFee, false);
+        emit CollectionRegistered(collection, creator, royaltyFee, false);
     }
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external onlyAuthorized {
@@ -417,6 +433,12 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function setAuthorizedContract(address contractAddr, bool authorized) external onlyOwner {
         authorizedContracts[contractAddr] = authorized;
         emit ContractAuthorized(contractAddr, authorized);
+    }
+
+    function setAuthorizedLaunchpad(address launchpad, bool authorized) external onlyOwner {
+        if (launchpad == address(0)) revert InvalidAddress();
+        authorizedLaunchpads[launchpad] = authorized;
+        emit LaunchpadAuthorized(launchpad, authorized);
     }
 
     function pause() external onlyOwner {

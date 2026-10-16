@@ -6,3 +6,5 @@ export { MockNFTAbi } from "./mock-nft.abi";
 export { MarketplaceABI } from "./marketplace.abi";
 export { MarketplaceBidsABI } from "./marketplace-bids.abi";
 export { MarketplaceCoreABI } from "./marketplace-core.abi";
+export { LaunchPadABI } from "./launchpad.abi";
+export { MiColeccionABI } from "./micoleccion.abi";

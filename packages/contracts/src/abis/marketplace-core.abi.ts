@@ -108,6 +108,25 @@ export const MarketplaceCoreABI = [
   },
   {
     type: "function",
+    name: "authorizedLaunchpads",
+    inputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "buy",
     inputs: [
       {
@@ -564,7 +583,7 @@ export const MarketplaceCoreABI = [
         internalType: "address",
       },
       {
-        name: "sender",
+        name: "creator",
         type: "address",
         internalType: "address",
       },
@@ -585,6 +604,24 @@ export const MarketplaceCoreABI = [
     inputs: [
       {
         name: "contractAddr",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "authorized",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setAuthorizedLaunchpad",
+    inputs: [
+      {
+        name: "launchpad",
         type: "address",
         internalType: "address",
       },
@@ -925,6 +962,25 @@ export const MarketplaceCoreABI = [
         type: "address",
         indexed: true,
         internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "LaunchpadAuthorized",
+    inputs: [
+      {
+        name: "launchpad",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "authorized",
+        type: "bool",
+        indexed: false,
+        internalType: "bool",
       },
     ],
     anonymous: false,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useReadContract } from "wagmi"
+import { useReadContract, useAccount } from "wagmi"
 import { nftAbi, MarketplaceABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 
@@ -36,6 +36,12 @@ export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
 export function useMarketplaceInfo() {
   const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
+  const { data: owner }: any = useReadContract({
+    address: MARKETPLACE_CONTRACT_ADDRESS,
+    abi: MarketplaceABI,
+    functionName: "owner",
+  })
+
   const { data: marketplaceFee }: any = useReadContract({
     address: MARKETPLACE_CONTRACT_ADDRESS,
     abi: MarketplaceABI,
@@ -66,5 +72,19 @@ export function useMarketplaceInfo() {
     functionName: "totalVolume",
   })
 
-  return { marketplaceFee, feeReceiver, totalListings, totalSales, totalVolume, refetchTotalSales, refetchTotalVolume, refetchTotalListings }
+  return { owner, marketplaceFee, feeReceiver, totalListings, totalSales, totalVolume, refetchTotalSales, refetchTotalVolume, refetchTotalListings }
+}
+
+/**
+ * External collection registration is restricted to the marketplace owner/admin.
+ * Launchpad-created collections are registered automatically by the factory.
+ */
+export function useIsMarketplaceAdmin() {
+  const { address } = useAccount()
+  const { owner } = useMarketplaceInfo()
+
+  return {
+    owner: owner as `0x${string}` | undefined,
+    isAdmin: !!address && !!owner && address.toLowerCase() === (owner as string).toLowerCase(),
+  }
 }

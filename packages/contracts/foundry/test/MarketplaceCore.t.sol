@@ -248,10 +248,30 @@ contract MarketplaceCoreTest is TestSetup {
         assertTrue(exists);
     }
 
-    function testRegisterCollection_NotCollectionOwner() public {
+    function testRegisterCollection_NonAdminReverts() public {
         vm.prank(buyer);
-        _expectRevert(MarketplaceCore.NotCollectionOwner.selector);
+        _expectOwnableUnauthorized(buyer);
         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    }
+
+    function testRegisterCollection_ExternalCreatorAutoFilled() public {
+        vm.prank(owner);
+        vm.expectEmit(false, true, false, false);
+        emit MarketplaceCore.CollectionRegistered(address(0), owner, uint16(ROYALTY_FEE), false);
+        marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+
+        (, , , , , bool exists) = core.collections(address(nft));
+        assertTrue(exists);
+    }
+
+    function testSetAuthorizedLaunchpad_AdminOnly() public {
+        vm.prank(owner);
+        marketplace.setAuthorizedLaunchpad(address(0xBEEF), true);
+        assertTrue(core.authorizedLaunchpads(address(0xBEEF)));
+
+        vm.prank(unauthorized);
+        _expectOwnableUnauthorized(unauthorized);
+        marketplace.setAuthorizedLaunchpad(address(0xBEEF), false);
     }
 
     function testRegisterCollection_NonERC721() public {

@@ -91,16 +91,6 @@ contract TestSetup is Test {
         marketplace.registerCollection(collection, royaltyFee, royaltyReceiver);
     }
 
-    function _registerCollectionAs(
-        address collection,
-        uint16 royaltyFee,
-        address royaltyReceiver,
-        address collectionOwner
-    ) internal {
-        vm.prank(collectionOwner);
-        marketplace.registerCollection(collection, royaltyFee, royaltyReceiver);
-    }
-
     function _mintNFT(address to, uint256 tokenId) internal {
         nft.mint(to, tokenId);
     }

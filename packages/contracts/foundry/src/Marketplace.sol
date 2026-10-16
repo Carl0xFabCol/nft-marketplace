@@ -67,6 +67,10 @@ interface IMarketplaceCore {
 
     function setAuthorizedContract(address contractAddr, bool authorized) external;
 
+    function setAuthorizedLaunchpad(address launchpad, bool authorized) external;
+
+    function authorizedLaunchpads(address launchpad) external view returns (bool);
+
     function pause() external;
 
     function unpause() external;
@@ -345,7 +349,9 @@ contract Marketplace is Ownable2Step {
     // COLLECTION MANAGEMENT - Delegate to Core
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver) external {
+    /// @notice External collection registration is restricted to the owner/admin.
+    ///         Launchpad collections are registered automatically by the factory.
+    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver) external onlyOwner {
         core.registerCollection(collection, royaltyFee, royaltyReceiver, msg.sender);
     }
 
@@ -367,6 +373,18 @@ contract Marketplace is Ownable2Step {
 
     function updateFeeReceiver(address newReceiver) external onlyOwner {
         core.updateFeeReceiver(newReceiver);
+    }
+
+    function setAuthorizedContract(address contractAddr, bool authorized) external onlyOwner {
+        core.setAuthorizedContract(contractAddr, authorized);
+    }
+
+    function setAuthorizedLaunchpad(address launchpad, bool authorized) external onlyOwner {
+        core.setAuthorizedLaunchpad(launchpad, authorized);
+    }
+
+    function authorizedLaunchpads(address launchpad) external view returns (bool) {
+        return core.authorizedLaunchpads(launchpad);
     }
 
     function pause() external onlyOwner {

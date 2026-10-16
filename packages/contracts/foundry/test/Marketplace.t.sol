@@ -30,9 +30,9 @@ contract MarketplaceTest is TestSetup {
         assertTrue(info.exists);
     }
 
-    function testRegisterCollection_RejectsNonCollectionOwner() public {
+    function testRegisterCollection_RejectsNonAdmin() public {
         vm.prank(buyer);
-        _expectRevert(MarketplaceCore.NotCollectionOwner.selector);
+        _expectOwnableUnauthorized(buyer);
         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
     }
 

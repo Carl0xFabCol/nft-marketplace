@@ -143,6 +143,25 @@ export const MarketplaceABI = [
   },
   {
     type: "function",
+    name: "authorizedLaunchpads",
+    inputs: [
+      {
+        name: "launchpad",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "bids",
     inputs: [],
     outputs: [
@@ -758,6 +777,42 @@ export const MarketplaceABI = [
     type: "function",
     name: "renounceOwnership",
     inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setAuthorizedContract",
+    inputs: [
+      {
+        name: "contractAddr",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "authorized",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setAuthorizedLaunchpad",
+    inputs: [
+      {
+        name: "launchpad",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "authorized",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
     outputs: [],
     stateMutability: "nonpayable",
   },
