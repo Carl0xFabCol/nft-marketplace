@@ -48,6 +48,10 @@ export class ViemRpcProvider implements IRpcProvider {
     }
   }
 
+  async getChainId(): Promise<number> {
+    return await this.client.getChainId()
+  }
+
   async getContractEvents(params: GetContractEventsParams): Promise<RawContractEvent[]> {
     const { address, abi, fromBlock, toBlock, eventName } = params
 

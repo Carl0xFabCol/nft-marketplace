@@ -20,6 +20,9 @@ export interface IRpcProvider {
   /** Get the latest block number */
   getBlockNumber(): Promise<bigint>
 
+  /** Get the chain id reported by the RPC endpoint (used to reject misconfigured URLs) */
+  getChainId(): Promise<number>
+
   /** Fetch contract events within a block range */
   getContractEvents(params: GetContractEventsParams): Promise<RawContractEvent[]>
 

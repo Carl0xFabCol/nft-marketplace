@@ -113,7 +113,40 @@ async function main() {
     providers.push(new ViemRpcProvider(buildProviderConfig("fallback", env.fallbackRpcUrl, "fast", env.chainId)))
   }
 
-  const providerPool = new ProviderPool(providers)
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1a. VERIFY PROVIDERS BELONG TO THE TARGET CHAIN
+  // ─────────────────────────────────────────────────────────────────────────────
+  // A misconfigured URL (e.g. a Sepolia endpoint in an Elysium deployment) would
+  // otherwise be trusted for head-block detection, causing the indexer to request
+  // eth_getLogs for blocks far beyond the real chain head ("invalid block range
+  // params" / "nonce too high"-style RPC failures). Reject mismatched providers.
+  const verifiedProviders: IRpcProvider[] = []
+  for (const provider of providers) {
+    try {
+      const providerChainId = await provider.getChainId()
+      if (providerChainId !== env.chainId) {
+        logger.error(
+          { provider: provider.name, expectedChainId: env.chainId, actualChainId: providerChainId },
+          "❌ Provider chain mismatch — excluding provider from pool",
+        )
+        continue
+      }
+      verifiedProviders.push(provider)
+    } catch (error) {
+      logger.warn(
+        { provider: provider.name, error: error instanceof Error ? error.message : String(error) },
+        "⚠️  Could not verify provider chain — excluding provider from pool",
+      )
+    }
+  }
+
+  if (verifiedProviders.length === 0) {
+    throw new Error(
+      `No RPC providers match CHAIN_ID=${env.chainId}. Check FAST_RPC_URL / ARCHIVE_RPC_URL / FALLBACK_RPC_URL.`,
+    )
+  }
+
+  const providerPool = new ProviderPool(verifiedProviders)
 
   // Health check
   await providerPool.checkHealth()

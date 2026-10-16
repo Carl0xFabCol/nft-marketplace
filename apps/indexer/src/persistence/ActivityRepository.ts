@@ -42,7 +42,7 @@ export class ActivityRepository {
         log_index: params.logIndex,
         source_contract: params.sourceContract,
       },
-      { onConflict: "tx_hash,log_index,source_contract", ignoreDuplicates: true },
+      { onConflict: "tx_hash,log_index", ignoreDuplicates: true },
     )
 
     if (error) {
