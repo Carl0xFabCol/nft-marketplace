@@ -6,21 +6,31 @@ import type { Address } from "viem"
 // Both apps/web and apps/indexer must import from here.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Shape of the per-chain contract address map. `LAUNCHPAD` is optional because it is only deployed on chains that run the factory. */
+export type ContractAddresses = {
+  readonly MARKETPLACE: Address
+  readonly MARKETPLACE_BIDS: Address
+  readonly MARKETPLACE_CORE: Address
+  readonly LAUNCHPAD?: Address
+}
+
 /** Sepolia testnet (chain ID 11155111) */
-export const SEPOLIA_ADDRESSES = {
+export const SEPOLIA_ADDRESSES: ContractAddresses = {
   MARKETPLACE: "0x880176caEd2C38F889e5E0AD6Ae55A871dd0f3B5" as Address,
   MARKETPLACE_BIDS: "0x66759517050c84A1AC239C4D37FfB7A2de05F37f" as Address,
   MARKETPLACE_CORE: "0x80D414fAD89E471E46c97B66F2B567e1b970A5C0" as Address,
-} as const
+}
 
-export const ELYSIUM_ADDRESSES = {
-  MARKETPLACE: "0x373cDd612dE9857DeA8cA360EFc302405dD82860" as Address,
-  MARKETPLACE_BIDS: "0xA499b7077FBF2c99451F58AD7d7F29fF1DFc42a5" as Address,
-  MARKETPLACE_CORE: "0x7Ba8Bb2631Db0cFD67A440EEDE810C5EF1A6d523" as Address,
-} as const
+/** Elysium (chain ID 99801) */
+export const ELYSIUM_ADDRESSES: ContractAddresses = {
+  MARKETPLACE: "0xF26E73d620251752782B351424D5EC749c5007e9" as Address,
+  MARKETPLACE_BIDS: "0xc2f7357E0f66CBdb7E52f6D9787eFc13Eb3669Df" as Address,
+  MARKETPLACE_CORE: "0x8dDbd93EaD1766a1Fe98DE55D68a7B8529B5f079" as Address,
+  LAUNCHPAD: "0x3613128fAA9f1bb8DF769D60ad5CfbBc85C59d54" as Address,
+}
 
 /** Address map keyed by chain ID */
-export const CONTRACT_ADDRESSES: Record<number, typeof SEPOLIA_ADDRESSES> = {
+export const CONTRACT_ADDRESSES: Record<number, ContractAddresses> = {
   11155111: SEPOLIA_ADDRESSES,
   99801: ELYSIUM_ADDRESSES,
 }
@@ -33,7 +43,7 @@ export const DEFAULT_ADDRESSES_CHAIN_ID = 99801 // Elysium
  * Falls back to DEFAULT_ADDRESSES_CHAIN_ID's addresses if the chain id is
  * not recognized (with a console warning), so callers never get `undefined`.
  */
-export function getContractAddresses(chainId?: number): typeof SEPOLIA_ADDRESSES {
+export function getContractAddresses(chainId?: number): ContractAddresses {
   const resolvedChainId = chainId ?? DEFAULT_ADDRESSES_CHAIN_ID
   const addresses = CONTRACT_ADDRESSES[resolvedChainId]
 
@@ -53,3 +63,4 @@ export function getContractAddresses(chainId?: number): typeof SEPOLIA_ADDRESSES
 export const MARKETPLACE_CONTRACT_ADDRESS = ELYSIUM_ADDRESSES.MARKETPLACE
 export const BIDS_CONTRACT_ADDRESS = ELYSIUM_ADDRESSES.MARKETPLACE_BIDS
 export const CORE_CONTRACT_ADDRESS = ELYSIUM_ADDRESSES.MARKETPLACE_CORE
+export const LAUNCHPAD_CONTRACT_ADDRESS = ELYSIUM_ADDRESSES.LAUNCHPAD

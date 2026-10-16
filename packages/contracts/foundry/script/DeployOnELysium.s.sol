@@ -5,6 +5,7 @@ import "forge-std/Script.sol";
 import "../src/MarketplaceCore.sol";
 import "../src/MarketplaceBids.sol";
 import "../src/Marketplace.sol";
+import "../src/LaunchPad.sol";
 
 contract DeployMarketplace is Script {
     function run() external {
@@ -13,6 +14,7 @@ contract DeployMarketplace is Script {
         address deployer = vm.addr(deployerPrivateKey);
         address feeReceiver = vm.envOr("FEE_RECEIVER", deployer);
         uint16 marketplaceFee = uint16(vm.envOr("MARKETPLACE_FEE", uint256(100)));
+        uint256 launchFee = vm.envOr("LAUNCH_FEE", uint256(0));
 
         // Safety check: this deployment is intended for Elysium.
         require(block.chainid == 99801, "Wrong network: expected Elysium");
@@ -57,26 +59,44 @@ contract DeployMarketplace is Script {
         console.log("Marketplace:", address(marketplace));
 
         // ================================================================
-        // 4. Authorize Bids + Router in Core
+        // 4. Deploy LaunchPad
         // ================================================================
 
-        console.log("\n4. Authorizing contracts in Core...");
+        console.log("\n4. Deploying LaunchPad...");
+
+        LaunchPad launchPad = new LaunchPad(address(core));
+
+        console.log("LaunchPad:", address(launchPad));
+
+        launchPad.setLaunchFee(launchFee);
+
+        console.log("LaunchPad fee:", launchFee);
+
+        // ================================================================
+        // 5. Authorize Bids + Router + LaunchPad in Core
+        // ================================================================
+
+        console.log("\n5. Authorizing contracts in Core...");
 
         core.setAuthorizedContract(address(bids), true);
         core.setAuthorizedContract(address(marketplace), true);
+        core.setAuthorizedLaunchpad(address(launchPad), true);
 
         require(core.authorizedContracts(address(bids)), "Bids authorization failed");
 
         require(core.authorizedContracts(address(marketplace)), "Marketplace authorization failed");
 
+        require(core.authorizedLaunchpads(address(launchPad)), "LaunchPad authorization failed");
+
         console.log("Bids authorized");
         console.log("Marketplace authorized");
+        console.log("LaunchPad authorized");
 
         // ================================================================
-        // 5. Transfer Core ownership -> Router
+        // 6. Transfer Core ownership -> Router
         // ================================================================
 
-        console.log("\n5. Transferring Core ownership...");
+        console.log("\n6. Transferring Core ownership...");
 
         core.transferOwnership(address(marketplace));
 
@@ -85,10 +105,10 @@ contract DeployMarketplace is Script {
         console.log("Core ownership transfer initiated");
 
         // ================================================================
-        // 6. Transfer Bids ownership -> Router
+        // 7. Transfer Bids ownership -> Router
         // ================================================================
 
-        console.log("\n6. Transferring Bids ownership...");
+        console.log("\n7. Transferring Bids ownership...");
 
         bids.transferOwnership(address(marketplace));
 
@@ -97,10 +117,10 @@ contract DeployMarketplace is Script {
         console.log("Bids ownership transfer initiated");
 
         // ================================================================
-        // 7. Router accepts ownership of Core + Bids
+        // 8. Router accepts ownership of Core + Bids
         // ================================================================
 
-        console.log("\n7. Accepting component ownership...");
+        console.log("\n8. Accepting component ownership...");
 
         marketplace.acceptComponentOwnership();
 
@@ -112,10 +132,10 @@ contract DeployMarketplace is Script {
         console.log("Bids owner:", bids.owner());
 
         // ================================================================
-        // 8. Configure Bids -> Router
+        // 9. Configure Bids -> Router
         // ================================================================
 
-        console.log("\n8. Configuring Bids marketplace address...");
+        console.log("\n9. Configuring Bids marketplace address...");
 
         marketplace.configureBidsMarketplace();
 
@@ -124,10 +144,10 @@ contract DeployMarketplace is Script {
         console.log("Bids marketplace:", bids.marketplace());
 
         // ================================================================
-        // 9. Final security/configuration checks
+        // 10. Final security/configuration checks
         // ================================================================
 
-        console.log("\n9. Running final checks...");
+        console.log("\n10. Running final checks...");
 
         require(marketplace.owner() == deployer, "Marketplace owner is not deployer");
 
@@ -139,11 +159,15 @@ contract DeployMarketplace is Script {
 
         require(core.authorizedContracts(address(marketplace)), "Marketplace is not authorized in Core");
 
+        require(core.authorizedLaunchpads(address(launchPad)), "LaunchPad is not authorized in Core");
+
         require(bids.marketplace() == address(marketplace), "Bids marketplace incorrect");
 
         require(address(marketplace.core()) == address(core), "Router Core address incorrect");
 
         require(address(marketplace.bids()) == address(bids), "Router Bids address incorrect");
+
+        require(address(launchPad.core()) == address(core), "LaunchPad Core address incorrect");
 
         console.log("All checks passed.");
 
@@ -164,20 +188,24 @@ contract DeployMarketplace is Script {
         console.log("MarketplaceCore:", address(core));
         console.log("MarketplaceBids:", address(bids));
         console.log("Marketplace:", address(marketplace));
+        console.log("LaunchPad:", address(launchPad));
 
         console.log("\nOwners:");
         console.log("Core:", core.owner());
         console.log("Bids:", bids.owner());
         console.log("Marketplace:", marketplace.owner());
+        console.log("LaunchPad:", launchPad.owner());
 
         console.log("\nConfiguration:");
         console.log("Bids.marketplace:", bids.marketplace());
         console.log("Fee Receiver:", core.feeReceiver());
         console.log("Marketplace Fee:", core.marketplaceFee());
+        console.log("LaunchPad Fee:", launchPad.launchFee());
 
         console.log("\nIMPORTANT:");
         console.log("- Users interact with:", address(marketplace));
         console.log("- NFT approvals go to:", address(core));
+        console.log("- Collection creation via:", address(launchPad));
         console.log("- Core owner:", address(marketplace));
         console.log("- Bids owner:", address(marketplace));
         console.log("- Marketplace admin:", deployer);
@@ -198,11 +226,17 @@ contract DeployMarketplace is Script {
                 '  "marketplace": "',
                 vm.toString(address(marketplace)),
                 '",\n',
+                '  "launchpad": "',
+                vm.toString(address(launchPad)),
+                '",\n',
                 '  "feeReceiver": "',
                 vm.toString(feeReceiver),
                 '",\n',
                 '  "marketplaceFee": ',
                 vm.toString(marketplaceFee),
+                ",\n",
+                '  "launchFee": ',
+                vm.toString(launchFee),
                 ",\n",
                 '  "chainId": ',
                 vm.toString(block.chainid),

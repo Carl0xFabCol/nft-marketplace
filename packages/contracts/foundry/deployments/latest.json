@@ -1,9 +1,11 @@
 {
-  "core": "0x7Ba8Bb2631Db0cFD67A440EEDE810C5EF1A6d523",
-  "bids": "0xA499b7077FBF2c99451F58AD7d7F29fF1DFc42a5",
-  "marketplace": "0x373cDd612dE9857DeA8cA360EFc302405dD82860",
+  "core": "0x8dDbd93EaD1766a1Fe98DE55D68a7B8529B5f079",
+  "bids": "0xc2f7357E0f66CBdb7E52f6D9787eFc13Eb3669Df",
+  "marketplace": "0xF26E73d620251752782B351424D5EC749c5007e9",
+  "launchpad": "0x3613128fAA9f1bb8DF769D60ad5CfbBc85C59d54",
   "feeReceiver": "0x13F1CDc39d462A2B48c93fc4875C3F761AF26EB3",
   "marketplaceFee": 100,
+  "launchFee": 0,
   "chainId": 99801,
   "network": "elysium"
 }

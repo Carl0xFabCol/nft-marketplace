@@ -527,8 +527,8 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     }
 
     function _getRoyalty(address collection, uint256 tokenId, uint256 salePrice) internal view returns (address receiver, uint256 amount) {
-        if (IERC165(collection).supportsInterface(type(IERC2981).interfaceId)) {
-            try IERC2981(collection).royaltyInfo(tokenId, salePrice) returns (address r, uint256 a) {
+        if (IERC165(collection).supportsInterface(type(IMarketplaceRoyalty).interfaceId)) {
+            try IMarketplaceRoyalty(collection).royaltyInfo(tokenId, salePrice) returns (address r, uint256 a) {
                 uint256 maxRoyalty = (salePrice * MAX_ROYALTY_FEE) / BASIS_POINTS;
                 if (a <= maxRoyalty) {
                     return (r, a);
@@ -548,6 +548,6 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     }
 }
 
-interface IERC2981 is IERC165 {
+interface IMarketplaceRoyalty is IERC165 {
     function royaltyInfo(uint256 tokenId, uint256 salePrice) external view returns (address receiver, uint256 royaltyAmount);
 }
