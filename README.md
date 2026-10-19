@@ -38,9 +38,9 @@ This ensures an instantaneous UI while maintaining the decentralization and secu
 
 | Contract | Address | Etherscan |
 |----------|---------|-----------|
-| `Marketplace` (router) | `0x55495153De44570DFC37B2daC4Bc13241B3C2e87` | [View](https://sepolia.etherscan.io/address/0x55495153De44570DFC37B2daC4Bc13241B3C2e87) |
-| `MarketplaceCore` | `0x36052B33e4f10E3264B89961EC3873374Fedc793` | [View](https://sepolia.etherscan.io/address/0x36052B33e4f10E3264B89961EC3873374Fedc793) |
-| `MarketplaceBids` | `0x613CeD51Fd25F67FEcc0c5C22981d42397eddFb1` | [View](https://sepolia.etherscan.io/address/0x613CeD51Fd25F67FEcc0c5C22981d42397eddFb1) |
+| `Marketplace` (router) | `0x880176caEd2C38F889e5E0AD6Ae55A871dd0f3B5` | [View](https://sepolia.etherscan.io/address/0x880176caEd2C38F889e5E0AD6Ae55A871dd0f3B5) |
+| `MarketplaceCore` | `0x80D414fAD89E471E46c97B66F2B567e1b970A5C0` | [View](https://sepolia.etherscan.io/address/0x80D414fAD89E471E46c97B66F2B567e1b970A5C0) |
+| `MarketplaceBids` | `0x66759517050c84A1AC239C4D37FfB7A2de05F37f` | [View](https://sepolia.etherscan.io/address/0x66759517050c84A1AC239C4D37FfB7A2de05F37f) |
 
 ## 🛠 Tech Stack
 
@@ -52,6 +52,16 @@ This ensures an instantaneous UI while maintaining the decentralization and secu
 - **State Management**: React Context / React Query
 
 ### Backend & Indexing
+
+- **Runtime**: Node.js
+- **Indexer**: Viem (Blockchain event polling)
+- **Database**: Supabase (PostgreSQL)
+- **Client**: Supabase JS SDK
+
+### Multi-chain
+
+- Contracts are deployed on **Sepolia** (11155111) and **Elysium** (99801).
+- `packages/contracts/src/addresses.ts` defaults to **Elysium** when no chain ID is given; always prefer `getContractAddresses(chainId)` for Sepolia.
 
 - **Runtime**: Node.js
 - **Indexer**: Viem (Blockchain event polling)
@@ -198,13 +208,13 @@ See `docker-compose.yml` for configuration details.
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | Full system architecture, data flows, trade-offs |
-| [Smart Contracts](docs/CONTRACTS.md) | Three-contract design, security patterns, gas optimizations |
-| [Indexer](docs/INDEXER.md) | Provider pooling, batching, handler registry, crash recovery |
-| [Frontend](docs/FRONTEND.md) | Optimistic UI, realtime, batch operations, SIWE auth |
-| [ADR-001](docs/adr/001-modular-contracts.md) | Why three contracts (Core/Bids/Router) |
-| [ADR-002](docs/adr/002-event-indexing.md) | Event-driven indexing strategy |
-| [ADR-003](docs/adr/003-optimistic-ui.md) | Optimistic UI with idempotent reconciliation |
+| [Web Architecture](docs/web-architecture.md) | Full system architecture, data flows, trade-offs |
+| [Smart Contracts & Packages](docs/packages-architecture.md) | Three-contract design, shared packages, contract addresses |
+| [Indexer](docs/indexer-architecture.md) | Provider pooling, batching, handler registry, crash recovery |
+| [LaunchPad System Tasks](docs/launchpad-system-tasks.md) | LaunchPad feature roadmap and tasks |
+| [ADR-001](docs/adr/001-modular-contracts.md) | Why three contracts (Core/Bids/Router) — planned |
+| [ADR-002](docs/adr/002-event-indexing.md) | Event-driven indexing strategy — planned |
+| [ADR-003](docs/adr/003-optimistic-ui.md) | Optimistic UI with idempotent reconciliation — planned |
 
 ## 🗺 Roadmap
 

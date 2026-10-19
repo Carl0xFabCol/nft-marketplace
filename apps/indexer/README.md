@@ -138,7 +138,7 @@ pnpm install
 ### Step 2: Set Up Database
 
 1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Run the migrations from `packages/database/migrations/`
+2. Create the required tables via the Supabase dashboard
 3. Initialize the indexer state:
 
 ```sql

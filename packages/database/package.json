@@ -11,6 +11,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "generate-types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" > src/types.ts"
   },
   "devDependencies": {

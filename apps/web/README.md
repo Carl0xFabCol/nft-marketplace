@@ -1,145 +1,49 @@
-# SupNFT – Full‑stack Web3 NFT Mint DApp
+# @marketplace/web — Next.js Marketplace Frontend
 
-SupNFT is a full‑stack Web3 decentralized application built to demonstrate practical skills in modern Ethereum development. The project covers the complete NFT lifecycle: minting, burning with ETH refund, wallet connection, contract interaction, and on‑chain state synchronization.
+The user-facing marketplace. Reads marketplace data from Supabase (populated by `apps/indexer`) for fast reads, and writes to smart contracts via wagmi/viem. Built with Next.js 16 App Router.
 
-This repository is intended as a **technical showcase** for Web3 / Blockchain developer roles.
+## Tech Stack
 
----
+- **Framework**: Next.js 16 (App Router)
+- **Web3**: Wagmi, Viem, React Query
+- **Database**: Supabase (PostgreSQL + Realtime)
+- **Styling**: Tailwind CSS
+- **Language**: TypeScript
+- **Auth**: JWT-based wallet authentication (`/api/auth/nonce`, `/api/auth/login`)
 
-## 🚀 Live Demo
+## Routes
 
-- **Network:** Sepolia Testnet
-- **Contract:** ERC‑721 deployed and verified on Sepolia
-- **Wallet:** MetaMask / Injected wallets
+| Route | Description |
+|-------|-------------|
+| `/` | Home — top collections by volume |
+| `/collections` | Collections listing |
+| `/collection/[colAddress]` | Collection detail |
+| `/collection/[colAddress]/[tokenId]` | NFT detail |
+| `/user/[userAddress]` | User profile / dashboard |
+| `/launchpad` | Collection registration UI |
 
----
+## Key files
 
-## 🧠 Project Purpose
+- `app/layout.tsx` — root layout with providers
+- `app/providers.tsx` — Wagmi, QueryClient, Auth providers
+- `hooks/` — contract reads/writes and realtime subscriptions
+- `services/` — Supabase data-fetching layer
+- `actions/listings/` — server actions for optimistic listing creation
+- `lib/supabase/` — Supabase client factory (browser/server/admin)
 
-The goal of this project is to demonstrate:
+## Environment variables (`apps/web/.env`)
 
-- Real‑world smart contract design decisions
-- Secure NFT mint & burn flows
-- Clean frontend–contract integration
-- Professional tooling used in production Web3 stacks
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Public anon key for browser client |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Admin key for server-side operations |
 
----
+## Scripts
 
-## 🧩 Features
-
-### Smart Contract
-
-https://github.com/0xteric/SUP-NFT/blob/main/src/SupNFT.sol
-
-- ERC‑721 NFT implementation using OpenZeppelin
-- Public mint with:
-
-  - Max supply
-  - Max mint per transaction
-  - Fixed mint price
-
-- Burn functionality with automatic ETH refund
-- Reentrancy protection
-- Events for minting and burning
-
-### Frontend
-
-- Wallet connection (MetaMask)
-- Network detection & auto switch (Sepolia)
-- Mint UI with:
-
-  - Validation
-  - Transaction lifecycle states (waiting signature → pending → success)
-  - Transaction hash & Etherscan link
-
-- Burn UI for owned NFTs
-- Live contract stats (price, total supply)
-- Automatic UI refresh after on‑chain actions
-
----
-
-## 🛠️ Tech Stack
-
-### Smart Contracts
-
-- **Solidity** ^0.8.x
-- **OpenZeppelin** (ERC721, Ownable, ReentrancyGuard)
-- **Foundry** (forge, scripts, local testing)
-
-### Frontend
-
-- **Next.js 14+** (App Router)
-- **React**
-- **TypeScript**
-- **wagmi** + **viem**
-- **TanStack Query**
-- **Tailwind CSS**
-
-### Network
-
-- **Ethereum Sepolia Testnet**
-
----
-
-## 🔐 Security Considerations
-
-- Reentrancy protection on ETH‑handling functions
-- Strict supply limits enforced on‑chain
-- ETH refund logic carefully ordered to avoid locked funds
-- No privileged minting (fair mint logic)
-
----
-
-## ⚙️ Local Setup
-
-### Prerequisites
-
-- Node.js 18+
-- Foundry
-
-### Install dependencies
-
-```bash
-npm install
-```
-
-### Run frontend
-
-```bash
-npm run dev
-```
-
-### Build contracts
-
-```bash
-forge build
-```
-
----
-
-## 🧪 Deployment
-
-Contracts are deployed using Foundry scripts:
-
-```bash
-forge script script/SupNFT.s.sol:SupNFTScript \
-  --rpc-url https://ethereum-sepolia-rpc.publicnode.com \
-  --private-key $PK \
-  --broadcast
-```
-
----
-
-## 📌 What This Project Demonstrates
-
-- Full NFT lifecycle management
-- Secure ETH flows in smart contracts
-- Frontend–contract synchronization
-- Modern Web3 developer tooling
-- Clean and readable code structure
-
----
-
-## 📝 License
-
-MIT License
+- `pnpm dev` — dev server
+- `pnpm build` — production build
+- `pnpm start` — start production server
+- `pnpm lint` — ESLint
+- `pnpm typecheck` — TypeScript check
+- `pnpm update-types` — regenerate Supabase types
