@@ -46,7 +46,7 @@ export class NFTRepository {
   }
 
   async updateOwner(collectionAddress: string, tokenId: string, ownerWallet: string, lastSynced: Date): Promise<void> {
-    const { error } = await this.supabase
+    const { data, error } = await this.supabase
       .from("nfts")
       .update({
         owner_wallet: ownerWallet.toLowerCase(),
@@ -55,6 +55,7 @@ export class NFTRepository {
       .eq("collection_address", collectionAddress.toLowerCase())
       .eq("token_id", tokenId)
       .eq("chain_id", env.chainId)
+      .select()
 
     if (error) {
       logger.error(
@@ -68,6 +69,39 @@ export class NFTRepository {
       )
 
       throw error
+    }
+
+    // If no row was updated the NFT doesn't exist yet (e.g. the mint transfer
+    // was missed, the indexer started after minting, or historical transfers
+    // weren't backfilled). Insert it so the owner — and therefore the user's
+    // balance — is recorded accurately.
+    if (!data || data.length === 0) {
+      const { error: insertError } = await this.supabase
+        .from("nfts")
+        .insert({
+          collection_address: collectionAddress.toLowerCase(),
+          token_id: tokenId,
+          owner_wallet: ownerWallet.toLowerCase(),
+          last_synced: lastSynced,
+          chain_id: env.chainId,
+          token_uri: null,
+          image_url: null,
+          metadata: null,
+        })
+
+      if (insertError) {
+        logger.error(
+          {
+            error: insertError,
+            collectionAddress,
+            tokenId,
+            ownerWallet,
+          },
+          "❌ Failed to insert NFT on transfer",
+        )
+
+        throw insertError
+      }
     }
   }
 }
