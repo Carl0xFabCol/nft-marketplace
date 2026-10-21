@@ -127,8 +127,8 @@ export class IndexerOrchestrator {
 
       const globalFromBlock = BigInt(state.last_block + 1)
 
-      // Step 2: Discover active collections and build per-contract state
-      const collections = await this.collectionsRepo.getAll()
+      // Step 2: Discover active collections for this chain and build per-contract state
+      const collections = await this.collectionsRepo.getAll(this.config.chainId)
 
       // Build contract fetch requests:
       // - Static contracts (core, bids) use global fromBlock

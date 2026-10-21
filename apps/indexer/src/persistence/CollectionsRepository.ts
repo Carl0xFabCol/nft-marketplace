@@ -99,13 +99,21 @@ export class CollectionsRepository {
   }
 
   /**
-   * Get all registered collections.
+   * Get all registered collections, optionally scoped to a chain.
+   * Scoping is important when multiple indexer instances (one per chain)
+   * share the same database: otherwise each instance would try to index
+   * collections that belong to a different chain.
    */
-  async getAll(): Promise<any[]> {
-    const { data, error } = await this.supabase.from("collections").select("*")
+  async getAll(chainId?: number): Promise<any[]> {
+    let query = this.supabase.from("collections").select("*")
+    if (chainId !== undefined) {
+      query = query.eq("chain_id", chainId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
-      logger.error({ error }, "❌ Failed to fetch collections")
+      logger.error({ error, chainId }, "❌ Failed to fetch collections")
       throw error
     }
 

@@ -24,6 +24,7 @@ export class NFTRepository {
     tokenUri: string | null
     imageUrl: string | null
     metadata: Record<string, unknown> | null
+    mintedAt?: Date | null
   }): Promise<void> {
     const { error } = await this.supabase.from("nfts").upsert(
       {
@@ -35,6 +36,7 @@ export class NFTRepository {
         token_uri: params.tokenUri,
         image_url: params.imageUrl,
         metadata: params.metadata,
+        ...(params.mintedAt !== undefined && { minted_at: params.mintedAt }),
       },
       { onConflict: "collection_address,token_id,chain_id" },
     )

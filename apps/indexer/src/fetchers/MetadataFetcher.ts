@@ -6,6 +6,19 @@ import { logger } from "../utils/logger"
 // METADATA FETCHER
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const IPFS_GATEWAYS = [
+  process.env.IPFS_GATEWAY,
+  "https://gateway.pinata.cloud/ipfs",
+  "https://dweb.link/ipfs",
+  "https://ipfs.io/ipfs",
+].filter((gateway): gateway is string => Boolean(gateway))
+
+const METADATA_TIMEOUT_MS = 20000
+
+function resolveGatewayUrl(uri: string, gateway: string): string {
+  return uri.startsWith("ipfs://") ? uri.replace("ipfs://", `${gateway}/`) : uri
+}
+
 /**
  * Fetches NFT and collection metadata from contracts and IPFS.
  * Extracted from the main indexer logic for better separation of concerns.
@@ -49,34 +62,35 @@ export class MetadataFetcher {
   async fetchMetadata(uri: string): Promise<Record<string, unknown> | null> {
     if (!uri) return null
 
-    try {
-      // Convert IPFS URIs to HTTP gateway
-      let fetchUri = uri
-      if (uri.startsWith("ipfs://")) {
-        fetchUri = uri.replace("ipfs://", "https://ipfs.io/ipfs/")
+    const gateways = uri.startsWith("ipfs://") ? IPFS_GATEWAYS : [""]
+
+    for (const gateway of gateways) {
+      const fetchUri = resolveGatewayUrl(uri, gateway)
+
+      try {
+        const response = await fetch(fetchUri, {
+          signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
+        })
+
+        if (!response.ok) {
+          logger.debug({ uri, gateway, status: response.status }, "⚠️  Metadata fetch failed")
+          continue
+        }
+
+        return (await response.json()) as Record<string, unknown>
+      } catch (error) {
+        logger.debug(
+          {
+            uri,
+            gateway,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          "⚠️  Failed to fetch metadata",
+        )
       }
-
-      const response = await fetch(fetchUri, {
-        signal: AbortSignal.timeout(10000), // 10s timeout
-      })
-
-      if (!response.ok) {
-        logger.debug({ uri, status: response.status }, "⚠️  Metadata fetch failed")
-        return null
-      }
-
-      const metadata = await response.json()
-      return metadata as Record<string, unknown>
-    } catch (error) {
-      logger.debug(
-        {
-          uri,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        "⚠️  Failed to fetch metadata",
-      )
-      return null
     }
+
+    return null
   }
 
   /**
@@ -132,7 +146,10 @@ export class MetadataFetcher {
     if (metadata?.image && typeof metadata.image === "string") {
       imageUrl = metadata.image
       if (imageUrl.startsWith("ipfs://")) {
-        imageUrl = imageUrl.replace("ipfs://", "https://ipfs.io/ipfs/")
+        const gateway = IPFS_GATEWAYS[0]
+        if (gateway) {
+          imageUrl = imageUrl.replace("ipfs://", `${gateway}/`)
+        }
       }
     }
 

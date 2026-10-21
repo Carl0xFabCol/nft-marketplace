@@ -26,8 +26,7 @@ import { ContractIndexerStateRepository } from "./persistence/ContractIndexerSta
 import { HandlerRegistry } from "./handlers/HandlerRegistry"
 import { createCoreEventHandlers } from "./handlers/CoreEventHandler"
 import { createBidsEventHandlers } from "./handlers/BidsEventHandler"
-import { TransferHandler } from "./handlers/TransferHandler"
-import type { IEventHandler } from "./handlers/IEventHandler"
+import { createTransferHandler } from "./handlers/TransferHandler"
 
 // Orchestrator
 import { IndexerOrchestrator } from "./services/IndexerOrchestrator"
@@ -186,15 +185,18 @@ async function main() {
   // Initialize per-contract block tracking for all registered collections.
   // If a collection has no state entry, seed it with its indexer_block as the starting point.
   // This is idempotent — running it multiple times has no side effects.
-  const existingCollections = await collectionsRepo.getAll()
+  const existingCollections = await collectionsRepo.getAll(env.chainId)
   for (const collection of existingCollections) {
     const contractAddress = collection.contract_address as string
-    const indexerBlock = collection.indexer_block as number
+    const indexerBlock = Number(collection.indexer_block ?? 0)
 
     const existingState = await contractStateRepo.getContractState(contractAddress, env.chainId)
     if (!existingState) {
-      await contractStateRepo.upsertContractState(contractAddress, env.chainId, indexerBlock)
-      logger.info({ contractAddress, lastBlock: indexerBlock }, "🌱 Seeded contract indexer state for collection")
+      // Store indexerBlock - 1 so the next run starts *at* indexerBlock (inclusive).
+      // Using indexerBlock here would skip the registration block itself.
+      const seedBlock = Math.max(indexerBlock - 1, 0)
+      await contractStateRepo.upsertContractState(contractAddress, env.chainId, seedBlock)
+      logger.info({ contractAddress, lastBlock: seedBlock }, "🌱 Seeded contract indexer state for collection")
     }
   }
 
@@ -221,7 +223,7 @@ async function main() {
   }
 
   // Register NFT Transfer handler (for dynamically-registered collection contracts)
-  const transferHandler = new TransferHandler(activityRepo, nftRepo) as IEventHandler<any>
+  const transferHandler = createTransferHandler(activityRepo, nftRepo, metadataFetcher)
   handlerRegistry.register(transferHandler)
 
   logger.info(

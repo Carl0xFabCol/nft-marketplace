@@ -124,8 +124,19 @@ export class BatchEventFetcher implements IEventFetcher {
     const contractEvents = await pMap(
       requests,
       async (req) => {
+        // Skip contracts that don't start until after this chunk ends. Querying
+        // with fromBlock > toBlock makes the RPC reject the request with
+        // "invalid block range params", which would abort the whole iteration.
+        if (req.fromBlock > rangeToBlock) {
+          return []
+        }
+
         // Each contract starts from its own fromBlock, but no further back than the chunk start
         const contractFromBlock = req.fromBlock > rangeFromBlock ? req.fromBlock : rangeFromBlock
+        if (contractFromBlock > rangeToBlock) {
+          return []
+        }
+
         return await this.fetchContractEvents(req.contract, contractFromBlock, rangeToBlock)
       },
       { concurrency: this.maxParallelRequests },

@@ -6,6 +6,7 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "diagnose": "tsx src/scripts/diagnose.ts",
+    "backfill": "tsx src/scripts/backfill-nfts.ts",
     "test": "vitest run"
   },
   "keywords": [],

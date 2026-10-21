@@ -13,6 +13,7 @@ vi.mock("../config/env", () => ({
 type QueryBuilder = {
   update: ReturnType<typeof vi.fn>
   insert: ReturnType<typeof vi.fn>
+  upsert: ReturnType<typeof vi.fn>
   eq: ReturnType<typeof vi.fn>
   select: ReturnType<typeof vi.fn>
 }
@@ -20,6 +21,7 @@ type QueryBuilder = {
 const makeQueryBuilder = (): QueryBuilder => ({
   update: vi.fn().mockReturnThis(),
   insert: vi.fn().mockReturnThis(),
+  upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
   eq: vi.fn().mockReturnThis(),
   select: vi.fn(),
 })
@@ -48,6 +50,62 @@ function buildRepo() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+})
+
+describe("NFTRepository.upsert", () => {
+  it("writes minted_at and metadata when provided", async () => {
+    const qb = makeQueryBuilder()
+    from.mockReturnValue(qb)
+
+    const mintedAt = new Date("2026-10-16T23:25:29Z")
+    const repo = buildRepo()
+
+    await repo.upsert({
+      collectionAddress,
+      tokenId,
+      ownerWallet,
+      lastSynced: mintedAt,
+      chainId: env.chainId,
+      tokenUri: "ipfs://bafy-token",
+      imageUrl: "https://ipfs.io/ipfs/bafy-image",
+      metadata: { name: "Hypurr #0" },
+      mintedAt,
+    })
+
+    expect(qb.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection_address: collectionAddress.toLowerCase(),
+        token_id: tokenId,
+        owner_wallet: ownerWallet.toLowerCase(),
+        chain_id: env.chainId,
+        token_uri: "ipfs://bafy-token",
+        image_url: "https://ipfs.io/ipfs/bafy-image",
+        metadata: { name: "Hypurr #0" },
+        minted_at: mintedAt,
+      }),
+      { onConflict: "collection_address,token_id,chain_id" },
+    )
+  })
+
+  it("omits minted_at when it is not provided", async () => {
+    const qb = makeQueryBuilder()
+    from.mockReturnValue(qb)
+
+    const repo = buildRepo()
+    await repo.upsert({
+      collectionAddress,
+      tokenId,
+      ownerWallet,
+      lastSynced,
+      chainId: env.chainId,
+      tokenUri: null,
+      imageUrl: null,
+      metadata: null,
+    })
+
+    const payload = qb.upsert.mock.calls[0][0]
+    expect(payload).not.toHaveProperty("minted_at")
+  })
 })
 
 describe("NFTRepository.updateOwner", () => {
