@@ -115,8 +115,9 @@ describe("NFTRepository.updateOwner", () => {
     qb.select.mockResolvedValueOnce({ data: [{ id: "1" }], error: null })
 
     const repo = buildRepo()
-    await repo.updateOwner(collectionAddress, tokenId, ownerWallet, lastSynced)
+    const inserted = await repo.updateOwner(collectionAddress, tokenId, ownerWallet, lastSynced)
 
+    expect(inserted).toBe(false)
     expect(qb.update).toHaveBeenCalled()
     expect(qb.eq).toHaveBeenCalledWith("chain_id", env.chainId)
     expect(qb.insert).not.toHaveBeenCalled()
@@ -130,8 +131,9 @@ describe("NFTRepository.updateOwner", () => {
     qb.insert.mockResolvedValueOnce({ data: [{ id: "2" }], error: null })
 
     const repo = buildRepo()
-    await repo.updateOwner(collectionAddress, tokenId, ownerWallet, lastSynced)
+    const inserted = await repo.updateOwner(collectionAddress, tokenId, ownerWallet, lastSynced)
 
+    expect(inserted).toBe(true)
     expect(qb.update).toHaveBeenCalled()
     expect(qb.insert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -141,6 +143,66 @@ describe("NFTRepository.updateOwner", () => {
         chain_id: env.chainId,
       }),
     )
+  })
+
+  it("applies optional metadata only on insert", async () => {
+    const qb = makeQueryBuilder()
+    from.mockReturnValue(qb)
+    qb.select.mockResolvedValueOnce({ data: [], error: null })
+    qb.insert.mockResolvedValueOnce({ data: [{ id: "2" }], error: null })
+
+    const repo = buildRepo()
+    const inserted = await repo.updateOwner(
+      collectionAddress,
+      tokenId,
+      ownerWallet,
+      lastSynced,
+      {
+        tokenUri: "ipfs://bafy-token",
+        imageUrl: "https://gateway.pinata.cloud/ipfs/bafy-image",
+        metadata: { name: "Hypurr #0" },
+      },
+    )
+
+    expect(inserted).toBe(true)
+    expect(qb.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection_address: collectionAddress.toLowerCase(),
+        token_id: tokenId,
+        owner_wallet: ownerWallet.toLowerCase(),
+        chain_id: env.chainId,
+        token_uri: "ipfs://bafy-token",
+        image_url: "https://gateway.pinata.cloud/ipfs/bafy-image",
+        metadata: { name: "Hypurr #0" },
+      }),
+    )
+  })
+
+  it("does not apply optional metadata when updating an existing row", async () => {
+    const qb = makeQueryBuilder()
+    from.mockReturnValue(qb)
+    qb.select.mockResolvedValueOnce({ data: [{ id: "1" }], error: null })
+
+    const repo = buildRepo()
+    await repo.updateOwner(
+      collectionAddress,
+      tokenId,
+      ownerWallet,
+      lastSynced,
+      {
+        tokenUri: "ipfs://bafy-token",
+        imageUrl: "https://gateway.pinata.cloud/ipfs/bafy-image",
+        metadata: { name: "Hypurr #0" },
+      },
+    )
+
+    expect(qb.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        owner_wallet: ownerWallet.toLowerCase(),
+        last_synced: lastSynced,
+      }),
+    )
+    expect(qb.insert).not.toHaveBeenCalled()
   })
 
   it("throws when the update fails", async () => {

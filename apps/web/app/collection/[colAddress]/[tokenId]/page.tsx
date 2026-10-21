@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: NFTPageProps) {
     title: `${nftData?.name || `NFT #${tokenId}`} | Marketplace`,
     description: `View details for NFT #${tokenId} from collection ${colAddress}`,
     openGraph: {
-      images: [nftData?.image_url || "/default-nft.png"],
+      images: [nftData?.image_url ?? nftData?.token_uri ?? "/default-nft.png"],
     },
   }
 }

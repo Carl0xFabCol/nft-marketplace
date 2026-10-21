@@ -7,6 +7,7 @@
     "start": "node dist/index.js",
     "diagnose": "tsx src/scripts/diagnose.ts",
     "backfill": "tsx src/scripts/backfill-nfts.ts",
+    "backfill:image-urls": "tsx src/scripts/backfill-image-urls.ts",
     "test": "vitest run"
   },
   "keywords": [],

@@ -8,6 +8,7 @@ import NFTBids from "./NftBids"
 import { useConnection } from "wagmi"
 import { explorerAddressUrl } from "@/lib/chains"
 import { NFTDetail as NFTDetailData } from "@/types/user.types"
+import { IpfsImage } from "@/components/features/nft/IpfsImage"
 
 interface NFTDetailProps {
   nft: NFTDetailData
@@ -33,7 +34,11 @@ export default function NFTDetail({ nft }: NFTDetailProps) {
         rounded-2xl overflow-hidden border border-(--text)/20 aspect-square h-min
       `}
       >
-        <img src={nft.image_url || "/placeholder-nft.png"} alt={nft.name ?? "NFT"} className="w-full aspect-square object-cover" />
+        <IpfsImage
+          src={nft.image_url || nft.token_uri || undefined}
+          alt={nft.name ?? "NFT"}
+          className="w-full aspect-square object-cover"
+        />
       </div>
 
       {/* NFT details */}

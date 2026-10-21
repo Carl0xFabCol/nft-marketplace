@@ -83,7 +83,22 @@ export class TransferHandler implements IEventHandler<TransferArgs> {
       await this.nftRepo.updateOwner(collectionAddress, tokenIdString, ZERO_ADDRESS, timestamp)
     } else {
       // Normal transfer: update the NFT owner to 'to'
-      await this.nftRepo.updateOwner(collectionAddress, tokenIdString, to, timestamp)
+      const inserted = await this.nftRepo.updateOwner(collectionAddress, tokenIdString, to, timestamp)
+      if (inserted) {
+        // The NFT row didn't exist yet (indexer missed the mint or started
+        // after minting). Fetch metadata so the image shows up in the frontend.
+        const nftData = await this.metadataFetcher.getNFTData(event.contractAddress, tokenIdString)
+        await this.nftRepo.upsert({
+          collectionAddress,
+          tokenId: tokenIdString,
+          ownerWallet: to,
+          lastSynced: timestamp,
+          chainId: env.chainId,
+          tokenUri: nftData.tokenUri,
+          imageUrl: nftData.imageUrl,
+          metadata: nftData.metadata,
+        })
+      }
     }
 
     // Record the activity (upsert for idempotency on crash/restart)
