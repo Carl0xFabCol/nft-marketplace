@@ -106,7 +106,7 @@ export default function UserDashboard({ userAddress, initialData }: UserDashboar
                   {currentView === "tokenBids" && (
                     <UserTokenBids collections={initialData.collections} tokenBids={initialData.tokenBids} selectedCollection={selectedCollection} batchOps={batchOps} userAddress={userAddress} />
                   )}
-                  {currentView === "history" && <UserHistory activity={initialData.activity} />}
+                  {currentView === "history" && <UserHistory activity={initialData.activity} userAddress={userAddress} totalPages={initialData.activityTotalPages ?? 1} />}
                 </motion.div>
               </AnimatePresence>
             </motion.div>

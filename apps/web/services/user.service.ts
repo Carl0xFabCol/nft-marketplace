@@ -18,7 +18,7 @@ export class UserService {
       this.getUserTokenBids(supabase, userAddress),
       this.getUserCollections(supabase, userAddress),
       this.getUserNFTsPaginated(supabase, userAddress, { page: 1, limit: 24 }),
-      this.getUserActivity(supabase, userAddress, { page: 1, limit: 24 }),
+      this.getUserActivityPaginated(supabase, userAddress, { page: 1, limit: 24 }),
     ])
 
     const listings = listingsRes.status === "fulfilled" ? listingsRes.value : []
@@ -26,7 +26,7 @@ export class UserService {
     const tokenBids = tokenBidsRes.status === "fulfilled" ? tokenBidsRes.value : []
     const collections = collectionsRes.status === "fulfilled" ? collectionsRes.value : []
     const nftsPage = nftsRes.status === "fulfilled" ? nftsRes.value : { nfts: [], hasMore: false }
-    const activity = activityRes.status === "fulfilled" ? activityRes.value : []
+    const activityPage = activityRes.status === "fulfilled" ? activityRes.value : { activity: [], page: 1, limit: 24, total: 0, totalPages: 0 }
 
     return {
       listings,
@@ -35,7 +35,8 @@ export class UserService {
       collections,
       nfts: nftsPage.nfts,
       hasMore: nftsPage.hasMore,
-      activity,
+      activity: activityPage.activity,
+      activityTotalPages: activityPage.totalPages,
     }
   }
 
@@ -159,7 +160,15 @@ export class UserService {
   /**
    * The user's activity.
    */
-  static async getUserActivity(
+  static async getUserActivity(supabase: SupabaseClient, userAddress: Address, options?: { page?: number; limit?: number; sortDir?: "asc" | "desc" }): Promise<Activity[]> {
+    const { activity } = await this.getUserActivityPaginated(supabase, userAddress, options)
+    return activity
+  }
+
+  /**
+   * The user's activity with pagination metadata.
+   */
+  static async getUserActivityPaginated(
     supabase: SupabaseClient,
     userAddress: Address,
     options?: {
@@ -167,26 +176,34 @@ export class UserService {
       limit?: number
       sortDir?: "asc" | "desc"
     },
-  ): Promise<Activity[]> {
+  ): Promise<{ activity: Activity[]; page: number; limit: number; total: number; totalPages: number }> {
     const { page = 1, limit = 24, sortDir = "desc" } = options || {}
 
     const from = (page - 1) * limit
     const to = from + limit - 1
     const addr = userAddress.toLowerCase()
 
-    let activityQuery = supabase
+    const { data, error, count } = await supabase
       .from("activity")
-      .select("*")
+      .select("*", { count: "exact" })
       .or(`from.eq.${addr},to.eq.${addr}`)
       .eq("chain_id", DEFAULT_CHAIN)
       .order("created_at", { ascending: sortDir === "asc" })
+      .range(from, to)
 
-    const { data, error } = await activityQuery.range(from, to)
     if (error) throw error
 
-    return (data || []).map((item: any) => ({
+    const activity = (data || []).map((item: any) => ({
       ...item,
       type: item.event,
     })) as Activity[]
+
+    return {
+      activity,
+      page,
+      limit,
+      total: count ?? 0,
+      totalPages: Math.ceil((count ?? 0) / limit),
+    }
   }
 }

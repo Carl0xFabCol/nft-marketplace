@@ -117,6 +117,13 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
     [listings],
   )
 
+  // ─── Bid accepted: the token leaves the seller's wallet, drop it from state ───
+  const handleBidAccepted = useCallback((sold: UserNFT) => {
+    const key = `${sold.collection_address.toLowerCase()}-${String(sold.token_id)}`
+    setNfts((prev) => prev.filter((nft) => `${nft.collection_address.toLowerCase()}-${String(nft.token_id)}` !== key))
+    setListings((prev) => prev.filter((listing) => `${listing.collection_address.toLowerCase()}-${String(listing.token_id)}` !== key))
+  }, [])
+
   const { approvalMap, allApproved, handleDelist, approveCollection } = useUserNfts({
     nfts,
     collections,
@@ -321,6 +328,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
                 }}
                 approvalMap={approvalMap}
                 batchOps={batchOps}
+                onBidAccepted={handleBidAccepted}
               />
             ))}
           </AnimatePresence>

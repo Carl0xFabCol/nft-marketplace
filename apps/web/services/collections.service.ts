@@ -91,14 +91,15 @@ export class CollectionService {
    * Collections with their top bid included.
    * Resolves the N+1 by fetching all top bids in a single query.
    */
-  static async getCollectionsWithTopBids(supabase: SupabaseClient, options?: { page?: number; limit?: number; chainId?: number }) {
-    const { page = 1, limit = 20, chainId = DEFAULT_CHAIN } = options || {}
+  static async getCollectionsWithTopBids(supabase: SupabaseClient, options?: { page?: number; limit?: number; chainId?: number; search?: string }) {
+    const { page = 1, limit = 20, chainId = DEFAULT_CHAIN, search } = options || {}
 
     const collectionsResult = await this.getCollections(supabase, {
       page,
       limit,
       chainId,
       sortBy: "volume",
+      search,
     })
     if (collectionsResult.collections.length === 0) return { ...collectionsResult, collections: [] }
 

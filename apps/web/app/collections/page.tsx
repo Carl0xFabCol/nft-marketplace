@@ -1,22 +1,29 @@
 import CollectionsCol from "../../components/features/collections/CollectionsCol"
+import { CollectionsSearch } from "@/components/features/collections/CollectionsSearch"
 import { CollectionService } from "@/services/collections.service"
 import { Collection } from "@/types/user.types"
 import { Pagination } from "@/components/ui/ServerPagination"
 import { getServerSupabase } from "@/lib/supabase/server"
 
-export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string }> }) {
   const supabase = await getServerSupabase()
-  const { page: pageStr } = await searchParams
+  const { page: pageStr, q } = await searchParams
   const page = Number(pageStr) || 1
+  const search = (q ?? "").trim()
 
   const { collections, totalPages } = await CollectionService.getCollectionsWithTopBids(supabase, {
     page,
     limit: 20,
+    search: search || undefined,
   })
 
   return (
-    <div className="w-full flex flex-col px-1 pt-16">
-      <div className="flex card rounded flex-col w-full">
+    <div className="w-full flex flex-col px-1 pt-16 gap-1">
+      <div className="flex card rounded flex-col w-full p-2 gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h1 className="text-3xl font-bold">Collections</h1>
+          <CollectionsSearch initialQuery={search} />
+        </div>
         <div className="p-4 flex w-full items-center text-sm">
           <div className="flex-2">
             <span>Collection</span>
@@ -45,7 +52,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
       {/* Paginación */}
       {totalPages > 1 && (
         <div className="mt-4">
-          <Pagination currentPage={page} totalPages={totalPages} baseUrl="/collections" />
+          <Pagination currentPage={page} totalPages={totalPages} baseUrl="/collections" query={{ q: search || undefined }} />
         </div>
       )}
     </div>

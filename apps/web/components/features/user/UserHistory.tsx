@@ -3,11 +3,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
 "use client"
 
+import { useState } from "react"
 import { FaEthereum, FaExternalLinkAlt, FaInbox } from "react-icons/fa"
 import { useAccount } from "wagmi"
 import { RiNftFill } from "react-icons/ri"
 import Link from "next/link"
+import { Address } from "viem"
 import { explorerTxUrl } from "@/lib/chains"
+import { UserService } from "@/services/user.service"
+import { getBrowserSupabase } from "@/lib/supabase/client"
+import { Pagination } from "@/components/ui/ServerPagination"
+
+const PAGE_SIZE = 24
 
 const CREATION_EVENTS = new Set(["LISTING_CREATED", "TOKEN_BID_PLACED", "COLLECTION_BID_PLACED", "COLLECTION_REGISTERED"])
 const SALE_EVENTS = new Set(["SALE", "TOKEN_BID_ACCEPTED", "COLLECTION_BID_ACCEPTED"])
@@ -56,9 +63,39 @@ interface ActivityRow {
   created_at: string
 }
 
-export default function UserHistory({ activity: actions }: { activity: ActivityRow[] }) {
+interface UserHistoryProps {
+  activity: ActivityRow[]
+  userAddress: Address
+  totalPages: number
+}
+
+export default function UserHistory({ activity: initialActivity, userAddress, totalPages: initialTotalPages }: UserHistoryProps) {
   const { address } = useAccount()
   const self = address?.toLowerCase()
+
+  const [actions, setActions] = useState<ActivityRow[]>(initialActivity)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(Math.max(1, initialTotalPages))
+  const [loading, setLoading] = useState(false)
+
+  const goToPage = async (nextPage: number) => {
+    if (loading || nextPage === page || nextPage < 1 || nextPage > totalPages) return
+
+    setLoading(true)
+    try {
+      const result = await UserService.getUserActivityPaginated(getBrowserSupabase(), userAddress, {
+        page: nextPage,
+        limit: PAGE_SIZE,
+      })
+      setActions(result.activity as unknown as ActivityRow[])
+      setPage(nextPage)
+      setTotalPages(Math.max(1, result.totalPages))
+    } catch (error) {
+      console.error("Error loading activity page:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (!actions.length) {
     return (
@@ -79,8 +116,8 @@ export default function UserHistory({ activity: actions }: { activity: ActivityR
         ))}
       </div>
 
-      <div className="flex flex-col overflow-y-scroll">
-        {actions.map((a: any, i: number) => (
+      <div className={`flex flex-col overflow-y-scroll transition-opacity ${loading ? "opacity-50" : ""}`}>
+        {actions.map((a, i) => (
           <div key={i} className="flex justify-between items-center relative px-2">
             <div className="p-2 flex flex-3 relative z-10">
               <div className="flex items-center gap-3">
@@ -126,6 +163,12 @@ export default function UserHistory({ activity: actions }: { activity: ActivityR
           </div>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="shrink-0 border-t border-(--text)/10">
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={goToPage} disabled={loading} />
+        </div>
+      )}
     </div>
   )
 }

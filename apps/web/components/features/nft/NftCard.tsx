@@ -22,9 +22,10 @@ interface NFTCardProps {
   index?: number
   batchOps: UseBatchOperationsReturn
   approvalMap?: Map<string, boolean> | null
+  onBidAccepted?: (token: NftCardToken) => void
 }
 
-export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMap = null }: NFTCardProps) {
+export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMap = null, onBidAccepted }: NFTCardProps) {
   const [bidHovered, setBidHovered] = useState<boolean>(false)
   const [hovered, setHovered] = useState<string | null>(null)
   const { addToBatch, isInBatch, removeFromBatch } = batchOps
@@ -149,6 +150,10 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
 
       updateTx(hash, { label: "Bid accepted successfully!", status: "success" })
       removeTx(hash)
+
+      removeFromBatch(token, "list")
+      removeFromBatch(token, "delist")
+      onBidAccepted?.(token)
     } catch (e) {
       console.error("Error accepting bid:", e)
       if (hash) {
@@ -157,8 +162,6 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
       }
     }
   }
-
-  console.log(token)
 
   return (
     <motion.div
