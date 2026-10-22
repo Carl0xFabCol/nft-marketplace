@@ -3,7 +3,7 @@
 import { useWriteContract, usePublicClient } from "wagmi"
 import { MarketplaceABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
-import { Address } from "viem"
+import type { Address, PublicClient } from "viem"
 
 export function useBidToken() {
   const { writeContractAsync } = useWriteContract()
@@ -23,7 +23,18 @@ export function useBidToken() {
   return { bidToken }
 }
 
-export function useBidTokenBatch() {
+export interface UseBidTokenBatchResult {
+  bidTokenBatch: (
+    collection: `0x${string}`,
+    tokenIds: bigint[],
+    prices: bigint[],
+    totalValue: bigint,
+    expiresAts: number[],
+  ) => Promise<`0x${string}`>
+  publicClient: PublicClient | undefined
+}
+
+export function useBidTokenBatch(): UseBidTokenBatchResult {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient()
   const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
@@ -90,6 +101,23 @@ export function useAcceptTokenBid() {
   }
 
   return { acceptTokenBid }
+}
+
+export function useAcceptCollectionBid() {
+  const { writeContractAsync } = useWriteContract()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+
+  const acceptCollectionBid = async (collection: `0x${string}`, bidder: `0x${string}`, tokenIds: bigint[]) => {
+    const txHash = await writeContractAsync({
+      address: MARKETPLACE_CONTRACT_ADDRESS,
+      abi: MarketplaceABI,
+      functionName: "acceptCollectionBid",
+      args: [collection, bidder, tokenIds],
+    })
+    return txHash
+  }
+
+  return { acceptCollectionBid }
 }
 
 export function useBidCollection() {

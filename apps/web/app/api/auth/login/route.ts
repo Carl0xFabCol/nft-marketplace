@@ -1,9 +1,11 @@
 import { NextResponse, NextRequest } from "next/server"
 import { recoverMessageAddress } from "viem"
-import { supabaseAdmin } from "@/lib/supabase/admin"
+import { createSupabaseAdmin } from "@/lib/supabase/admin"
 import { randomBytes, randomUUID } from "crypto"
 
-async function validateNonce(message: string): Promise<boolean> {
+type SupabaseAdmin = ReturnType<typeof createSupabaseAdmin>
+
+async function validateNonce(supabaseAdmin: SupabaseAdmin, message: string): Promise<boolean> {
   const match = message.match(/nonce:\s*(\w+)/i)
   if (!match) {
     return false
@@ -13,6 +15,7 @@ async function validateNonce(message: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin.from("nonces").select("*").eq("nonce", nonce).single()
 
   if (error || !data) {
+    if (error) console.error("Nonce validation failed:", error)
     return false
   }
   if (data.used) {
@@ -44,11 +47,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Lack of data" }, { status: 400 })
   }
 
+  const supabaseAdmin = createSupabaseAdmin()
+
   try {
     const wallet = await recoverMessageAddress({ message, signature })
 
     // Validate nonce using admin client
-    if (!(await validateNonce(message))) {
+    if (!(await validateNonce(supabaseAdmin, message))) {
       return NextResponse.json({ error: "Invalid nonce" }, { status: 400 })
     }
 

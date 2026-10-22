@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
 import { randomBytes } from "crypto"
-import { supabase } from "@/lib/supabase/client"
+import { createSupabaseAdmin } from "@/lib/supabase/admin"
 
 export async function POST() {
+  const supabaseAdmin = createSupabaseAdmin()
   const nonce = randomBytes(16).toString("hex")
-  const { error } = await supabase.from("nonces").insert({
+  const { error } = await supabaseAdmin.from("nonces").insert({
     nonce,
   })
   if (error) {

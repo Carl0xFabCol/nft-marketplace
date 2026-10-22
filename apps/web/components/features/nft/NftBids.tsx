@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { useTx } from "@/app/context/TxContext"
 import { useAcceptTokenBid } from "@/hooks/useBidActions"
+import { useEnsureApproval } from "@/hooks/useEnsureApproval"
 import Link from "next/link"
 import { FaEthereum, FaExternalLinkAlt, FaGavel } from "react-icons/fa"
-import { usePublicClient } from "wagmi"
+import { useAccount, usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { UserTokenBid } from "@/types/user.types"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
@@ -22,8 +23,10 @@ interface NFTBidsProps {
 export default function NFTBids({ bids, owner = false, collectionAddress, tokenId }: NFTBidsProps) {
   const [bidList, setBidList] = useState<UserTokenBid[]>(bids)
   const { acceptTokenBid } = useAcceptTokenBid()
+  const { ensureApproval } = useEnsureApproval()
   const { addTx, updateTx, removeTx } = useTx()
   const publicClient = usePublicClient()
+  const { address } = useAccount()
 
   // Sync when the server re-delivers fresh bids (e.g. router.refresh()).
   useEffect(() => {
@@ -49,19 +52,30 @@ export default function NFTBids({ bids, owner = false, collectionAddress, tokenI
   })
 
   const handleAcceptBid = async (bid: UserTokenBid) => {
-    let hash: any
+    if (!address || !bid.collection_address || !bid.token_id || !bid.bidder_wallet) return
+
+    const collection = bid.collection_address as Address
+    let hash: `0x${string}` | undefined
+
     try {
-      // Signature is acceptTokenBid(collection, tokenId, bidder) — tokenId must
-      // be the token id, not the bidder address.
-      hash = await acceptTokenBid(bid.collection_address as Address, Number(bid.token_id), bid.bidder_wallet as Address)
+      await ensureApproval(collection, address)
+
+      hash = await acceptTokenBid(collection, Number(bid.token_id), bid.bidder_wallet as Address)
       addTx({ hash, label: "Accepting token bid", status: "loading" })
-      await publicClient?.waitForTransactionReceipt({ hash })
+
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash })
+      if (receipt && receipt.status !== "success") {
+        throw new Error("Transaction reverted")
+      }
+
       updateTx(hash, { status: "success" })
       removeTx(hash)
     } catch (e) {
       console.error("Error accepting token bid: " + e)
-      updateTx(hash, { status: "error" })
-      removeTx(hash)
+      if (hash) {
+        updateTx(hash, { status: "error" })
+        removeTx(hash)
+      }
     }
   }
 

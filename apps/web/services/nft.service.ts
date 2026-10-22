@@ -98,13 +98,23 @@ export class NFTService {
     if (error) throw error
 
     const tokenIds = nfts?.map((n) => n.token_id) ?? []
-    const [listingsMap, topBidsMap] = await Promise.all([this.fetchListingsMap(addr, tokenIds), this.fetchTopBidsMap(addr, tokenIds)])
+    const [listingsMap, topBidsMap, topColBidsMap] = await Promise.all([
+      this.fetchListingsMap(addr, tokenIds),
+      this.fetchTopBidsMap(addr, tokenIds),
+      this.fetchTopCollectionBidsMap([addr as Address]),
+    ])
 
-    let enriched = (nfts || []).map((nft) => ({
-      ...nft,
-      active_listing: listingsMap.get(nft.token_id) ?? null,
-      topBid: topBidsMap.get(nft.token_id) ?? null,
-    }))
+    let enriched = (nfts || []).map((nft) => {
+      const tokenBid = topBidsMap.get(nft.token_id) ?? null
+      const colBid = topColBidsMap.get(String(nft.collection_address).toLowerCase()) ?? null
+      const topBid = tokenBid && colBid ? (BigInt(tokenBid.price) >= BigInt(colBid.price) ? tokenBid : colBid) : (tokenBid ?? colBid)
+
+      return {
+        ...nft,
+        active_listing: listingsMap.get(nft.token_id) ?? null,
+        topBid,
+      }
+    })
 
     if (sortBy === "price") {
       enriched = sortByPrice(enriched, sortDir)
@@ -277,7 +287,7 @@ export class NFTService {
     data?.forEach((bid) => {
       const existing = map.get(String(bid.token_id))
       if (!existing || BigInt(Number(bid.price)) > BigInt(existing.price)) {
-        map.set(String(bid.token_id), bid)
+        map.set(String(bid.token_id), { ...bid, kind: "token" })
       }
     })
     return map
@@ -291,7 +301,7 @@ export class NFTService {
 
     const { data } = await supabase
       .from("collection_bids")
-      .select("collection_address, price, bidder_wallet")
+      .select("collection_address, price, bidder_wallet, quantity")
       .eq("is_active", true)
       .in(
         "collection_address",
@@ -301,7 +311,7 @@ export class NFTService {
 
     const map = new Map<string, any>()
     data?.forEach((bid) => {
-      if (!map.has(String(bid.collection_address))) map.set(String(bid.collection_address), bid)
+      if (!map.has(String(bid.collection_address))) map.set(String(bid.collection_address), { ...bid, kind: "collection" })
     })
     return map
   }

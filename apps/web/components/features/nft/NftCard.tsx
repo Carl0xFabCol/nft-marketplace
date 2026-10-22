@@ -1,5 +1,6 @@
 import { useTx } from "@/app/context/TxContext"
-import { useAcceptTokenBid } from "@/hooks/useBidActions"
+import { useAcceptCollectionBid, useAcceptTokenBid } from "@/hooks/useBidActions"
+import { useEnsureApproval } from "@/hooks/useEnsureApproval"
 import { EnrichedUserNFT } from "@/types/user.types"
 import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 import { motion } from "framer-motion"
@@ -30,6 +31,8 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
   const { address } = useConnection()
   const publicClient = usePublicClient()
   const { acceptTokenBid } = useAcceptTokenBid()
+  const { acceptCollectionBid } = useAcceptCollectionBid()
+  const { ensureApproval } = useEnsureApproval()
   const { addTx, removeTx, updateTx } = useTx()
   const handleNFTClick = (nft: NftCardToken, e: React.MouseEvent) => {
     if (isUserPage) {
@@ -122,24 +125,36 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
     }
   }
 
-  const handleAcceptTokenBid = async (token_id: string, bidder: string, collection_address: string) => {
-    let hash = ""
+  const handleAcceptBid = async () => {
+    if (!token.topBid || !address) return
+
+    const bid = token.topBid
+    const collection = token.collection_address as Address
+    let hash: `0x${string}` | undefined
+
     try {
-      const hash = await acceptTokenBid(collection_address as Address, Number(token_id), bidder as Address)
+      await ensureApproval(collection, address)
+
+      hash =
+        bid.kind === "collection"
+          ? await acceptCollectionBid(collection, bid.bidder_wallet, [BigInt(token.token_id)])
+          : await acceptTokenBid(collection, Number(token.token_id), bid.bidder_wallet)
 
       addTx({ hash, label: "Accepting bid...", status: "loading" })
 
-      const txRes = await publicClient?.waitForTransactionReceipt({ hash })
-      if (txRes && txRes?.status === "success") {
-        updateTx(hash, { label: "Bid accepted successfully!", status: "success" })
-      } else {
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash })
+      if (receipt && receipt.status !== "success") {
         throw new Error("Transaction reverted")
       }
 
-      updateTx(hash, { label: "Bid accepted succesfuly!", status: "success" })
+      updateTx(hash, { label: "Bid accepted successfully!", status: "success" })
+      removeTx(hash)
     } catch (e) {
-      updateTx(hash, { label: "Transaction failed", status: "error" })
-      removeTx(hash as `0x${string}`)
+      console.error("Error accepting bid:", e)
+      if (hash) {
+        updateTx(hash, { label: "Transaction failed", status: "error" })
+        removeTx(hash)
+      }
     }
   }
 
@@ -209,7 +224,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
                 </span>
                 {bidHovered && (
                   <div className="w-full p-1 absolute top-0 left-0  flex items-center card">
-                    <button onClick={() => handleAcceptTokenBid(token.token_id, token.topBid?.bidder_wallet ?? "", token.collection_address)} className="w-full rounded p-1 ">
+                    <button onClick={handleAcceptBid} className="w-full rounded p-1 ">
                       Accept bid
                     </button>
                   </div>

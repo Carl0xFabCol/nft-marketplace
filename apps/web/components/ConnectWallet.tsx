@@ -13,6 +13,7 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
   const { session } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [loggedIn, setLoggedIn] = useState(!!session)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -30,35 +31,52 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
   })
 
   async function loginUser() {
-    const nonceRes = await fetch("/api/auth/nonce", { method: "POST" })
-    const { nonce } = await nonceRes.json()
+    setError(null)
 
-    const message = `Welcome to Hypermarket!\nLogin to use all its features.\nNonce: ${nonce}`
-    const signature = await signMessageAsync({ message })
+    try {
+      const nonceRes = await fetch("/api/auth/nonce", { method: "POST" })
+      const nonceData = await nonceRes.json().catch(() => null)
 
-    const loginRes = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, signature }),
-    })
+      if (!nonceRes.ok || !nonceData?.nonce) {
+        setError("Could not start the login. Please try again.")
+        return
+      }
 
-    const data = await loginRes.json()
-    const { access_token, refresh_token, ok } = data
+      const { nonce } = nonceData
+      const message = `Welcome to Hypermarket!\nLogin to use all its features.\nNonce: ${nonce}`
+      const signature = await signMessageAsync({ message })
 
-    if (access_token && refresh_token) {
-      const { error } = await supabase.auth.setSession({
-        access_token: access_token,
-        refresh_token: refresh_token,
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, signature }),
       })
 
-      if (error) {
-        console.error("Error al establecer la sesión:", error)
+      const data = await loginRes.json()
+
+      if (!loginRes.ok || !data.access_token || !data.refresh_token) {
+        setError(data.error ?? "Login failed. Please try again.")
+        return
+      }
+
+      const { access_token, refresh_token } = data
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      })
+
+      if (sessionError) {
+        console.error("Error al establecer la sesión:", sessionError)
+        setError("Could not establish the session. Please try again.")
         return
       }
 
       setLoggedIn(true)
       router.push("/")
       router.refresh()
+    } catch (err) {
+      console.error("Login error:", err)
+      setError("Login failed. Please try again.")
     }
   }
 
@@ -98,9 +116,12 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
 
   if (isConnected && !loggedIn) {
     return (
-      <button onClick={loginUser} className="px-3 py-1 rounded w-full text-center">
-        <span className="flex w-full items-center gap-2 justify-center">Establish connection</span>
-      </button>
+      <div className="w-full">
+        <button onClick={loginUser} className="px-3 py-1 rounded w-full text-center">
+          <span className="flex w-full items-center gap-2 justify-center">Establish connection</span>
+        </button>
+        {error && <p className="mt-1 text-xs text-red-400 text-center">{error}</p>}
+      </div>
     )
   }
 

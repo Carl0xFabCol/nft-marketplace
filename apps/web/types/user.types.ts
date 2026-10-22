@@ -118,9 +118,12 @@ export interface Activity {
 export interface EnrichedUserNFT extends UserNFT {
   active_listing?: UserListing | null
   topBid?: {
-    token_id: string
+    kind: "token" | "collection"
+    collection_address: Address
     price: string
     bidder_wallet: Address
+    quantity?: number
+    token_id?: string
   } | null
   collection?: Collection | null
 }
