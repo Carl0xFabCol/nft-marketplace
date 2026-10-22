@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react"
 import { useNftStats } from "@/hooks/useMarketplaceReads"
 import { useMint } from "@/hooks/useMintActions"
-import { explorerTxUrl } from "@/lib/chains"
+import { explorerTxUrl, SUPPORTED_CHAINS } from "@/lib/chains"
 import { motion, AnimatePresence } from "framer-motion"
-import { useReadContract, useBalance, useAccount } from "wagmi"
-import { nftAbi } from "@/lib/abi"
+import { useBalance, useAccount, useChainId } from "wagmi"
+import { formatEther } from "viem"
 import ConnectWallet from "./ConnectWallet"
 
 interface props {
@@ -21,15 +21,18 @@ export function MintForm({ contractAddress, name, symbol }: props) {
   const [error, setError] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
 
-  const { mintPrice } = useNftStats(contractAddress as `0x${string}`)
+  const { mintPrice, maxSupply, totalSupply, isMintActive, refetchTotalSupply } = useNftStats(
+    contractAddress as `0x${string}`,
+  )
   const { mint, publicClient } = useMint()
   const { address } = useAccount()
+  const chainId = useChainId()
+  const nativeSymbol = SUPPORTED_CHAINS.find((chain) => chain.id === chainId)?.nativeCurrency.symbol ?? "ETH"
 
-  const { refetch: refetchTotalSupply } = useReadContract({
-    address: contractAddress as `0x${string}`,
-    abi: nftAbi,
-    functionName: "totalSupply",
-  })
+  const price = mintPrice ?? BigInt(0)
+  const remaining = maxSupply && maxSupply > BigInt(0) ? maxSupply - (totalSupply ?? BigInt(0)) : undefined
+  const soldOut = remaining !== undefined && remaining <= BigInt(0)
+  const mintEnded = isMintActive === false
 
   const { refetch: refetchBalance } = useBalance({
     address,
@@ -41,10 +44,12 @@ export function MintForm({ contractAddress, name, symbol }: props) {
   useEffect(() => {
     if (amount < 1 || amount > 500) {
       setError("Mint amount must be > 0 & < 500")
+    } else if (remaining !== undefined && BigInt(amount) > remaining) {
+      setError(`Only ${remaining.toString()} left to mint`)
     } else {
       setError(null)
     }
-  }, [amount])
+  }, [amount, remaining])
 
   const getBtnMsg = () => {
     if (status == "idle") {
@@ -61,12 +66,12 @@ export function MintForm({ contractAddress, name, symbol }: props) {
   }
 
   const handleMint = async () => {
-    if (error) return
+    if (error || mintEnded || soldOut) return
 
     try {
       setStatus("waiting")
 
-      const hash = await mint(amount, contractAddress as `0x${string}`, address as `0x${string}`)
+      const hash = await mint(amount, contractAddress as `0x${string}`, address as `0x${string}`, price * BigInt(amount))
       setTxHash(hash)
 
       setStatus("loading")
@@ -93,7 +98,7 @@ export function MintForm({ contractAddress, name, symbol }: props) {
     }
   }
 
-  const cost = mintPrice ? (amount * Number(mintPrice)) / 1e18 : 0
+  const cost = formatEther(price * BigInt(amount))
 
   return (
     <div className="flex flex-col items-center p-4 gap-2 relative justify-between">
@@ -120,13 +125,19 @@ export function MintForm({ contractAddress, name, symbol }: props) {
         </button>
       </div>
       <span className="text-[12px] text-(--muted)">
-        Cost: <span className="text-(--foreground) font-medium">{cost.toFixed(cost < 0.001 ? 6 : 4)} ETH</span>
+        Cost:{" "}
+        <span className="text-(--foreground) font-medium">
+          {Number(cost).toFixed(Number(cost) < 0.001 ? 6 : 4)} {nativeSymbol}
+        </span>
       </span>
+
+      {mintEnded && <p className="text-red-400 text-sm">Minting has ended.</p>}
+      {soldOut && <p className="text-red-400 text-sm">Sold out.</p>}
 
       {(address && (
         <button
           onClick={handleMint}
-          disabled={status === "loading" || !!error}
+          disabled={status === "loading" || !!error || mintEnded || soldOut}
           className="px-2 py-1 
    font-semibold
   hover:scale-105 transition

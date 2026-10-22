@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { env } from "../config/env"
 import { logger } from "../utils/logger"
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -31,6 +32,7 @@ export class ActivityRepository {
     const { error } = await this.supabase.from("activity").upsert(
       {
         event: params.event,
+        chain_id: env.chainId,
         collection_address: params.collectionAddress.toLowerCase(),
         token_id: params.tokenId,
         from: params.from?.toLowerCase(),

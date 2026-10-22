@@ -1,13 +1,13 @@
 "use client"
 
 import { useReadContract, useAccount } from "wagmi"
-import { nftAbi, MarketplaceABI } from "@/lib/abi"
+import { MiColeccionABI, MarketplaceABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 
 export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
-  const { data: totalSupply } = useReadContract({
+  const { data: totalSupply, refetch: refetchTotalSupply } = useReadContract({
     address: NFT_CONTRACT_ADDRESS,
-    abi: nftAbi,
+    abi: MiColeccionABI,
     functionName: "totalSupply",
     query: {
       refetchInterval: false,
@@ -16,20 +16,35 @@ export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
 
   const { data: maxSupply } = useReadContract({
     address: NFT_CONTRACT_ADDRESS,
-    abi: nftAbi,
+    abi: MiColeccionABI,
     functionName: "maxSupply",
   })
 
   const { data: mintPrice } = useReadContract({
     address: NFT_CONTRACT_ADDRESS,
-    abi: nftAbi,
+    abi: MiColeccionABI,
     functionName: "mintPrice",
+  })
+
+  const { data: mintEndsAt } = useReadContract({
+    address: NFT_CONTRACT_ADDRESS,
+    abi: MiColeccionABI,
+    functionName: "mintEndsAt",
+  })
+
+  const { data: isMintActive } = useReadContract({
+    address: NFT_CONTRACT_ADDRESS,
+    abi: MiColeccionABI,
+    functionName: "isMintActive",
   })
 
   return {
     totalSupply,
+    refetchTotalSupply,
     maxSupply,
     mintPrice,
+    mintEndsAt,
+    isMintActive,
   }
 }
 

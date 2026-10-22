@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { env } from "../config/env"
 import { logger } from "../utils/logger"
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -32,6 +33,7 @@ export class ListingsRepository {
     const { error } = await this.supabase.from("listings").upsert(
       {
         listing_id: params.listingId,
+        chain_id: env.chainId,
         collection_address: params.collectionAddress.toLowerCase(),
         token_id: params.tokenId,
         seller_wallet: params.sellerWallet.toLowerCase(),

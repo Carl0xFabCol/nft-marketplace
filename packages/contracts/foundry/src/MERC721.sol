@@ -20,16 +20,22 @@ contract MiColeccion is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, Reentra
     /// @notice Price in wei required per token when minting (0 = free).
     uint256 public mintPrice;
 
+    /// @notice Timestamp when minting ends. 0 = minting never ends.
+    uint256 public mintEndsAt;
+
     string private _baseTokenURI;
 
     event BaseURIUpdated(string newBaseURI);
     event MintPriceUpdated(uint256 oldPrice, uint256 newPrice);
+    event MintEndsAtUpdated(uint256 oldEndsAt, uint256 newEndsAt);
     event RoyaltyUpdated(address indexed receiver, uint96 royaltyFee);
 
     error InvalidOwner();
     error MaxSupplyExceeded();
     error InvalidMaxSupply();
+    error InvalidAmount();
     error InsufficientPayment();
+    error MintEnded();
     error TransferFailed();
 
     constructor(
@@ -39,12 +45,18 @@ contract MiColeccion is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, Reentra
         uint16 royaltyFee_,
         address royaltyReceiver_,
         uint256 maxSupply_,
-        string memory baseURI_
+        string memory baseURI_,
+        uint256 mintPrice_,
+        uint256 mintDuration_
     ) ERC721(name_, symbol_) Ownable(initialOwner_) {
         if (initialOwner_ == address(0)) revert InvalidOwner();
 
         maxSupply = maxSupply_;
         _baseTokenURI = baseURI_;
+        mintPrice = mintPrice_;
+        if (mintDuration_ != 0) {
+            mintEndsAt = block.timestamp + mintDuration_;
+        }
 
         if (royaltyFee_ > 0) {
             address receiver = royaltyReceiver_ == address(0) ? initialOwner_ : royaltyReceiver_;
@@ -56,17 +68,20 @@ contract MiColeccion is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, Reentra
     // MINTING
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function mint(address to) external payable onlyOwner returns (uint256 tokenId) {
+    function mint(address to) external payable nonReentrant returns (uint256 tokenId) {
+        if (!isMintActive()) revert MintEnded();
         if (msg.value != mintPrice) revert InsufficientPayment();
-        if (maxSupply != 0 && _nextTokenId() >= maxSupply) revert MaxSupplyExceeded();
+        if (maxSupply != 0 && totalSupply() >= maxSupply) revert MaxSupplyExceeded();
 
         tokenId = _nextTokenId();
         _safeMint(to, tokenId);
     }
 
-    function batchMint(address to, uint256 amount) external payable onlyOwner returns (uint256[] memory tokenIds) {
+    function batchMint(address to, uint256 amount) external payable nonReentrant returns (uint256[] memory tokenIds) {
+        if (amount == 0) revert InvalidAmount();
+        if (!isMintActive()) revert MintEnded();
         if (msg.value != mintPrice * amount) revert InsufficientPayment();
-        if (maxSupply != 0 && _nextTokenId() + amount > maxSupply) revert MaxSupplyExceeded();
+        if (maxSupply != 0 && totalSupply() + amount > maxSupply) revert MaxSupplyExceeded();
 
         tokenIds = new uint256[](amount);
         for (uint256 i; i < amount; ) {
@@ -92,6 +107,13 @@ contract MiColeccion is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, Reentra
         uint256 oldPrice = mintPrice;
         mintPrice = newPrice;
         emit MintPriceUpdated(oldPrice, newPrice);
+    }
+
+    /// @notice Update the minting window from now. A duration of 0 makes minting eternal.
+    function setMintDuration(uint256 durationSeconds) external onlyOwner {
+        uint256 oldEndsAt = mintEndsAt;
+        mintEndsAt = durationSeconds == 0 ? 0 : block.timestamp + durationSeconds;
+        emit MintEndsAtUpdated(oldEndsAt, mintEndsAt);
     }
 
     function setRoyalty(address receiver, uint96 royaltyFee) external onlyOwner {
@@ -123,6 +145,11 @@ contract MiColeccion is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, Reentra
         return _nextTokenId();
     }
 
+    /// @notice True while the collection is within its minting window.
+    function isMintActive() public view returns (bool) {
+        return mintEndsAt == 0 || block.timestamp <= mintEndsAt;
+    }
+
     function tokensOfOwner(address account) external view returns (uint256[] memory tokens) {
         uint256 balance = balanceOf(account);
         tokens = new uint256[](balance);
@@ -139,7 +166,7 @@ contract MiColeccion is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, Reentra
     // ═══════════════════════════════════════════════════════════════════════════════
 
     function _nextTokenId() internal view returns (uint256) {
-        return totalSupply();
+        return totalSupply() + 1;
     }
 
     function _baseURI() internal view override returns (string memory) {

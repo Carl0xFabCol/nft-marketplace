@@ -52,13 +52,17 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         uint16 royaltyFee,
         address royaltyReceiver,
         uint256 maxSupply,
-        string calldata baseURI
+        string calldata baseURI,
+        uint256 mintPrice,
+        uint256 mintDuration
     ) external payable whenNotPaused nonReentrant returns (address collection) {
         if (msg.value != launchFee) revert InsufficientLaunchFee();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
         if (royaltyReceiver == address(0)) royaltyReceiver = msg.sender;
 
-        collection = deployCollection(name, symbol, msg.sender, royaltyFee, royaltyReceiver, maxSupply, baseURI);
+        collection = deployCollection(
+            name, symbol, msg.sender, royaltyFee, royaltyReceiver, maxSupply, baseURI, mintPrice, mintDuration
+        );
 
         _collectionsByCreator[msg.sender].push(collection);
         isLaunchpadCollection[collection] = true;
@@ -80,9 +84,15 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         uint16 royaltyFee,
         address royaltyReceiver,
         uint256 maxSupply,
-        string calldata baseURI
+        string calldata baseURI,
+        uint256 mintPrice,
+        uint256 mintDuration
     ) internal returns (address collection) {
-        collection = address(new MiColeccion(name, symbol, creator, royaltyFee, royaltyReceiver, maxSupply, baseURI));
+        collection = address(
+            new MiColeccion(
+                name, symbol, creator, royaltyFee, royaltyReceiver, maxSupply, baseURI, mintPrice, mintDuration
+            )
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

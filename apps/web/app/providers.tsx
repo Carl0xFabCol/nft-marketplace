@@ -14,6 +14,9 @@ import { elysium, ELYSIUM_RPC_URL } from "@/lib/chains"
 const config = createConfig({
   chains: [sepolia, elysium],
   connectors: [injected()],
+  // Prevent wagmi from rehydrating persisted wallet state during the first
+  // client render, which would not match the server-rendered HTML.
+  ssr: true,
 
   transports: {
     [sepolia.id]: http(),
@@ -24,9 +27,8 @@ const config = createConfig({
   },
 })
 
-const queryClient = new QueryClient()
-
 export function Providers({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient())
   const [walletOptionsCard, setWalletModal] = useState<boolean>(false)
 
   return (

@@ -1,493 +1,503 @@
 // LaunchPad factory ABI — permissionless NFT collection creation and registration.
 export const LaunchPadABI = [
   {
-    type: "constructor",
-    inputs: [
+    "type": "constructor",
+    "inputs": [
       {
-        name: "_core",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "_core",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "nonpayable",
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "MAX_ROYALTY_FEE",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "MAX_ROYALTY_FEE",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint16",
-        internalType: "uint16",
-      },
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "acceptOwnership",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "acceptOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "accruedFees",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "accruedFees",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "core",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "core",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "contract IMarketplaceCoreRegistry",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "contract IMarketplaceCoreRegistry"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "createCollection",
-    inputs: [
+    "type": "function",
+    "name": "createCollection",
+    "inputs": [
       {
-        name: "name",
-        type: "string",
-        internalType: "string",
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: "symbol",
-        type: "string",
-        internalType: "string",
+        "name": "symbol",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: "royaltyFee",
-        type: "uint16",
-        internalType: "uint16",
+        "name": "royaltyFee",
+        "type": "uint16",
+        "internalType": "uint16"
       },
       {
-        name: "royaltyReceiver",
-        type: "address",
-        internalType: "address",
+        "name": "royaltyReceiver",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "maxSupply",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "maxSupply",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        name: "baseURI",
-        type: "string",
-        internalType: "string",
+        "name": "baseURI",
+        "type": "string",
+        "internalType": "string"
       },
+      {
+        "name": "mintPrice",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "mintDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "collection",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "collection",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "payable",
+    "stateMutability": "payable"
   },
   {
-    type: "function",
-    name: "getCollectionsCreatedBy",
-    inputs: [
+    "type": "function",
+    "name": "getCollectionsCreatedBy",
+    "inputs": [
       {
-        name: "creator",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "creator",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "address[]",
-        internalType: "address[]",
-      },
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "getCollectionsCreatedCount",
-    inputs: [
+    "type": "function",
+    "name": "getCollectionsCreatedCount",
+    "inputs": [
       {
-        name: "creator",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "creator",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "isLaunchpadCollection",
-    inputs: [
+    "type": "function",
+    "name": "isLaunchpadCollection",
+    "inputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "launchFee",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "launchFee",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "owner",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "pause",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "pause",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "paused",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "paused",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "pendingOwner",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "pendingOwner",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "renounceOwnership",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "renounceOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "setLaunchFee",
-    inputs: [
+    "type": "function",
+    "name": "setLaunchFee",
+    "inputs": [
       {
-        name: "newFee",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "newFee",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "transferOwnership",
-    inputs: [
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [
       {
-        name: "newOwner",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "unpause",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "unpause",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "withdrawFees",
-    inputs: [
+    "type": "function",
+    "name": "withdrawFees",
+    "inputs": [
       {
-        name: "recipient",
-        type: "address",
-        internalType: "address payable",
-      },
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address payable"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "event",
-    name: "CollectionDeployed",
-    inputs: [
+    "type": "event",
+    "name": "CollectionDeployed",
+    "inputs": [
       {
-        name: "collection",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "collection",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "creator",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "creator",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "name",
-        type: "string",
-        indexed: false,
-        internalType: "string",
+        "name": "name",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
       },
       {
-        name: "symbol",
-        type: "string",
-        indexed: false,
-        internalType: "string",
-      },
+        "name": "symbol",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "CollectionRegisteredOnMarketplace",
-    inputs: [
+    "type": "event",
+    "name": "CollectionRegisteredOnMarketplace",
+    "inputs": [
       {
-        name: "collection",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "collection",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "royaltyFee",
-        type: "uint16",
-        indexed: false,
-        internalType: "uint16",
+        "name": "royaltyFee",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
       },
       {
-        name: "royaltyReceiver",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
+        "name": "royaltyReceiver",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "FeesWithdrawn",
-    inputs: [
+    "type": "event",
+    "name": "FeesWithdrawn",
+    "inputs": [
       {
-        name: "to",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "amount",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "LaunchFeeUpdated",
-    inputs: [
+    "type": "event",
+    "name": "LaunchFeeUpdated",
+    "inputs": [
       {
-        name: "oldFee",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
+        "name": "oldFee",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       },
       {
-        name: "newFee",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "newFee",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "OwnershipTransferStarted",
-    inputs: [
+    "type": "event",
+    "name": "OwnershipTransferStarted",
+    "inputs": [
       {
-        name: "previousOwner",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "newOwner",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "OwnershipTransferred",
-    inputs: [
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
       {
-        name: "previousOwner",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "newOwner",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Paused",
-    inputs: [
+    "type": "event",
+    "name": "Paused",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        indexed: false,
-        internalType: "address",
-      },
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Unpaused",
-    inputs: [
+    "type": "event",
+    "name": "Unpaused",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        indexed: false,
-        internalType: "address",
-      },
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "error",
-    name: "EnforcedPause",
-    inputs: [],
+    "type": "error",
+    "name": "EnforcedPause",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "ExpectedPause",
-    inputs: [],
+    "type": "error",
+    "name": "ExpectedPause",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "FeeTooHigh",
-    inputs: [],
+    "type": "error",
+    "name": "FeeTooHigh",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "InsufficientLaunchFee",
-    inputs: [],
+    "type": "error",
+    "name": "InsufficientLaunchFee",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "InvalidAddress",
-    inputs: [],
+    "type": "error",
+    "name": "InvalidAddress",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "NoFees",
-    inputs: [],
+    "type": "error",
+    "name": "NoFees",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "OwnableInvalidOwner",
-    inputs: [
+    "type": "error",
+    "name": "OwnableInvalidOwner",
+    "inputs": [
       {
-        name: "owner",
-        type: "address",
-        internalType: "address",
-      },
-    ],
+        "name": "owner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "OwnableUnauthorizedAccount",
-    inputs: [
+    "type": "error",
+    "name": "OwnableUnauthorizedAccount",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        internalType: "address",
-      },
-    ],
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "ReentrancyGuardReentrantCall",
-    inputs: [],
+    "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "TransferFailed",
-    inputs: [],
-  },
-] as const
+    "type": "error",
+    "name": "TransferFailed",
+    "inputs": []
+  }
+] as const;

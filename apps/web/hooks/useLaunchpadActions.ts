@@ -47,6 +47,10 @@ export interface CreateCollectionParams {
   /** 0 means unlimited. */
   maxSupply: bigint
   baseURI: string
+  /** Price per token in wei. 0 means free. */
+  mintPrice: bigint
+  /** Minting window in seconds from launch. 0 means forever. */
+  mintDuration: bigint
 }
 
 export interface UseCreateCollectionResult {
@@ -71,7 +75,16 @@ export function useCreateCollection(): UseCreateCollectionResult {
       address: LAUNCHPAD_CONTRACT_ADDRESS,
       abi: LaunchPadABI,
       functionName: "createCollection",
-      args: [params.name, params.symbol, params.royaltyFee, params.royaltyReceiver, params.maxSupply, params.baseURI],
+      args: [
+        params.name,
+        params.symbol,
+        params.royaltyFee,
+        params.royaltyReceiver,
+        params.maxSupply,
+        params.baseURI,
+        params.mintPrice,
+        params.mintDuration,
+      ],
       value,
     })
 

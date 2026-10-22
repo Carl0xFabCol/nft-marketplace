@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { AnimatePresence } from "framer-motion"
 import { Rocket } from "lucide-react"
 import { useAccount } from "wagmi"
-import { formatEther, decodeEventLog, type Hex } from "viem"
+import { formatEther, parseEther, decodeEventLog, type Hex } from "viem"
 import { useRouter } from "next/navigation"
 import { Modal } from "@/components/ui/Modal"
 import { useTx } from "@/app/context/TxContext"
@@ -28,6 +28,7 @@ export function LaunchCollection() {
   const { createCollection, publicClient } = useCreateCollection()
   const { addTx, updateTx, removeTx } = useTx()
 
+  const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [symbol, setSymbol] = useState("")
@@ -35,23 +36,42 @@ export function LaunchCollection() {
   const [royaltyReceiver, setRoyaltyReceiver] = useState("")
   const [maxSupply, setMaxSupply] = useState("")
   const [baseURI, setBaseURI] = useState("")
+  const [mintPrice, setMintPrice] = useState("")
+  const [mintDurationDays, setMintDurationDays] = useState("")
   const [status, setStatus] = useState<Status>("idle")
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [createdAddress, setCreatedAddress] = useState<string | null>(null)
 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // The factory only exists on chains where it has been deployed (Elysium).
-  if (!LAUNCHPAD_CONTRACT_ADDRESS) return null
+  // Wait for mount so the server and client first render agree (the wallet
+  // chain is only known on the client).
+  if (!mounted || !LAUNCHPAD_CONTRACT_ADDRESS) return null
 
   const maxRoyaltyPercent = maxRoyaltyFee !== undefined ? Number(maxRoyaltyFee) / 100 : 20
   const effectiveReceiver = royaltyReceiver.trim() || address || ""
   const feePercent = Number(royaltyPercent || 0)
   const feeValid = !Number.isNaN(feePercent) && feePercent >= 0 && feePercent <= maxRoyaltyPercent
   const supplyValid = maxSupply.trim() === "" || /^\d+$/.test(maxSupply.trim())
+  const priceValid = mintPrice.trim() === "" || /^\d*\.?\d+$/.test(mintPrice.trim())
+  const durationValid = mintDurationDays.trim() === "" || /^\d+$/.test(mintDurationDays.trim())
   const receiverValid = isAddress(effectiveReceiver)
   const busy = status === "waiting" || status === "loading"
 
   const canSubmit =
-    !!address && name.trim() !== "" && symbol.trim() !== "" && feeValid && receiverValid && supplyValid && !paused && !busy
+    !!address &&
+    name.trim() !== "" &&
+    symbol.trim() !== "" &&
+    feeValid &&
+    receiverValid &&
+    supplyValid &&
+    priceValid &&
+    durationValid &&
+    !paused &&
+    !busy
 
   const launchFeeDisplay = launchFee !== undefined ? formatEther(launchFee) : "0"
   const requiresPayment = launchFee !== undefined && launchFee > BigInt(0)
@@ -63,6 +83,8 @@ export function LaunchCollection() {
     setRoyaltyReceiver("")
     setMaxSupply("")
     setBaseURI("")
+    setMintPrice("")
+    setMintDurationDays("")
     setStatus("idle")
     setErrorMsg(null)
     setCreatedAddress(null)
@@ -105,6 +127,8 @@ export function LaunchCollection() {
           royaltyReceiver: effectiveReceiver as `0x${string}`,
           maxSupply: maxSupply.trim() === "" ? BigInt(0) : BigInt(maxSupply.trim()),
           baseURI: baseURI.trim(),
+          mintPrice: mintPrice.trim() === "" ? BigInt(0) : parseEther(mintPrice.trim()),
+          mintDuration: mintDurationDays.trim() === "" ? BigInt(0) : BigInt(mintDurationDays.trim()) * BigInt(86400),
         },
         launchFee ?? BigInt(0),
       )
@@ -235,7 +259,39 @@ export function LaunchCollection() {
                     disabled={busy}
                     className={inputClass}
                   />
-                  <span className="text-xs text-(--muted)">0 = unlimited</span>
+                  <span className="text-xs text-(--muted)">Leave empty for unlimited</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm text-(--muted)">Mint price (native)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.0001"
+                    value={mintPrice}
+                    onChange={(e) => setMintPrice(e.target.value)}
+                    placeholder="0"
+                    disabled={busy}
+                    className={inputClass}
+                  />
+                  <span className="text-xs text-(--muted)">0 = free mint</span>
+                </label>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm text-(--muted)">Mint duration (days)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={mintDurationDays}
+                    onChange={(e) => setMintDurationDays(e.target.value)}
+                    placeholder="Eternal"
+                    disabled={busy}
+                    className={inputClass}
+                  />
+                  <span className="text-xs text-(--muted)">Leave empty for eternal minting</span>
                 </label>
               </div>
 

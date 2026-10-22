@@ -1,6 +1,7 @@
 "use client"
 
 import { useWriteContract, usePublicClient } from "wagmi"
+import type { PublicClient } from "viem"
 import { MarketplaceABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 
@@ -21,7 +22,12 @@ export function useCancelList() {
   return { cancelList }
 }
 
-export function useCancelListBatch() {
+export interface UseCancelListBatchResult {
+  cancelListBatch: (collections: `0x${string}`[], tokenIds: bigint[]) => Promise<`0x${string}`>
+  publicClient: PublicClient | undefined
+}
+
+export function useCancelListBatch(): UseCancelListBatchResult {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient()
   const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()

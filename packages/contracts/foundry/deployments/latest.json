@@ -1,8 +1,8 @@
 {
-  "core": "0x8dDbd93EaD1766a1Fe98DE55D68a7B8529B5f079",
-  "bids": "0xc2f7357E0f66CBdb7E52f6D9787eFc13Eb3669Df",
-  "marketplace": "0xF26E73d620251752782B351424D5EC749c5007e9",
-  "launchpad": "0x3613128fAA9f1bb8DF769D60ad5CfbBc85C59d54",
+  "core": "0x0726b653Bf5296FBA944263FaE162B949a2F75be",
+  "bids": "0xb6906CD5f251C442355f92E1612CDcAD1fCEb5E7",
+  "marketplace": "0xabD5209ef11AfbBeb42ACd09baa844e913eb4bdb",
+  "launchpad": "0x2039f3b69deF8f2FfC8a0A6c1daE02CA92171A90",
   "feeReceiver": "0x13F1CDc39d462A2B48c93fc4875C3F761AF26EB3",
   "marketplaceFee": 100,
   "launchFee": 0,
