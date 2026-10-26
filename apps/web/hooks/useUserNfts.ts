@@ -1,17 +1,17 @@
 // hooks/useUserNfts.ts
-import { useState, useMemo, useEffect } from "react"
+import { useMemo } from "react"
 import { Address } from "viem"
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi"
 import { erc721Abi } from "viem"
-import { EnrichedUserNFT, Collection, UserNFT } from "@/types/user.types"
+import { EnrichedUserNFT, UserNFT } from "@/types/user.types"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 import { useTx } from "@/app/context/TxContext"
 import { UseBatchOperationsReturn } from "./useBatchOperations"
 import { useCancelListBatch } from "./useListingActions"
+import { waitForTxConfirmation } from "@/lib/tx"
 
 interface UseUserNftsParams {
   nfts: EnrichedUserNFT[]
-  collections: Collection[]
   batchOps: UseBatchOperationsReturn
   userAddress: Address
   /** Called right after the delist tx is sent — optimistic local patch. */
@@ -20,16 +20,14 @@ interface UseUserNftsParams {
   onDelistFail?: (items: UserNFT[]) => void
 }
 
-export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist, onDelistFail }: UseUserNftsParams) {
+export function useUserNfts({ nfts, batchOps, userAddress, onDelist, onDelistFail }: UseUserNftsParams) {
   const publicClient = usePublicClient()
 
   const { writeContractAsync } = useWriteContract()
   const { cancelListBatch } = useCancelListBatch()
   const { address } = useAccount()
   const { CORE_CONTRACT_ADDRESS } = useContractAddresses()
-  const [approvalMap, setApprovalMap] = useState<Map<string, boolean>>(new Map())
-
-  const { listTokensBatch, delistBatch, approveBatch, clearBatch } = batchOps
+  const { delistBatch, approveBatch, clearBatch } = batchOps
   const { addTx, removeTx, updateTx } = useTx()
 
   // Collect the unique collection addresses
@@ -52,22 +50,20 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
     },
   })
 
-  // Update the approvals map
-  useEffect(() => {
-    if (!approvals) return
-
-    const newApprovalMap = new Map()
-    approvals.forEach((result: any, index: number) => {
+  // Derived directly from the read results so it can never go stale.
+  const approvalMap = useMemo(() => {
+    const map = new Map<string, boolean>()
+    approvals?.forEach((result, index) => {
       if (result.status === "success") {
-        newApprovalMap.set(uniqueCollections[index], result.result)
+        map.set(uniqueCollections[index], Boolean(result.result))
       }
     })
-    setApprovalMap(newApprovalMap)
+    return map
   }, [approvals, uniqueCollections])
 
   // Check that every collection in the approve batch is approved
   const allApproved = useMemo(() => {
-    const collectionsToApprove = new Set(approveBatch.map((item: any) => item.toLowerCase()))
+    const collectionsToApprove = new Set(approveBatch.map((item) => item.toLowerCase()))
     for (const collection of collectionsToApprove) {
       if (!approvalMap.get(collection as string)) {
         return false
@@ -93,14 +89,14 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
       // the indexer + realtime reconcile the DB `is_active = false`.
       onDelist?.(items)
 
-      await publicClient?.waitForTransactionReceipt({ hash })
+      await waitForTxConfirmation(publicClient, hash)
       updateTx(hash, { status: "success", label: "Delisted!" })
-      setTimeout(() => removeTx(hash), 3000)
+      setTimeout(() => removeTx(hash), 5000)
 
       clearBatch("delist")
     } catch (err) {
       console.error("Delist error:", err)
-      const hash = (err as any)?.hash
+      const hash = (err as { hash?: `0x${string}` })?.hash
       if (hash) {
         updateTx(hash, { status: "error", label: "Delist failed" })
         setTimeout(() => removeTx(hash), 5000)
@@ -113,9 +109,9 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
   // Handler for approving a collection
   const approveCollection = async (collectionAddress: Address) => {
     // Approve the marketplace to transfer all tokens of this collection.
-    let txHash = ""
+    let txHash: `0x${string}` | undefined
     try {
-      const txHash = await writeContractAsync({
+      txHash = await writeContractAsync({
         address: collectionAddress,
         abi: erc721Abi,
         functionName: "setApprovalForAll",
@@ -124,13 +120,16 @@ export function useUserNfts({ nfts, collections, batchOps, userAddress, onDelist
 
       addTx({ hash: txHash, label: "Approving collection", status: "loading" })
 
-      await publicClient?.waitForTransactionReceipt({ hash: txHash })
-      updateTx(txHash, { label: "Approving collection", status: "success" })
-      removeTx(txHash as `0x${string}`)
+      await waitForTxConfirmation(publicClient, txHash)
+      updateTx(txHash, { label: "Collection approved!", status: "success" })
+      setTimeout(() => removeTx(txHash!), 5000)
       clearBatch("approve")
-    } catch (e) {
-      updateTx(txHash, { label: "Transaction reverted!", status: "error" })
-      removeTx(txHash as `0x${string}`)
+    } catch (error) {
+      console.error("Approval error:", error)
+      if (txHash) {
+        updateTx(txHash, { label: "Approval failed", status: "error" })
+        setTimeout(() => removeTx(txHash!), 6000)
+      }
     }
   }
 

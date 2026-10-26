@@ -3,15 +3,17 @@
 import { useState } from "react"
 import { useAccount } from "wagmi"
 import { useRouter } from "next/navigation"
-import { FaEthereum, FaShoppingCart, FaGavel, FaTag, FaTimes } from "react-icons/fa"
+import { FaShoppingCart, FaGavel, FaTag } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { MdLocalOffer, MdCancel } from "react-icons/md"
 import { useBuy } from "@/hooks/useBuyActions"
 import { useCancelList } from "@/hooks/useListingActions"
-import { useBidToken, useBidTokenBatch } from "@/hooks/useBidActions"
+import { useBidTokenBatch } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { BidCard } from "../collections/collection/BidCard"
 import { useBatchOperations } from "@/hooks/useBatchOperations"
-import { NFTDetail, UserNFT } from "@/types/user.types"
+import { BatchNFT, NFTDetail } from "@/types/user.types"
+import { waitForTxConfirmation } from "@/lib/tx"
 
 interface NFTActionsProps {
   nft: NFTDetail
@@ -22,25 +24,24 @@ export function NFTActions({ nft }: NFTActionsProps) {
   const { address: userAddress } = useAccount()
   const [showBidModal, setShowBidModal] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const { removeFromBatch, clearBatch, addToBatch, isInBatch, bidBatch } = useBatchOperations()
+  const { removeFromBatch, clearBatch, addToBatch, bidBatch } = useBatchOperations()
   const { buy } = useBuy()
   const { cancelList } = useCancelList()
-  const { bidToken } = useBidToken()
   const { publicClient } = useBidTokenBatch()
   const { addTx, updateTx, removeTx } = useTx()
 
   const isOwner = userAddress?.toLowerCase() === nft.owner_wallet.toLowerCase()
   const isListed = Boolean(nft.listing?.is_active)
   const isSeller = userAddress?.toLowerCase() === nft.listing?.seller_wallet?.toLowerCase()
-  // The bid batch stores tokens as UserNFT; NFTDetail is a superset.
-  const nftForBatch = nft as unknown as UserNFT
+  // The bid batch stores tokens as BatchNFT; NFTDetail is a superset.
+  const nftForBatch = nft as unknown as BatchNFT
 
   // Handler for buying the NFT
   const handleBuy = async () => {
     if (!nft.listing || !userAddress) return
 
     setIsProcessing(true)
-    let hash: any
+    let hash: `0x${string}` | undefined
 
     try {
       const price = BigInt(nft.listing.price)
@@ -53,30 +54,28 @@ export function NFTActions({ nft }: NFTActionsProps) {
         label: "Buying NFT...",
       })
 
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash })
-        updateTx(hash, {
-          status: "success",
-          label: "NFT purchased successfully!",
-        })
-        removeTx(hash)
+      await waitForTxConfirmation(publicClient, hash)
+      updateTx(hash, {
+        status: "success",
+        label: "NFT purchased successfully!",
+      })
+      setTimeout(() => removeTx(hash!), 5000)
 
-        // Refetch the server component data in place (no full reload).
-        router.refresh()
-      }
+      // Refetch the server component data in place (no full reload).
+      router.refresh()
     } catch (error) {
       console.error("Buy error:", error)
       if (hash) {
         updateTx(hash, { status: "error", label: "Purchase failed!" })
-        removeTx(hash)
+        setTimeout(() => removeTx(hash!), 6000)
       }
     } finally {
       setIsProcessing(false)
     }
   }
 
-  const formatDate = (timestamp: any) => {
-    const date = new Date(timestamp)
+  const formatDate = (timestamp: string | null | undefined) => {
+    const date = new Date(timestamp ?? 0)
     return new Intl.DateTimeFormat("en-US", {
       day: "2-digit",
       month: "2-digit",
@@ -92,7 +91,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
     if (!nft.listing || !userAddress) return
 
     setIsProcessing(true)
-    let hash: any
+    let hash: `0x${string}` | undefined
 
     try {
       hash = await cancelList(nft.collection_address, Number(nft.token_id))
@@ -103,21 +102,20 @@ export function NFTActions({ nft }: NFTActionsProps) {
         label: "Cancelling listing...",
       })
 
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash })
-        updateTx(hash, {
-          status: "success",
-          label: "Listing cancelled!",
-        })
-        removeTx(hash)
+      await waitForTxConfirmation(publicClient, hash)
+      updateTx(hash, {
+        status: "success",
+        label: "Listing cancelled!",
+      })
+      setTimeout(() => removeTx(hash!), 5000)
 
-        router.refresh()
-      }
+      router.refresh()
     } catch (error) {
       console.error("Cancel listing error:", error)
+
       if (hash) {
         updateTx(hash, { status: "error", label: "Cancellation failed!" })
-        removeTx(hash)
+        setTimeout(() => removeTx(hash!), 6000)
       }
     } finally {
       setIsProcessing(false)
@@ -126,13 +124,13 @@ export function NFTActions({ nft }: NFTActionsProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Precio actual */}
+      {/* Current price */}
       {isListed && (
         <div className="bg-(--bg) rounded-xl p-6 border border-(--text)/20">
           <div className="flex flex-col gap-2">
             <span className="text-sm opacity-75">Current Price</span>
             <div className="flex items-center gap-2">
-              <FaEthereum className="text-3xl" />
+              <HypeIcon className="text-3xl" />
               <span className="text-4xl font-bold">{(Number(nft.listing!.price) / 1e18).toFixed(4)}</span>
             </div>
 
@@ -147,7 +145,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
         </div>
       )}
 
-      {/* Botones de acción */}
+      {/* Action buttons */}
       <div className="flex flex-col gap-2">
         {!userAddress ? (
           <div className="card rounded-xl p-4 text-center opacity-75">
@@ -155,7 +153,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
           </div>
         ) : (
           <>
-            {/* Si el NFT está listado y NO eres el owner */}
+            {/* Listed and the viewer is not the seller */}
             {isListed && !isSeller && (
               <>
                 <button
@@ -180,7 +178,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
               </>
             )}
 
-            {/* Si eres el seller */}
+            {/* The viewer is the seller */}
             {isListed && isSeller && (
               <button
                 onClick={handleCancelListing}
@@ -192,7 +190,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
               </button>
             )}
 
-            {/* Si eres el owner pero NO está listado */}
+            {/* The viewer owns the NFT but it is not listed */}
             {isOwner && !isListed && (
               <div className="card rounded-xl p-6 border border-(--text)/20">
                 <div className="flex flex-col gap-3 items-center">
@@ -212,7 +210,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
               </div>
             )}
 
-            {/* Si NO eres owner y NO está listado */}
+            {/* The viewer does not own the NFT and it is not listed */}
             {!isOwner && !isListed && (
               <div className="card rounded-xl p-6 border border-(--text)/20">
                 <div className="flex flex-col gap-3 items-center">
@@ -235,70 +233,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
         )}
       </div>
 
-      {/* Modal de hacer oferta */}
-      {/* {showBidModal && (
-        <div
-          onClick={(e: any) => {
-            if (e.target.id === "bid-modal-backdrop") {
-              setShowBidModal(false)
-            }
-          }}
-          id="bid-modal-backdrop"
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        >
-          <div className="card rounded-2xl border border-(--text)/20 max-w-md w-full">
-            <div className="flex  justify-between items-center p-4">
-              <div className="flex  gap-3 items-center">
-                <FaGavel className="text-3xl" />
-                <span className="text-2xl font-bold ">Bid token</span>
-              </div>
-              <button onClick={() => setShowBidModal(false)} className="bg-transparent! text-(--text)!">
-                <FaTimes />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-4 px-4">
-              <div>
-                <label className="text-sm opacity-75 mb-2 block">Offer price (ETH)</label>
-                <div className="flex items-center gap-2 rounded-xl p-3 bg-(--bg)">
-                  <FaEthereum className="text-2xl opacity-50" />
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={bidAmount}
-                    onChange={(e) => {
-                      if (/^\d*\.?\d*$/.test(e.target.value)) {
-                        setBidAmount(e.target.value)
-                      }
-                    }}
-                    className="flex-1 bg-transparent! text-lg"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pb-4">
-                <button
-                  onClick={() => {
-                    setShowBidModal(false)
-                    setBidAmount("")
-                  }}
-                  className="flex-1 py-3 rounded border border-(--text)/20 hover:bg-(--text)/5"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleMakeOffer}
-                  disabled={!bidAmount || isProcessing}
-                  className="flex-1 py-3 rounded bg-(--accent) text-(--bg-secondary) font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isProcessing ? "Processing..." : "Make Offer"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
+      {/* Bid modal */}
       {showBidModal && (
         <BidCard
           items={bidBatch}

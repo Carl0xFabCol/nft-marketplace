@@ -4,17 +4,18 @@ import { CollectionService } from "@/services/collections.service"
 import { Collection } from "@/types/user.types"
 import { Pagination } from "@/components/ui/ServerPagination"
 import { getServerSupabase } from "@/lib/supabase/server"
+import { clampInt, sanitizePostgrestSearch } from "@/lib/validation"
 
 export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string }> }) {
   const supabase = await getServerSupabase()
   const { page: pageStr, q } = await searchParams
-  const page = Number(pageStr) || 1
-  const search = (q ?? "").trim()
+  const page = clampInt(pageStr, 1, 1, 100_000)
+  const search = (typeof q === "string" ? q : "").trim().slice(0, 64)
 
   const { collections, totalPages } = await CollectionService.getCollectionsWithTopBids(supabase, {
     page,
     limit: 20,
-    search: search || undefined,
+    search: sanitizePostgrestSearch(search) || undefined,
   })
 
   return (
@@ -49,7 +50,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
         <CollectionsCol collections={collections as Collection[]} />
       </div>
 
-      {/* Paginación */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4">
           <Pagination currentPage={page} totalPages={totalPages} baseUrl="/collections" query={{ q: search || undefined }} />

@@ -51,7 +51,7 @@ export interface Collection24hStats {
   floor_price: string | null;
   nft_count: number;
   is_verified: boolean;
-  /** 24h volume in ETH */
+  /** 24h volume in HYPE */
   volume_24h?: number;
   /** 24h sales count */
   sales_24h?: number;

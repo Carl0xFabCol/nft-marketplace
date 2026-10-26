@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { FaGavel, FaEthereum } from "react-icons/fa"
+import { FaGavel } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useBidCollection } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { usePublicClient } from "wagmi"
@@ -9,6 +10,7 @@ import { Address } from "viem"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
+import { waitForTxConfirmation } from "@/lib/tx"
 
 interface ColBidCardProps {
   collectionAddress: Address
@@ -36,7 +38,7 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
       return
     }
 
-    let hash: any
+    let hash: `0x${string}` | undefined
 
     try {
       const bidPrice = BigInt(Math.floor(Number(price) * 1e18))
@@ -49,22 +51,20 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
         label: "Placing collection bid...",
       })
 
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash })
-        updateTx(hash, {
-          status: "success",
-          label: "Collection bid placed!",
-        })
-        removeTx(hash)
+      await waitForTxConfirmation(publicClient, hash)
+      updateTx(hash, {
+        status: "success",
+        label: "Collection bid placed!",
+      })
+      setTimeout(() => removeTx(hash!), 5000)
 
-        onSuccess?.()
-        onClose()
-      }
+      onSuccess?.()
+      onClose()
     } catch (error) {
       console.error("Collection bid error:", error)
       if (hash) {
         updateTx(hash, { status: "error", label: "Bid failed!" })
-        removeTx(hash)
+        setTimeout(() => removeTx(hash!), 6000)
       }
     }
   }
@@ -113,7 +113,7 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
               {floorPrice ? (
                 <>
                   <span className="font-bold">{(Number(floorPrice) / 1e18).toFixed(4)}</span>
-                  <FaEthereum />
+                  <HypeIcon />
                 </>
               ) : (
                 <span className="opacity-50">No listings</span>
@@ -149,7 +149,7 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
               <span className="text-sm opacity-75">Total Balance Needed</span>
               <div className="flex items-center gap-2 text-2xl font-bold">
                 <span>{totalBalance.toFixed(4)}</span>
-                <FaEthereum />
+                <HypeIcon />
               </div>
             </div>
 

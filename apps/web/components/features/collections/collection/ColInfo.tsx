@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { FaEthereum, FaExternalLinkAlt } from "react-icons/fa"
+import { FaExternalLinkAlt } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { FiCopy } from "react-icons/fi"
 import { explorerTokenUrl } from "@/lib/chains"
 import { supabase } from "@/lib/supabase/client"
@@ -54,7 +55,7 @@ export default function ColInfo({ colAddress }: { colAddress: string }) {
             <span className="font-bold text-xs opacity-75">TOTAL VOLUME</span>
             <div className="flex gap-1 items-center justify-center">
               <span>{col?.total_volume != null ? col.total_volume : "-"}</span>
-              <FaEthereum />
+              <HypeIcon />
             </div>
           </div>
           <div className="card py-2 px-4 rounded-xl border-2 border-(--bg) flex flex-col text-center">

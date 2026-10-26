@@ -6,10 +6,11 @@ import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
-import { FaEthereum, FaUser } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useConnection, usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
+import { waitForTxConfirmation } from "@/lib/tx"
 
 type NftCardToken = EnrichedUserNFT & {
   price?: number
@@ -143,13 +144,10 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
 
       addTx({ hash, label: "Accepting bid...", status: "loading" })
 
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash })
-      if (receipt && receipt.status !== "success") {
-        throw new Error("Transaction reverted")
-      }
+      await waitForTxConfirmation(publicClient, hash)
 
       updateTx(hash, { label: "Bid accepted successfully!", status: "success" })
-      removeTx(hash)
+      setTimeout(() => removeTx(hash!), 5000)
 
       removeFromBatch(token, "list")
       removeFromBatch(token, "delist")
@@ -158,7 +156,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
       console.error("Error accepting bid:", e)
       if (hash) {
         updateTx(hash, { label: "Transaction failed", status: "error" })
-        removeTx(hash)
+        setTimeout(() => removeTx(hash!), 6000)
       }
     }
   }
@@ -210,7 +208,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
               </Link>
               <div className="flex gap-2  text-xs lg:text-sm items-center ">
                 <span className="font-bold  ">{token.price ? Number(token.price.toString()) / 1e18 : token.active_listing ? Number(token.active_listing.price.toString()) / 1e18 : "-"}</span>
-                <FaEthereum />
+                <HypeIcon />
                 {isUserPage && token.active_listing?.status === "pending" && (
                   <span className="text-[10px] uppercase tracking-wide opacity-70 px-1.5 py-0.5 rounded border border-(--accent)/40 text-(--accent)">Pending…</span>
                 )}
@@ -222,7 +220,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
                 <span>Top bid:</span>
                 <span className="flex gap-2 items-center">
                   {token.topBid && Number(token.topBid.price) / 1e18}
-                  {token.topBid && <FaEthereum />}
+                  {token.topBid && <HypeIcon />}
                   {!token.topBid && "-"}
                 </span>
                 {bidHovered && (

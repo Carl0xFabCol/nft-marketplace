@@ -1,4 +1,5 @@
-import { FaEthereum, FaExternalLinkAlt } from "react-icons/fa"
+import { FaExternalLinkAlt } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { MdCancel, MdGavel, MdLocalOffer, MdShoppingCart, MdSwapHoriz } from "react-icons/md"
 import { Address } from "viem"
 import { formatDistanceToNow } from "date-fns"
@@ -31,7 +32,7 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
 
   // Format the event type into a human label ("LISTING_CANCELLED" → "Listing cancelled").
   const getActivityLabel = (type: string) => {
-    let formatted = type.replaceAll("_", " ")
+    const formatted = type.replaceAll("_", " ")
     return formatted.charAt(0) + formatted.slice(1).toLowerCase()
   }
 
@@ -80,7 +81,7 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
               <div className="col-span-2 flex items-center gap-1">
                 {activity.price ? (
                   <>
-                    <FaEthereum className="text-sm" />
+                    <HypeIcon className="text-sm" />
                     <span className="font-bold">{(Number(activity.price) / 1e18).toFixed(4)}</span>
                   </>
                 ) : (
@@ -129,7 +130,7 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm hover:text-(--accent) transition-colors"
           >
-            <span>View all activity on Etherscan</span>
+            <span>View all activity on the block explorer</span>
             <FaExternalLinkAlt className="text-xs" />
           </Link>
         </div>

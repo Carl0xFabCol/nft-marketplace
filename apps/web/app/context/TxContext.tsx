@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, ReactNode } from "react"
 import { FaTimes } from "react-icons/fa"
-import { Address } from "viem"
 import { explorerTxUrl } from "@/lib/chains"
 import { RxCrossCircled } from "react-icons/rx"
 import { FiCheckCircle } from "react-icons/fi"
@@ -40,7 +39,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
   return (
     <TxContext.Provider value={{ txs, addTx, updateTx, removeTx }}>
       {children}
-      {txs.length >= 0 && (
+      {txs.length > 0 && (
         <div className="fixed flex flex-col gap-2 right-3 bottom-11 z-50">
           {txs.map((tx: TxItem) => {
             return (

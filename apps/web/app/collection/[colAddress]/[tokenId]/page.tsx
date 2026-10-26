@@ -15,12 +15,12 @@ interface NFTPageProps {
 export default async function NFTPage({ params }: NFTPageProps) {
   const { colAddress, tokenId } = await params
 
-  // Validación
-  if (!isAddress(colAddress) || !tokenId) {
+  // Validation
+  if (!isAddress(colAddress) || !/^\d{1,78}$/.test(tokenId)) {
     notFound()
   }
 
-  // Fetch data del servidor
+  // Fetch data on the server
   const nftData = await NFTService.getNFTDetail(colAddress, tokenId)
 
   if (!nftData) {
@@ -36,10 +36,15 @@ export default async function NFTPage({ params }: NFTPageProps) {
   )
 }
 
-// Metadata dinámica para SEO
+// Dynamic metadata for SEO
 export async function generateMetadata({ params }: NFTPageProps) {
   const { colAddress, tokenId } = await params
-  const nftData = await NFTService.getNFTDetail(colAddress as `0x${string}`, tokenId)
+
+  if (!isAddress(colAddress) || !/^\d{1,78}$/.test(tokenId)) {
+    return { title: "NFT not found | Marketplace" }
+  }
+
+  const nftData = await NFTService.getNFTDetail(colAddress, tokenId)
 
   return {
     title: `${nftData?.name || `NFT #${tokenId}`} | Marketplace`,

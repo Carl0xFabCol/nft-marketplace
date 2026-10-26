@@ -37,10 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Detecta cambio o desconexión de cuenta en la wallet y cierra
-  // la sesión de Supabase si ya no corresponde con la wallet conectada.
+  // Detect a wallet account change or disconnect and clear the Supabase
+  // session when it no longer matches the connected wallet.
   useEffect(() => {
-    console.log("AuthProvider: address, isConnected, session", address, isConnected, session)
     if (!session) return
 
     const sessionWallet = session.user.user_metadata?.wallet as string | undefined

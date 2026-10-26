@@ -27,7 +27,7 @@ export default function NFTDetail({ nft }: NFTDetailProps) {
      
     `}
     >
-      {/* Imagen del NFT */}
+      {/* NFT image */}
       <div
         className={`
         lg:w-1/2

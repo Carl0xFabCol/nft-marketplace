@@ -10,6 +10,7 @@ import { useIsMarketplaceAdmin } from "@/hooks/useMarketplaceReads"
 import { useTx } from "@/app/context/TxContext"
 import { useConnection } from "wagmi"
 import { Modal } from "@/components/ui/Modal"
+import { waitForTxConfirmation } from "@/lib/tx"
 
 const inputClass = "w-full rounded-lg border border-(--accent)/30 bg-(--accent)/5 px-3 py-2 focus:outline-none focus:border-(--accent) disabled:opacity-50"
 
@@ -61,18 +62,17 @@ export function RegisterCollection() {
       hash = await registerCollection(collectionAddress.trim() as `0x${string}`, fee, effectiveReceiver as `0x${string}`)
       addTx({ hash, status: "loading", label: "Register collection" })
 
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash })
-      if (receipt && receipt.status !== "success") throw new Error("Transaction reverted")
+      await waitForTxConfirmation(publicClient, hash)
 
-      updateTx(hash, { status: "success" })
-      setTimeout(() => removeTx(hash!), 3000)
+      updateTx(hash, { status: "success", label: "Collection registered!" })
+      setTimeout(() => removeTx(hash!), 5000)
       setOpen(false)
       reset()
       router.refresh()
     } catch (e) {
       if (hash) {
-        updateTx(hash, { status: "error" })
-        removeTx(hash)
+        updateTx(hash, { status: "error", label: "Register failed" })
+        setTimeout(() => removeTx(hash!), 6000)
       }
       const err = e as { shortMessage?: string; message?: string }
       if (err?.shortMessage === "User rejected the request.") {

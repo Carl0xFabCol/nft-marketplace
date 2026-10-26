@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { Address, erc721Abi, parseEther } from "viem"
 import { useConnection, useWriteContract, useReadContracts, usePublicClient } from "wagmi"
-import { FaEthereum, FaTrash } from "react-icons/fa"
+import { FaTrash } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { MdOutlineLocalOffer } from "react-icons/md"
 import { RiNftFill } from "react-icons/ri"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
@@ -18,7 +19,13 @@ import { failListingsByTxHash } from "@/actions/listings/failBatch"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
-import { useAuth } from "@/components/AuthProvider"
+import { waitForTxConfirmation } from "@/lib/tx"
+
+interface ListItemWithPrice extends EnrichedUserNFT {
+  price?: bigint
+  priceHype?: string
+  expiresAt?: Date
+}
 
 export interface ListableItem {
   collection_address: Address
@@ -39,26 +46,19 @@ interface UserListCardProps {
   removeFromBatch: (token: UserNFT, batch: BatchType) => void
 }
 
-interface ListItemWithPrice extends EnrichedUserNFT {
-  priceEth?: string
-}
-
 export function UserListCard({ items, collections, listings, onClose, onSuccess, onOptimisticList, onOptimisticListFail, removeFromBatch }: UserListCardProps) {
   const [priceAll, setPriceAll] = useState<string>("")
-  const [totalEstimated, setTotalEstimated] = useState<number>(0)
-  const [totalRoyalties, setTotalRoyalties] = useState<number>(0)
-  const [totalMarketplaceFee, setTotalMarketplaceFee] = useState<number>(0)
-  const [listItems, setListItems] = useState<any[]>(items)
+  const [listItems, setListItems] = useState<ListItemWithPrice[]>(items)
   const { addTx, removeTx, updateTx } = useTx()
   const info = useMarketplaceInfo()
   const { address, chainId: connectedChainId } = useConnection()
-  const { session } = useAuth()
-  const token = session?.access_token
   const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
 
-  useEffect(() => {
+  const [prevItems, setPrevItems] = useState(items)
+  if (items !== prevItems) {
+    setPrevItems(items)
     setListItems(items)
-  }, [items])
+  }
 
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient()
@@ -74,7 +74,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     },
   })
 
-  const { data: colsData, isLoading: isLoadingCore } = useReadContracts({
+  const { data: colsData } = useReadContracts({
     contracts: collections.map((col) => ({
       address: MARKETPLACE_CONTRACT_ADDRESS as Address,
       abi: MarketplaceABI,
@@ -84,7 +84,16 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     query: {
       enabled: Boolean(collections.length),
     },
-  } as any)
+  } as never)
+
+  type CollectionInfo = {
+    royaltyReceiver: Address
+    royaltyFee: number
+    totalVolume: bigint
+    totalSales: number
+    isVerified: boolean
+    exists: boolean
+  }
 
   const floors = useMemo<Record<string, bigint>>(() => {
     if (!listings?.length) return {}
@@ -103,35 +112,31 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     return map
   }, [listings])
 
-  useEffect(() => {
-    if (!colsData || !info) return
+  const { totalEstimated, totalMarketplaceFee, totalRoyalties } = useMemo(() => {
+    let marketplaceFee = 0
+    let royaltyFee = 0
+    let estimated = 0
 
-    let _marketplaceFee = 0
-    let _royaltyFee = 0
-    let _totalEstimated = 0
+    if (colsData && info) {
+      listItems.forEach((item) => {
+        if (!item.price || item.price === BigInt(0)) return
 
-    listItems.forEach((item) => {
-      if (!item.price || item.price === BigInt(0)) return
+        const colIndex = collections.findIndex((col) => col.contract_address.toLowerCase() === item.collection_address.toLowerCase())
+        if (colIndex === -1 || !colsData[colIndex]) return
 
-      const colIndex = collections.findIndex((col) => col.contract_address.toLowerCase() === item.collection_address.toLowerCase())
+        const colData = colsData[colIndex].result as unknown as CollectionInfo
+        const priceNum = Number(item.price)
 
-      if (colIndex === -1 || !colsData[colIndex]) return
+        const itemRoyalty = (priceNum * Number(colData.royaltyFee)) / 10000
+        const itemMarketplaceFee = (priceNum * Number(info.marketplaceFee)) / 10000
 
-      const colData = colsData[colIndex].result as any
-      const priceNum = Number(item.price)
+        marketplaceFee += itemMarketplaceFee
+        royaltyFee += itemRoyalty
+        estimated += priceNum - itemRoyalty - itemMarketplaceFee
+      })
+    }
 
-      const royaltyFee = (priceNum * Number(colData.royaltyFee)) / 10000
-      const marketplaceFee = (priceNum * Number(info.marketplaceFee)) / 10000
-      const netAmount = priceNum - royaltyFee - marketplaceFee
-
-      _marketplaceFee += marketplaceFee
-      _royaltyFee += royaltyFee
-      _totalEstimated += netAmount
-    })
-
-    setTotalEstimated(_totalEstimated)
-    setTotalMarketplaceFee(_marketplaceFee)
-    setTotalRoyalties(_royaltyFee)
+    return { totalEstimated: estimated, totalMarketplaceFee: marketplaceFee, totalRoyalties: royaltyFee }
   }, [colsData, listItems, info, collections])
 
   const handleList = async () => {
@@ -175,7 +180,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
         expiresAts,
       })
 
-      await publicClient!.waitForTransactionReceipt({ hash })
+      await waitForTxConfirmation(publicClient, hash)
       updateTx(hash, { status: "success", label: "Listed!" })
 
       setTimeout(() => removeTx(hash), 3000)
@@ -183,7 +188,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
       onSuccess?.()
     } catch (err) {
       console.error("Listing error:", err)
-      const hash = txHash ?? (err as any)?.hash
+      const hash = txHash ?? (err as { hash?: `0x${string}` })?.hash
       if (hash) {
         updateTx(hash, { status: "error", label: "Listing failed" })
         setTimeout(() => removeTx(hash), 5000)
@@ -207,7 +212,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
 
     const wei = value === "" ? BigInt(0) : parseEther(value)
 
-    setListItems((prev) => prev.map((item) => (item.token_id === tokenId && item.collection_address.toLowerCase() === collection.toLowerCase() ? { ...item, priceEth: value, price: wei } : item)))
+    setListItems((prev) => prev.map((item) => (item.token_id === tokenId && item.collection_address.toLowerCase() === collection.toLowerCase() ? { ...item, priceHype: value, price: wei } : item)))
   }
 
   const updateAllPrices = (value: string) => {
@@ -220,7 +225,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     setListItems((prev) =>
       prev.map((item) => ({
         ...item,
-        priceEth: value,
+        priceHype: value,
         price: wei,
       })),
     )
@@ -238,12 +243,12 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     return String(names[colIndex].result) || "Unknown"
   }
 
-  const getCollectionData = (collectionAddress: string): any => {
+  const getCollectionData = (collectionAddress: string): CollectionInfo | null => {
     const colIndex = collections.findIndex((col) => col.contract_address.toLowerCase() === collectionAddress.toLowerCase())
 
     if (colIndex === -1 || !colsData?.[colIndex]) return null
 
-    return colsData[colIndex].result
+    return colsData[colIndex].result as unknown as CollectionInfo
   }
 
   const canList = listItems.some((item) => item.price && item.price > BigInt(0))
@@ -279,16 +284,16 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
 
       {/* Items list - scrollable */}
       <div className="flex flex-col w-full overflow-y-auto max-h-[50vh]">
-        {listItems.map((item, index) => {
+        {listItems.map((item) => {
           const floor = floors[item.collection_address.toLowerCase()]
           const collectionName = getCollectionName(item.collection_address)
           const colData = getCollectionData(item.collection_address)
           const royaltyPercent = colData ? Number(colData.royaltyFee) / 100 : 0
-          const royaltyAmount = item.priceEth ? (Number(item.priceEth) * royaltyPercent) / 100 : 0
+          const royaltyAmount = item.priceHype ? (Number(item.priceHype) * royaltyPercent) / 100 : 0
 
           return (
             <div className="flex items-center px-6 justify-between w-full py-6 " key={`${item.collection_address}-${item.token_id}`}>
-              {/* NFT Info */}
+              {/* NFT info */}
               <div className="flex flex-2 items-center gap-3">
                 <RiNftFill className="text-xl opacity-75" />
                 <div className="flex flex-col items-start">
@@ -301,7 +306,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
               <div className="flex gap-2 items-center flex-1">
                 <div className="flex gap-1 items-center">
                   <span>{floor ? (Number(floor) / 1e18).toFixed(4) : "-"}</span>
-                  {floor && <FaEthereum className="text-sm" />}
+                  {floor && <HypeIcon className="text-sm" />}
                 </div>
               </div>
 
@@ -309,7 +314,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
               <div className="flex-1 flex items-center gap-2">
                 <span className="flex items-center gap-1">
                   {royaltyAmount ? royaltyAmount.toFixed(4) : "-"}
-                  {royaltyAmount > 0 && <FaEthereum className="text-sm" />}
+                  {royaltyAmount > 0 && <HypeIcon className="text-sm" />}
                 </span>
                 <span className="text-sm opacity-65">({royaltyPercent ? `${royaltyPercent}%` : "-%"})</span>
               </div>
@@ -320,10 +325,10 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
                   <input
                     type="text"
                     inputMode="decimal"
-                    value={item.priceEth ?? ""}
+                    value={item.priceHype ?? ""}
                     onChange={(e) => updateItemPrice(item.token_id, item.collection_address, e.target.value)}
                     className="rounded flex-1 p-3 text-sm w-[80%]"
-                    placeholder="0.00 ETH"
+                    placeholder="0.00 HYPE"
                   />
                 </div>
               </div>
@@ -354,7 +359,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
               <span className="font-bold text-xl">Total estimated:</span>
               <div className="flex gap-2 items-center text-xl">
                 <span>{totalEstimated ? (totalEstimated / 1e18).toFixed(4) : "0.00"}</span>
-                <FaEthereum />
+                <HypeIcon />
               </div>
             </div>
 
@@ -396,7 +401,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
                   value={priceAll}
                   onChange={(e) => updateAllPrices(e.target.value)}
                   className="text-sm rounded w-32 p-2 border border-(--text)/20"
-                  placeholder="0.00 ETH"
+                  placeholder="0.00 HYPE"
                 />
               </div>
             </div>

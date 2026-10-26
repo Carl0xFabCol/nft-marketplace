@@ -1,11 +1,23 @@
-import { FaEthereum } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
+import { Address } from "viem"
+import { EnrichedUserNFT, UserListing } from "@/types/user.types"
 
 // Receives the collection DB row (with name) + derived item/listing arrays from
 // UserSidebar. No on-chain reads — name comes from the DB.
-export function CollectionLabel({ collection }: { collection: any }) {
+interface CollectionLabelProps {
+  collection: {
+    collection: Address
+    name: string | null
+    symbol: string | null
+    colItems: EnrichedUserNFT[]
+    colListings: UserListing[]
+  }
+}
+
+export function CollectionLabel({ collection }: CollectionLabelProps) {
   const name = collection.name || collection.symbol || "-"
-  const listed = collection.colItems.filter((item: any) => Boolean(item.active_listing))
-  const floor = [...collection.colListings].sort((a: any, b: any) => Number(a.price) - Number(b.price))
+  const listed = collection.colItems.filter((item) => Boolean(item.active_listing))
+  const floor = [...collection.colListings].sort((a, b) => Number(a.price) - Number(b.price))
 
   return (
     <div className="flex flex-col justify-end w-full h-full">
@@ -16,7 +28,7 @@ export function CollectionLabel({ collection }: { collection: any }) {
         <div className="flex-1 flex items-center justify-center">
           {floor.length ? (
             <span className="flex items-center gap-1">
-              {Number(floor[0].price) / 1e18} <FaEthereum />
+              {Number(floor[0].price) / 1e18} <HypeIcon />
             </span>
           ) : (
             <span>-</span>

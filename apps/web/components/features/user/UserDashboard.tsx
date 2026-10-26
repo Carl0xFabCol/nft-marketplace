@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import { Address } from "viem"
+import { useAccount } from "wagmi"
 import { useBatchOperations } from "@/hooks/useBatchOperations"
+import { ProfileNftOption, UserPageData, UserProfile } from "@/types/user.types"
 import UserHeader from "./UserHeader"
+import { UserProfileEditor } from "./UserProfileEditor"
 import UserSidebar from "./UserSidebar"
 import UserInventory from "./UserInventory"
 import UserCollectionBids from "./UserCollectionBids"
@@ -28,18 +31,24 @@ const slideVariants = {
 
 interface UserDashboardProps {
   userAddress: Address
-  initialData: any
+  initialData: UserPageData
+  profile: UserProfile | null
+  avatarOptions: ProfileNftOption[]
 }
 
-export default function UserDashboard({ userAddress, initialData }: UserDashboardProps) {
+export default function UserDashboard({ userAddress, initialData, profile, avatarOptions }: UserDashboardProps) {
   const [currentView, setCurrentView] = useState<ViewType>("inventory")
   const [selectedCollection, setSelectedCollection] = useState<Address | "">("")
   const [showSidebar, setShowSidebar] = useState(false)
+  const [showProfileEditor, setShowProfileEditor] = useState(false)
   const [direction, setDirection] = useState(0)
+
+  const { address } = useAccount()
+  const isOwner = address?.toLowerCase() === userAddress.toLowerCase()
 
   const batchOps = useBatchOperations()
 
-  const filteredNFTs = selectedCollection ? initialData.nfts.filter((nft: any) => nft.collection_address.toLowerCase() === selectedCollection.toLowerCase()) : initialData.nfts
+  const filteredNFTs = selectedCollection ? initialData.nfts.filter((nft) => nft.collection_address.toLowerCase() === selectedCollection.toLowerCase()) : initialData.nfts
 
   const handleViewChange = (view: ViewType) => {
     setDirection(VIEW_ORDER[view] - VIEW_ORDER[currentView])
@@ -73,6 +82,9 @@ export default function UserDashboard({ userAddress, initialData }: UserDashboar
               onViewChange={handleViewChange}
               onToggleSidebar={() => setShowSidebar((v) => !v)}
               showSidebar={showSidebar}
+              profile={profile}
+              isOwner={isOwner}
+              onEditProfile={() => setShowProfileEditor(true)}
             />
           </motion.div>
 
@@ -113,6 +125,12 @@ export default function UserDashboard({ userAddress, initialData }: UserDashboar
           </div>
         </motion.div>
       </motion.div>
+
+      <AnimatePresence>
+        {showProfileEditor && (
+          <UserProfileEditor userAddress={userAddress} profile={profile} avatarOptions={avatarOptions} onClose={() => setShowProfileEditor(false)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

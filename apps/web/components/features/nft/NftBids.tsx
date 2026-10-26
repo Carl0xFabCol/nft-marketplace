@@ -1,16 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useTx } from "@/app/context/TxContext"
 import { useAcceptTokenBid } from "@/hooks/useBidActions"
 import { useEnsureApproval } from "@/hooks/useEnsureApproval"
 import Link from "next/link"
-import { FaEthereum, FaExternalLinkAlt, FaGavel } from "react-icons/fa"
+import { FaGavel } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useAccount, usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { UserTokenBid } from "@/types/user.types"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserTokenBid, upsertTokenBid, deactivateTokenBid } from "@/lib/bidMerge"
+import { waitForTxConfirmation } from "@/lib/tx"
 
 interface NFTBidsProps {
   bids: UserTokenBid[]
@@ -29,25 +31,28 @@ export default function NFTBids({ bids, owner = false, collectionAddress, tokenI
   const { address } = useAccount()
 
   // Sync when the server re-delivers fresh bids (e.g. router.refresh()).
-  useEffect(() => {
+  const [prevBids, setPrevBids] = useState(bids)
+  if (bids !== prevBids) {
+    setPrevBids(bids)
     setBidList(bids)
-  }, [bids])
+  }
 
   // Live bid updates: a new offer on this token appears instantly; a
-  // cancelled/accepted bid disappears without a reload.
+  // cancelled/accepted bid disappears without a reload. Realtime only supports
+  // one column filter, so the token id is matched client-side.
   useRealtimeTable<UserTokenBid>({
     table: "token_bids",
-    filter: `and=(collection_address.eq.${collectionAddress.toLowerCase()},token_id.eq.${tokenId})`,
+    filter: `collection_address=eq.${collectionAddress.toLowerCase()}`,
     onChange: (change) => {
-      if (change.eventType === "DELETE") {
-        const old = change.old
-        if (old) setBidList((prev) => deactivateTokenBid(prev, toUserTokenBid(old)))
-        return
-      }
-      const row = change.new
-      if (!row) return
+      const row = change.eventType === "DELETE" ? change.old : change.new
+      if (!row || String(row.token_id) !== String(tokenId)) return
+
       const bid = toUserTokenBid(row)
-      setBidList((prev) => (bid.is_active === false ? deactivateTokenBid(prev, bid) : upsertTokenBid(prev, bid)))
+      if (change.eventType === "DELETE" || bid.is_active === false) {
+        setBidList((prev) => deactivateTokenBid(prev, bid))
+      } else {
+        setBidList((prev) => upsertTokenBid(prev, bid))
+      }
     },
   })
 
@@ -63,18 +68,15 @@ export default function NFTBids({ bids, owner = false, collectionAddress, tokenI
       hash = await acceptTokenBid(collection, Number(bid.token_id), bid.bidder_wallet as Address)
       addTx({ hash, label: "Accepting token bid", status: "loading" })
 
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash })
-      if (receipt && receipt.status !== "success") {
-        throw new Error("Transaction reverted")
-      }
+      await waitForTxConfirmation(publicClient, hash)
 
-      updateTx(hash, { status: "success" })
-      removeTx(hash)
+      updateTx(hash, { status: "success", label: "Token bid accepted!" })
+      setTimeout(() => removeTx(hash!), 5000)
     } catch (e) {
       console.error("Error accepting token bid: " + e)
       if (hash) {
-        updateTx(hash, { status: "error" })
-        removeTx(hash)
+        updateTx(hash, { status: "error", label: "Accept bid failed" })
+        setTimeout(() => removeTx(hash!), 6000)
       }
     }
   }
@@ -97,7 +99,7 @@ export default function NFTBids({ bids, owner = false, collectionAddress, tokenI
                 {/* Event type */}
                 <div className="col-span-3 flex items-center gap-2">
                   <span className="font-semibold">{Number(bid.price) / 1e18}</span>
-                  <FaEthereum className="text-sm" />
+                  <HypeIcon className="text-sm" />
                 </div>
 
                 {/* From */}

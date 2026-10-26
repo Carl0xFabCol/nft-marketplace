@@ -15,7 +15,7 @@ export function WalletOptions({ onConnect }: Props) {
     if (isConnected) {
       onConnect()
     }
-  }, [isConnected])
+  }, [isConnected, onConnect])
   return (
     <div className="flex flex-col gap-2 z-20 ">
       {connectors.map((connector) => (
@@ -26,8 +26,8 @@ export function WalletOptions({ onConnect }: Props) {
         >
           <div className="flex flex-1 items-center justify-center">
             {connector.name == "Injected" && <LuWallet />}
-            {connector.name == "Rabby Wallet" && <img src={"https://raw.githubusercontent.com/RabbyHub/logo/refs/heads/master/symbol.png"} className="w-8 " />}
-            {connector.name == "Brave Wallet" && <img src={"https://avatars.githubusercontent.com/u/12301619?s=200&v=4"} className="w-8 p-1 " />}
+            {connector.name == "Rabby Wallet" && <Image src="https://raw.githubusercontent.com/RabbyHub/logo/refs/heads/master/symbol.png" alt="Rabby Wallet" width={32} height={32} className="w-8" />}
+            {connector.name == "Brave Wallet" && <Image src="https://avatars.githubusercontent.com/u/12301619?s=200&v=4" alt="Brave Wallet" width={32} height={32} className="w-8 p-1" />}
             {connector.name == "Phantom" && (
               <div className="rounded-full overflow-hidden flex items-center justify-center w-8 h-8">
                 <Image src="/phantom.png" alt="Phantom" width="20" height="20" />

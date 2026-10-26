@@ -2,7 +2,7 @@
 
 import { AnimatePresence } from "framer-motion"
 import { FaInbox } from "react-icons/fa"
-import { useMemo, useState, useEffect, useCallback, useRef } from "react"
+import { useMemo, useState, useEffect, useCallback, useRef, useSyncExternalStore } from "react"
 import { Address } from "viem"
 import { NFTCard } from "../nft/NftCard"
 import { UserListCard, ListableItem } from "./UserListCard"
@@ -36,15 +36,15 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
   const [isLoading, setIsLoading] = useState(false)
   const [hasMore, setHasMore] = useState(hasMoreNfts)
   const [currentPage, setCurrentPage] = useState(1)
-  const [isMounted, setIsMounted] = useState(false)
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const observerRef = useRef<HTMLDivElement | null>(null)
   const isFirstRender = useRef(true)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   const { address } = useAccount()
   const isOwner = isMounted && address?.toLowerCase() === userAddress.toLowerCase()
@@ -126,7 +126,6 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
 
   const { approvalMap, allApproved, handleDelist, approveCollection } = useUserNfts({
     nfts,
-    collections,
     batchOps,
     userAddress,
     onDelist: applyOptimisticDelist,
@@ -145,11 +144,11 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
         sortBy,
         sortDir,
       })
-      setNfts(data.nfts as any)
+      setNfts(data.nfts)
       setCurrentPage(1)
       setHasMore(data.hasMore)
-    } catch (error: any) {
-      if (error?.name === "AbortError") return
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return
       console.error("Error reloading NFTs:", error)
     } finally {
       setIsLoading(false)
@@ -180,15 +179,15 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
         sortDir,
       })
 
-      setNfts((prev: any) => {
-        const existingIds = new Set(prev.map((n: any) => n.token_id))
-        return [...prev, ...data.nfts.filter((n: any) => !existingIds.has(n.token_id))]
+      setNfts((prev) => {
+        const existingIds = new Set(prev.map((n) => n.token_id))
+        return [...prev, ...data.nfts.filter((n) => !existingIds.has(n.token_id))]
       })
 
       setCurrentPage(nextPage)
       setHasMore(data.hasMore)
-    } catch (error: any) {
-      if (error?.name === "AbortError") return
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return
       console.error("Error loading more NFTs:", error)
     } finally {
       setIsLoading(false)
@@ -214,13 +213,13 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
   const filteredNFTs = useMemo(() => {
     if (!searchQuery) return nfts
     const q = searchQuery.toLowerCase()
-    return nfts.filter((nft: any) => nft.token_id.toString().includes(q))
+    return nfts.filter((nft) => nft.token_id.toString().includes(q))
   }, [nfts, searchQuery])
 
   const sortedNFTs = useMemo(() => {
     if (!searchQuery) return filteredNFTs
 
-    return [...filteredNFTs].sort((a: any, b: any) => {
+    return [...filteredNFTs].sort((a, b) => {
       if (sortBy === "id") {
         const diff = BigInt(a.token_id) > BigInt(b.token_id) ? 1 : -1
         return sortDir === "asc" ? diff : -diff
@@ -316,7 +315,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
               </div>
             ))}
           <AnimatePresence>
-            {sortedNFTs.map((nft: EnrichedUserNFT, i) => (
+            {sortedNFTs.map((nft: EnrichedUserNFT) => (
               <NFTCard
                 key={`${nft.token_id}-${nft.collection_address}`}
                 isUserPage={true}

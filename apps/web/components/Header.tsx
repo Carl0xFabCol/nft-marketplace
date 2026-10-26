@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import ConnectWallet from "./ConnectWallet"
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 import { useAccount } from "wagmi"
 import { useAuth } from "./AuthProvider"
 
@@ -11,15 +11,15 @@ interface Props {
   openWalletModal: () => void
 }
 export default function Header({ openWalletModal }: Props) {
-  const [mounted, setMounted] = useState<boolean>(false)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 
   const { session } = useAuth()
   const pathname = usePathname()
   const { address } = useAccount()
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   const linkClass = (path: string) => {
     return `h-7 ${pathname == path ? "text-(--accent)" : "text-(--text) hover:text-(--accent)"}`
   }

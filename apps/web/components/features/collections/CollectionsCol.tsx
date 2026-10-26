@@ -2,7 +2,7 @@
 "use client"
 
 import Link from "next/link"
-import { FaEthereum } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { Collection } from "@/types/user.types"
 import { MdOutlineVerified } from "react-icons/md"
 
@@ -56,7 +56,7 @@ export default function CollectionsCol({ collections }: CollectionsColProps) {
                 {floorFromDB !== null ? (
                   <>
                     <span>{floorFromDB.toFixed(3)}</span>
-                    <FaEthereum className="text-xs" />
+                    <HypeIcon className="text-xs" />
                   </>
                 ) : (
                   <span>-</span>
@@ -68,7 +68,7 @@ export default function CollectionsCol({ collections }: CollectionsColProps) {
                 {collection.top_bid ? (
                   <>
                     <span>{(Number(collection.top_bid.price) / 1e18).toFixed(3)}</span>
-                    <FaEthereum className="text-xs" />
+                    <HypeIcon className="text-xs" />
                   </>
                 ) : (
                   <span>-</span>
@@ -85,7 +85,7 @@ export default function CollectionsCol({ collections }: CollectionsColProps) {
                 {totalVol !== "-" ? (
                   <>
                     <span>{totalVol}</span>
-                    <FaEthereum className="text-xs" />
+                    <HypeIcon className="text-xs" />
                   </>
                 ) : (
                   <span>-</span>

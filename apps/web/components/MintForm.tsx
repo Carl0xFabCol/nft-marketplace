@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useNftStats } from "@/hooks/useMarketplaceReads"
 import { useMint } from "@/hooks/useMintActions"
 import { explorerTxUrl, SUPPORTED_CHAINS } from "@/lib/chains"
@@ -8,26 +8,27 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useBalance, useAccount, useChainId } from "wagmi"
 import { formatEther } from "viem"
 import ConnectWallet from "./ConnectWallet"
+import { useTx } from "@/app/context/TxContext"
+import { waitForTxConfirmation } from "@/lib/tx"
 
 interface props {
   contractAddress: string
   name: string
-  symbol: string
 }
 
-export function MintForm({ contractAddress, name, symbol }: props) {
+export function MintForm({ contractAddress, name }: props) {
   const [amount, setAmount] = useState(1)
   const [status, setStatus] = useState<"idle" | "waiting" | "loading" | "success" | "error">("idle")
-  const [error, setError] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
 
   const { mintPrice, maxSupply, totalSupply, isMintActive, refetchTotalSupply } = useNftStats(
     contractAddress as `0x${string}`,
   )
   const { mint, publicClient } = useMint()
+  const { addTx, updateTx, removeTx } = useTx()
   const { address } = useAccount()
   const chainId = useChainId()
-  const nativeSymbol = SUPPORTED_CHAINS.find((chain) => chain.id === chainId)?.nativeCurrency.symbol ?? "ETH"
+  const nativeSymbol = SUPPORTED_CHAINS.find((chain) => chain.id === chainId)?.nativeCurrency.symbol ?? "HYPE"
 
   const price = mintPrice ?? BigInt(0)
   const remaining = maxSupply && maxSupply > BigInt(0) ? maxSupply - (totalSupply ?? BigInt(0)) : undefined
@@ -41,15 +42,13 @@ export function MintForm({ contractAddress, name, symbol }: props) {
     },
   })
 
-  useEffect(() => {
-    if (amount < 1 || amount > 500) {
-      setError("Mint amount must be > 0 & < 500")
-    } else if (remaining !== undefined && BigInt(amount) > remaining) {
-      setError(`Only ${remaining.toString()} left to mint`)
-    } else {
-      setError(null)
-    }
-  }, [amount, remaining])
+  // Derived validation — no effect needed, so the error can never go stale.
+  const error =
+    amount < 1 || amount > 500
+      ? "Mint amount must be > 0 & < 500"
+      : remaining !== undefined && BigInt(amount) > remaining
+        ? `Only ${remaining.toString()} left to mint`
+        : null
 
   const getBtnMsg = () => {
     if (status == "idle") {
@@ -68,29 +67,34 @@ export function MintForm({ contractAddress, name, symbol }: props) {
   const handleMint = async () => {
     if (error || mintEnded || soldOut) return
 
+    let hash: `0x${string}` | undefined
     try {
       setStatus("waiting")
 
-      const hash = await mint(amount, contractAddress as `0x${string}`, address as `0x${string}`, price * BigInt(amount))
+      hash = await mint(amount, contractAddress as `0x${string}`, address as `0x${string}`, price * BigInt(amount))
       setTxHash(hash)
+      addTx({ hash, status: "loading", label: "Minting NFT..." })
 
       setStatus("loading")
 
-      const TxReceipt = await publicClient?.waitForTransactionReceipt({
-        hash,
-      })
-      if (TxReceipt?.status === "reverted") throw new Error("Reverted")
+      await waitForTxConfirmation(publicClient, hash)
       refetchBalance()
 
+      updateTx(hash, { status: "success", label: "Minted!" })
       setStatus("success")
       refetchTotalSupply()
 
+      setTimeout(() => removeTx(hash!), 5000)
       setTimeout(() => {
         setStatus("idle")
         setTxHash(null)
       }, 3500)
-    } catch (e: any) {
-      if (e?.shortMessage === "User rejected the request.") {
+    } catch (e) {
+      if (hash) {
+        updateTx(hash, { status: "error", label: "Mint failed!" })
+        setTimeout(() => removeTx(hash!), 6000)
+      }
+      if ((e as { shortMessage?: string })?.shortMessage === "User rejected the request.") {
         setStatus("idle")
       } else {
         setStatus("error")

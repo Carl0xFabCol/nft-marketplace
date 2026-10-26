@@ -22,7 +22,7 @@ export default function MintPage() {
         </div>
       </header>
 
-      {/* Grid con Suspense */}
+      {/* Grid with Suspense */}
       <Suspense fallback={<CollectionsSkeleton />}>
         <CollectionsGrid />
       </Suspense>
@@ -45,7 +45,7 @@ async function CollectionsGrid() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-      {collections.map((col: any) => (
+      {collections.map((col) => (
         <CollectionCard key={col.contract_address} collection={col} />
       ))}
     </div>

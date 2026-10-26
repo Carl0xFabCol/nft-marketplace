@@ -1,23 +1,66 @@
 // services/user.service.ts
 import { SupabaseClient } from "@supabase/supabase-js"
-import { Address } from "viem"
-
-// ─────────────────────────────────────────────────────────────────────────────
-// services/user.service.ts
-// ─────────────────────────────────────────────────────────────────────────────
-import { UserData, UserNFT, UserListing, UserTokenBid, UserCollectionBid, Activity, EnrichedUserNFT } from "@/types/user.types"
+import { Address, isAddress } from "viem"
+import { UserCollectionSummary, UserPageData, UserListing, UserTokenBid, UserCollectionBid, Activity, UserProfile, ProfileNftOption } from "@/types/user.types"
+import { clampInt } from "@/lib/validation"
 
 import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
 const DEFAULT_CHAIN = DEFAULT_CHAIN_ID
 
 export class UserService {
-  static async getUserData(supabase: SupabaseClient, userAddress: Address): Promise<any> {
+  /**
+   * Public profile row for a wallet (username, bio and selected PFP).
+   */
+  static async getUserProfile(supabase: SupabaseClient, userAddress: Address): Promise<UserProfile | null> {
+    if (!isAddress(userAddress)) return null
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, wallet, username, bio, avatar_url, created_at")
+      .eq("wallet", userAddress.toLowerCase())
+      .maybeSingle()
+
+    if (error) throw error
+    return (data as UserProfile | null) ?? null
+  }
+
+  /**
+   * NFTs owned by the wallet that have an image, used as PFP choices.
+   */
+  static async getProfileAvatarOptions(supabase: SupabaseClient, userAddress: Address): Promise<ProfileNftOption[]> {
+    if (!isAddress(userAddress)) return []
+
+    const { data, error } = await supabase
+      .from("nfts")
+      .select("id, collection_address, token_id, name, image_url")
+      .eq("owner_wallet", userAddress.toLowerCase())
+      .eq("chain_id", DEFAULT_CHAIN)
+      .not("image_url", "is", null)
+      .order("name", { ascending: true })
+      .limit(300)
+
+    if (error) throw error
+
+    return (data ?? [])
+      .filter((nft) => Boolean(nft.image_url))
+      .map((nft) => ({
+        id: nft.id,
+        collection_address: nft.collection_address as Address,
+        token_id: nft.token_id,
+        name: nft.name,
+        image_url: nft.image_url as string,
+      }))
+  }
+
+  static async getUserData(supabase: SupabaseClient, userAddress: Address): Promise<UserPageData> {
     const [listingsRes, colBidsRes, tokenBidsRes, collectionsRes, nftsRes, activityRes] = await Promise.allSettled([
       this.getUserListings(supabase, userAddress),
       this.getUserCollectionBids(supabase, userAddress),
       this.getUserTokenBids(supabase, userAddress),
       this.getUserCollections(supabase, userAddress),
-      this.getUserNFTsPaginated(supabase, userAddress, { page: 1, limit: 24 }),
+      // Match the inventory's default sort so the first render is consistent
+      // with the sort indicator shown in the UI.
+      this.getUserNFTsPaginated(supabase, userAddress, { page: 1, limit: 24, sortBy: "price", sortDir: "asc" }),
       this.getUserActivityPaginated(supabase, userAddress, { page: 1, limit: 24 }),
     ])
 
@@ -93,7 +136,7 @@ export class UserService {
   /**
    * Collections related to the user (owned NFTs, placed bids).
    */
-  static async getUserCollections(supabase: SupabaseClient, userAddress: Address): Promise<any[]> {
+  static async getUserCollections(supabase: SupabaseClient, userAddress: Address): Promise<UserCollectionSummary[]> {
     const addr = userAddress.toLowerCase()
 
     const [nftColRes, colBidRes, tokenBidRes] = await Promise.all([
@@ -104,50 +147,60 @@ export class UserService {
       supabase.from("token_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("is_active", true),
     ])
 
-    const map = new Map<string, any>()
+    type OwnedCollectionRow = UserCollectionSummary & {
+      user_nfts?: Array<{ owner_wallet: string; collection_address: string }>
+    }
+    type BidJoinRow = {
+      collections: UserCollectionSummary | UserCollectionSummary[] | null
+    }
 
-    nftColRes.data?.forEach((item: any) => {
-      map.set(item.contract_address, {
-        ...item,
-        user_nft_count: item.user_nfts?.length ?? 0,
+    const map = new Map<string, UserCollectionSummary>()
+    const normalize = (address: string | null | undefined) => (address ?? "").toLowerCase()
+
+    const joinCollection = (value: BidJoinRow["collections"]) => (Array.isArray(value) ? value[0] : value)
+
+    const addBidFlag = (value: BidJoinRow["collections"], flag: "has_collection_bid" | "has_token_bid") => {
+      const collection = joinCollection(value)
+      const contract = normalize(collection?.contract_address)
+      if (!collection || !contract) return
+
+      const normalized = { ...collection, contract_address: contract as Address }
+      const existing = map.get(contract)
+      if (existing) {
+        existing[flag] = true
+      } else {
+        map.set(contract, {
+          ...normalized,
+          user_nft_count: 0,
+          has_nfts: false,
+          has_collection_bid: flag === "has_collection_bid",
+          has_token_bid: flag === "has_token_bid",
+        })
+      }
+    }
+
+    for (const item of (nftColRes.data ?? []) as OwnedCollectionRow[]) {
+      const { user_nfts, ...collection } = item
+      const contract = normalize(collection.contract_address)
+      if (!contract) continue
+
+      map.set(contract, {
+        ...collection,
+        contract_address: contract as Address,
+        user_nft_count: user_nfts?.length ?? 0,
         has_nfts: true,
         has_collection_bid: false,
         has_token_bid: false,
-        user_nfts: undefined,
       })
-    })
+    }
 
-    colBidRes.data?.forEach((item: any) => {
-      const col = item.collections
-      const existing = map.get(col.contract_address)
-      if (existing) {
-        existing.has_collection_bid = true
-      } else {
-        map.set(col.contract_address, {
-          ...col,
-          user_nft_count: 0,
-          has_nfts: false,
-          has_collection_bid: true,
-          has_token_bid: false,
-        })
-      }
-    })
+    for (const item of (colBidRes.data ?? []) as BidJoinRow[]) {
+      addBidFlag(item.collections, "has_collection_bid")
+    }
 
-    tokenBidRes.data?.forEach((item: any) => {
-      const col = item.collections
-      const existing = map.get(col.contract_address)
-      if (existing) {
-        existing.has_token_bid = true
-      } else {
-        map.set(col.contract_address, {
-          ...col,
-          user_nft_count: 0,
-          has_nfts: false,
-          has_collection_bid: false,
-          has_token_bid: true,
-        })
-      }
-    })
+    for (const item of (tokenBidRes.data ?? []) as BidJoinRow[]) {
+      addBidFlag(item.collections, "has_token_bid")
+    }
 
     return Array.from(map.values()).sort((a, b) => {
       if (a.has_nfts !== b.has_nfts) return a.has_nfts ? -1 : 1
@@ -177,8 +230,11 @@ export class UserService {
       sortDir?: "asc" | "desc"
     },
   ): Promise<{ activity: Activity[]; page: number; limit: number; total: number; totalPages: number }> {
-    const { page = 1, limit = 24, sortDir = "desc" } = options || {}
+    const { sortDir = "desc" } = options || {}
+    if (!isAddress(userAddress)) throw new Error("Invalid wallet address")
 
+    const page = clampInt(options?.page, 1, 1, 100_000)
+    const limit = clampInt(options?.limit, 24, 1, 100)
     const from = (page - 1) * limit
     const to = from + limit - 1
     const addr = userAddress.toLowerCase()
@@ -193,9 +249,9 @@ export class UserService {
 
     if (error) throw error
 
-    const activity = (data || []).map((item: any) => ({
+    const activity = (data || []).map((item) => ({
       ...item,
-      type: item.event,
+      type: item.event as Activity["type"],
     })) as Activity[]
 
     return {

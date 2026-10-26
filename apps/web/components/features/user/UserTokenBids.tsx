@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { FaEthereum, FaInbox } from "react-icons/fa"
+import { useMemo, useState } from "react"
+import { FaInbox } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useTx } from "@/app/context/TxContext"
+import { waitForTxConfirmation } from "@/lib/tx"
 import { useAccount, usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { Collection, UserTokenBid } from "@/types/user.types"
@@ -23,7 +25,6 @@ interface UserTokenBidsProps {
 
 export default function UserTokenBids({ tokenBids, selectedCollection, batchOps, collections, userAddress }: UserTokenBidsProps) {
   const [bids, setBids] = useState(tokenBids)
-  const [sortedBids, setSortedBids] = useState(tokenBids)
   const { addTx, removeTx, updateTx } = useTx()
   const publicClient = usePublicClient()
   const { address } = useAccount()
@@ -33,9 +34,11 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
   const { cancelTokenBids } = useCancelTokenBidBatch()
 
   // Sync when the server re-delivers a fresh list (e.g. router.refresh()).
-  useEffect(() => {
+  const [prevTokenBids, setPrevTokenBids] = useState(tokenBids)
+  if (tokenBids !== prevTokenBids) {
+    setPrevTokenBids(tokenBids)
     setBids(tokenBids)
-  }, [tokenBids])
+  }
 
   // Live bid updates: new/updated/cancelled rows from the indexer arrive here
   // without a reload, so the "my bids" view reflects the DB as it changes.
@@ -55,37 +58,44 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
     },
   })
 
-  useEffect(() => {
-    if (bids && address) {
-      let _tokenBids = bids.filter((b) => String(b.bidder_wallet).toLowerCase() === String(address).toLowerCase())
-      if (selectedCollection) {
-        _tokenBids = _tokenBids.filter((b) => String(b.collection_address).toLowerCase() === String(selectedCollection).toLowerCase())
-      }
-      setSortedBids([..._tokenBids].sort((a, b) => Number(b.price) - Number(a.price)))
+  const sortedBids = useMemo(() => {
+    if (!address) return []
+
+    let visibleBids = bids.filter((bid) => String(bid.bidder_wallet).toLowerCase() === String(address).toLowerCase())
+    if (selectedCollection) {
+      visibleBids = visibleBids.filter((bid) => String(bid.collection_address).toLowerCase() === String(selectedCollection).toLowerCase())
     }
+    return [...visibleBids].sort((a, b) => Number(b.price) - Number(a.price))
   }, [bids, address, selectedCollection])
 
   const handleCancelBids = async () => {
     if (!cancelTokenBidBatch.length) return
-    let hash: any
+    let hash: `0x${string}` | undefined
     try {
-      if (cancelTokenBidBatch.length > 1) {
+      const bids = cancelTokenBidBatch.filter(
+      (bid): bid is UserTokenBid & { collection_address: Address; token_id: string } => Boolean(bid.collection_address) && Boolean(bid.token_id),
+    )
+    if (!bids.length) return
+
+    if (bids.length > 1) {
         hash = await cancelTokenBids(
-          cancelTokenBidBatch.map((b) => b.collection_address),
-          cancelTokenBidBatch.map((b) => BigInt(b.token_id)),
+          bids.map((b) => b.collection_address),
+          bids.map((b) => BigInt(b.token_id)),
         )
         addTx({ hash, status: "loading", label: "Cancelling token bids" })
       } else {
-        hash = await cancelTokenBid(cancelTokenBidBatch[0].collection_address, Number(cancelTokenBidBatch[0].token_id))
+        hash = await cancelTokenBid(bids[0].collection_address, Number(bids[0].token_id))
         addTx({ hash, status: "loading", label: "Cancelling token bids" })
       }
-      await publicClient?.waitForTransactionReceipt({ hash })
+      await waitForTxConfirmation(publicClient, hash)
       updateTx(hash, { status: "success", label: "Cancelled!" })
       clearBatch("cancelTokenBid")
-      removeTx(hash)
-    } catch (e) {
-      updateTx(hash, { status: "error", label: "Cancelling error!" })
-      removeTx(hash)
+      setTimeout(() => removeTx(hash!), 5000)
+    } catch {
+      if (hash) {
+        updateTx(hash, { status: "error", label: "Cancelling error!" })
+        setTimeout(() => removeTx(hash!), 6000)
+      }
     }
   }
 
@@ -116,11 +126,11 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
 
         <div>
           {!!sortedBids &&
-            sortedBids.map((c: any, index: number) => {
-              const col = collections.find((col: Collection) => col.contract_address.toLowerCase() == c.collection_address.toLowerCase())
+            sortedBids.map((c) => {
+              const col = collections.find((col) => col.contract_address.toLowerCase() == String(c.collection_address).toLowerCase())
               const colName = col ? col.name : "-"
               return (
-                <div key={index} className="flex items-center  relative  ">
+                <div key={c.id} className="flex items-center  relative  ">
                   <div className="flex-1 gap-2 items-center">
                     <Link href={`/collection/${c.collection_address}`} target="_blank">
                       {colName} #{c.token_id}
@@ -129,7 +139,7 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
                   <span className="flex-1 py-2 pl-6 flex  relative z-10">
                     <div className="flex gap-2 items-center">
                       <span>{Number(c.price) / 1e18}</span>
-                      <FaEthereum />
+                      <HypeIcon />
                     </div>
                   </span>
                   <div className="flex absolute z-10 right-0 justify-end">

@@ -1,42 +1,48 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { FaGavel, FaTrash, FaEthereum } from "react-icons/fa"
+import { useState } from "react"
+import { FaGavel, FaTrash } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { RiNftFill } from "react-icons/ri"
 import { useBidToken, useBidTokenBatch } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
-import { UserNFT } from "@/types/user.types"
+import { BatchNFT } from "@/types/user.types"
 import { usePublicClient } from "wagmi"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { Modal } from "@/components/ui/Modal"
+import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { dateToEpochSeconds } from "@/lib/dates"
+import { waitForTxConfirmation } from "@/lib/tx"
 
-interface BidItemWithPrice extends UserNFT {
-  priceEth?: string
+interface BidItemWithPrice extends BatchNFT {
+  expiresAt?: Date
+  priceHype?: string
   bidPrice?: bigint
 }
 
 interface BidCardProps {
-  items: UserNFT[]
+  items: BatchNFT[]
   collectionAddress: string
   collectionName?: string | null
   onClose: () => void
   onSuccess?: () => void
-  onRemoveItem: (item: UserNFT) => void
+  onRemoveItem: (item: BatchNFT) => void
 }
 
 export function BidCard({ items, collectionAddress, collectionName, onClose, onSuccess, onRemoveItem }: BidCardProps) {
   const [priceAll, setPriceAll] = useState<string>("")
-  const [bidItems, setBidItems] = useState<BidItemWithPrice[]>(items.map((item) => ({ ...item, priceEth: "", bidPrice: BigInt(0) })))
+  const [bidItems, setBidItems] = useState<BidItemWithPrice[]>(items.map((item) => ({ ...item, priceHype: "", bidPrice: BigInt(0) })))
 
   const { bidToken } = useBidToken()
   const publicClient = usePublicClient()
   const { bidTokenBatch } = useBidTokenBatch()
   const { addTx, removeTx, updateTx } = useTx()
 
-  useEffect(() => {
-    setBidItems(items.map((item) => ({ ...item, priceEth: "", bidPrice: BigInt(0) })))
-  }, [items])
+  const [prevItems, setPrevItems] = useState(items)
+  if (items !== prevItems) {
+    setPrevItems(items)
+    setBidItems(items.map((item) => ({ ...item, priceHype: "", bidPrice: BigInt(0) })))
+  }
 
   // Total value needed across all bids
   const totalValue = bidItems.reduce((total, item) => {
@@ -51,13 +57,13 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
       return
     }
 
-    let hash: any
+    let hash: `0x${string}` | undefined
     try {
       if (validItems.length > 1) {
         // Bid batch
         const tokenIds = validItems.map((item) => BigInt(item.token_id))
         const prices = validItems.map((item) => item.bidPrice as bigint)
-        const expiresAts = validItems.map((item: any) => dateToEpochSeconds(item.expiresAt))
+        const expiresAts = validItems.map((item) => dateToEpochSeconds(item.expiresAt))
         const totalVal = prices.reduce((sum, price) => sum + price, BigInt(0))
 
         hash = await bidTokenBatch(collectionAddress as `0x${string}`, tokenIds, prices, totalVal, expiresAts)
@@ -68,7 +74,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
         })
       } else {
         // Bid individual
-        const item: any = validItems[0]
+        const item = validItems[0]
         hash = await bidToken(collectionAddress as `0x${string}`, BigInt(item.token_id), item.bidPrice as bigint, dateToEpochSeconds(item.expiresAt))
         addTx({
           hash,
@@ -77,22 +83,20 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
         })
       }
 
-      if (hash && publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash })
-        updateTx(hash, {
-          status: "success",
-          label: validItems.length > 1 ? `${validItems.length} bids placed!` : "Bid placed!",
-        })
+      await waitForTxConfirmation(publicClient, hash)
+      updateTx(hash, {
+        status: "success",
+        label: validItems.length > 1 ? `${validItems.length} bids placed!` : "Bid placed!",
+      })
 
-        removeTx(hash)
-        onSuccess?.()
-        onClose()
-      }
+      setTimeout(() => removeTx(hash!), 5000)
+      onSuccess?.()
+      onClose()
     } catch (error) {
       console.error("Bid error:", error)
       if (hash) {
         updateTx(hash, { status: "error", label: "Bid failed!" })
-        removeTx(hash)
+        setTimeout(() => removeTx(hash!), 6000)
       }
     }
   }
@@ -103,7 +107,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
 
     const bidPrice = value === "" || value === "." ? undefined : BigInt(Math.floor(Number(value) * 1e18))
 
-    setBidItems((prev) => prev.map((item) => (item.token_id === tokenId ? { ...item, priceEth: value, bidPrice } : item)))
+    setBidItems((prev) => prev.map((item) => (item.token_id === tokenId ? { ...item, priceHype: value, bidPrice } : item)))
   }
 
   const updateItemExpirationDate = (tokenId: string, collection: string, expiresAt: Date) => {
@@ -120,7 +124,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
     setBidItems((prev) =>
       prev.map((item) => ({
         ...item,
-        priceEth: value,
+        priceHype: value,
         bidPrice,
       })),
     )
@@ -155,11 +159,11 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
 
           {/* Items list - scrollable */}
           <div className="overflow-y-auto max-h-[50vh]">
-            {bidItems.map((item: any) => (
+            {bidItems.map((item) => (
               <div key={`${item.collection_address}-${item.token_id}`} className="flex justify-between items-center p-6 ">
                 {/* Token info */}
                 <div className="flex flex-2 items-center gap-4">
-                  <div className="w-13 rounded-xl overflow-hidden">{item.image_url ? <img src={item.image_url} /> : <RiNftFill className="text-2xl opacity-75" />}</div>
+                  <div className="w-13 rounded-xl overflow-hidden">{item.image_url ? <IpfsImage src={item.image_url} alt={`#${item.token_id}`} className="w-full h-full object-cover" /> : <RiNftFill className="text-2xl opacity-75" />}</div>
 
                   <div className="flex flex-col items-start">
                     <span className="font-bold">#{item.token_id}</span>
@@ -172,7 +176,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
                   {item.price ? (
                     <>
                       <span>{(Number(item.price) / 1e18).toFixed(4)}</span>
-                      <FaEthereum />
+                      <HypeIcon />
                     </>
                   ) : (
                     <span className="opacity-50">-</span>
@@ -184,10 +188,10 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
                   <input
                     type="text"
                     inputMode="decimal"
-                    value={item.priceEth ?? ""}
+                    value={item.priceHype ?? ""}
                     onChange={(e) => updateItemPrice(item.token_id, e.target.value)}
                     className="rounded p-2 text-sm w-[60%]"
-                    placeholder="0.00 ETH"
+                    placeholder="0.00 HYPE"
                   />
                 </div>
 
@@ -211,7 +215,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
               <span className="text-xl font-bold ">Total balance needed: </span>
               <div className="flex items-center gap-2 text-xl">
                 <span>{(Number(totalValue) / 1e18).toFixed(4)}</span>
-                <FaEthereum />
+                <HypeIcon />
               </div>
             </div>
             {/* Set all price */}
@@ -225,7 +229,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
                     value={priceAll}
                     onChange={(e) => updateAllPrices(e.target.value)}
                     className="text-sm rounded w-32 p-2 border border-(--text)/20"
-                    placeholder="0.00 ETH"
+                    placeholder="0.00 HYPE"
                   />
                 </div>
               </div>

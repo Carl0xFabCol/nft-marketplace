@@ -1,9 +1,9 @@
 "use client"
 import { TopCollectionsSlider } from "./TopColsSlider"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Collection } from "@/types/user.types"
 import Link from "next/link"
-import { FaEthereum } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { MdOutlineVerified } from "react-icons/md"
 
 interface props {
@@ -11,12 +11,10 @@ interface props {
   initialCollections24: Collection[]
 }
 export function TopCols24({ initialCollections, initialCollections24 }: props) {
-  const [shownCollections, setShownCollections] = useState<Collection[]>(initialCollections)
   const [collectionsType, setCollectionsType] = useState<"trending" | "top">("top")
-
-  useEffect(() => {
-    setShownCollections(collectionsType == "top" ? initialCollections : initialCollections24)
-  }, [collectionsType])
+  // Derived directly from props so the list can never go stale when the server
+  // re-renders with fresh collections.
+  const shownCollections = collectionsType === "top" ? initialCollections : initialCollections24
 
   return (
     <div className="w-full pb-4">
@@ -71,10 +69,10 @@ export function TopCols24({ initialCollections, initialCollections24 }: props) {
 
                 {/* Floor price */}
                 <div className="flex flex-1 items-center gap-1">
-                  {collection.floor_price !== null && collection.floor_price.toString() !== "-" ? (
+                  {collection.floor_price != null ? (
                     <>
-                      <span>{typeof collection.floor_price === "number" ? (Number(collection.floor_price) / 1e18).toFixed(3) : Number(collection.floor_price) / 1e18}</span>
-                      <FaEthereum className="text-xs" />
+                      <span>{(Number(collection.floor_price) / 1e18).toFixed(3)}</span>
+                      <HypeIcon className="text-xs" />
                     </>
                   ) : (
                     <span>-</span>
@@ -83,10 +81,8 @@ export function TopCols24({ initialCollections, initialCollections24 }: props) {
 
                 {/* Royalty fee */}
                 <div className="flex flex-1 items-center gap-1">
-                  {collection.royalty_fee?.toString() !== "-" ? (
-                    <>
-                      <span>{Number(collection.royalty_fee) / 100}%</span>
-                    </>
+                  {collection.royalty_fee != null ? (
+                    <span>{Number(collection.royalty_fee) / 100}%</span>
                   ) : (
                     <span>-</span>
                   )}
@@ -94,10 +90,10 @@ export function TopCols24({ initialCollections, initialCollections24 }: props) {
 
                 {/* Total volume */}
                 <div className="flex flex-1 items-center gap-1">
-                  {collection.total_volume?.toString() !== "-" ? (
+                  {collection.total_volume != null ? (
                     <>
-                      <span>{collection.total_volume?.toString()}</span>
-                      <FaEthereum className="text-xs" />
+                      <span>{collection.total_volume}</span>
+                      <HypeIcon className="text-xs" />
                     </>
                   ) : (
                     <span>-</span>

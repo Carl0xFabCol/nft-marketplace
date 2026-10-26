@@ -1,24 +1,30 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { useDisconnect, useSwitchChain, useBalance, useSignMessage, useConnection } from "wagmi"
 import { LuWallet } from "react-icons/lu"
 import { CHAIN_ID, SUPPORTED_CHAIN_IDS } from "@/lib/chains"
-import { FaEthereum } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useAuth } from "@/components/AuthProvider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
 
-export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
+interface ConnectWalletProps {
+  textMsg: string
+  setWalletOptionsCard?: (open: boolean) => void
+}
+
+const emptySubscribe = () => () => {}
+
+export default function ConnectWallet({ textMsg, setWalletOptionsCard }: ConnectWalletProps) {
   const router = useRouter()
   const { session } = useAuth()
-  const [mounted, setMounted] = useState(false)
-  const [loggedIn, setLoggedIn] = useState(!!session)
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  )
+  const loggedIn = !!session
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-    setLoggedIn(!!session)
-  }, [session])
 
   const { address, isConnected, chainId } = useConnection()
   const { disconnect } = useDisconnect()
@@ -66,12 +72,11 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
       })
 
       if (sessionError) {
-        console.error("Error al establecer la sesión:", sessionError)
+        console.error("Error establishing the session:", sessionError)
         setError("Could not establish the session. Please try again.")
         return
       }
 
-      setLoggedIn(true)
       router.push("/")
       router.refresh()
     } catch (err) {
@@ -96,14 +101,12 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
         <span className="px-4 p-2 h-full flex items-center lg:border-r border-(--bg) gap-2">
           <span>{balance?.value && (Number(balance.value) / 1e18).toFixed(3)}</span>
           <span className="opacity-75">
-            <FaEthereum />
+            <HypeIcon />
           </span>
         </span>
         <div>{address && <div>{`${address?.slice(0, 6)}...${address?.slice(-6)}`}</div>}</div>
         <button
           onClick={() => {
-            setLoggedIn(false)
-
             disconnect()
           }}
           className="px-3 bg-transparent! text-(--accent)! py-1 h-full rounded lg:rounded-none"
@@ -126,7 +129,7 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: any) {
   }
 
   return (
-    <button onClick={() => setWalletOptionsCard(true)} className="px-3 py-1 rounded w-full text-center">
+    <button onClick={() => setWalletOptionsCard?.(true)} className="px-3 py-1 rounded w-full text-center">
       <span className="flex w-full items-center gap-2 justify-center">
         {textMsg}
         <LuWallet />

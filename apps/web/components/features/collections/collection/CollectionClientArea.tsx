@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
 import { FaUsers, FaGavel, FaSearch } from "react-icons/fa"
 import { HiOutlineCollection } from "react-icons/hi"
 import { IoIosArrowDown } from "react-icons/io"
@@ -18,13 +18,13 @@ import { useRealtimeListings } from "@/hooks/useRealtimeListings"
 import { upsertListingIntoNfts, deactivateListingInNfts } from "@/lib/listingMerge"
 import { SortBy, SortDir } from "@/lib/constants"
 import { NFTService } from "@/services/nft.service"
-import { UserListing } from "@/types/user.types"
+import { EnrichedUserNFT, UserCollectionBid, UserListing } from "@/types/user.types"
 
 interface CollectionClientAreaProps {
   colAddress: Address
-  collectionBids: any[]
+  collectionBids: UserCollectionBid[]
   initialNftsData: {
-    nfts: any[]
+    nfts: EnrichedUserNFT[]
     page: number
     limit: number
     total: number
@@ -83,7 +83,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
   const floorPrice = useMemo(() => {
     // If NFTs are loaded with listings, compute from them to reflect the
     // current page state (may differ right after a recent sale).
-    const prices = nfts.map((nft: any) => (nft.active_listing?.price ? BigInt(nft.active_listing.price) : null)).filter((p): p is bigint => p !== null)
+    const prices = nfts.map((nft) => (nft.active_listing?.price ? BigInt(nft.active_listing.price) : null)).filter((p): p is bigint => p !== null)
 
     if (!prices.length) return BigInt(initialFloorPrice)
     return prices.reduce((min, price) => (price < min ? price : min))
@@ -92,7 +92,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
   const updateNFTAfterBuy = useCallback(
     (tokenIds: string[]) => {
       batchOps.clearAllBatches()
-      setNfts((prev) => prev.map((nft) => (tokenIds.includes(nft.token_id.toString()) ? { ...nft, active_listing: null, owner_wallet: address } : nft)))
+      setNfts((prev) => prev.map((nft) => (tokenIds.includes(nft.token_id.toString()) ? { ...nft, active_listing: null, owner_wallet: address ?? nft.owner_wallet } : nft)))
     },
     [address, batchOps],
   )
@@ -115,8 +115,8 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
       setNfts(data.nfts)
       setCurrentPage(1)
       setHasMore(data.hasMore)
-    } catch (error: any) {
-      if (error?.name === "AbortError") return
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return
       console.error("Error loading first page:", error)
     } finally {
       setIsLoading(false)
@@ -151,14 +151,14 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
 
       setNfts((prev) => {
         const existingIds = new Set(prev.map((nft) => nft.token_id))
-        const newNfts = data.nfts.filter((nft: any) => !existingIds.has(nft.token_id))
+        const newNfts = data.nfts.filter((nft) => !existingIds.has(nft.token_id))
         return [...prev, ...newNfts]
       })
 
       setCurrentPage(nextPage)
       setHasMore(data.hasMore)
-    } catch (error: any) {
-      if (error?.name === "AbortError") return
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return
       console.error("Error loading more NFTs:", error)
     } finally {
       setIsLoading(false)
@@ -191,7 +191,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
   const filteredNFTs = useMemo(() => {
     if (!searchQuery) return nfts
     const q = searchQuery.toLowerCase()
-    return nfts.filter((nft: any) => nft.token_id.toString().includes(q) || nft.metadata?.name?.toLowerCase().includes(q) || nft.collection_address.toLowerCase() === q)
+    return nfts.filter((nft) => nft.token_id.toString().includes(q) || nft.metadata?.name?.toLowerCase().includes(q) || nft.collection_address.toLowerCase() === q)
   }, [nfts, searchQuery])
 
   // Local re-sort only when a search is active
@@ -199,7 +199,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
   const sortedNFTs = useMemo(() => {
     if (!searchQuery) return filteredNFTs
 
-    return [...filteredNFTs].sort((a: any, b: any) => {
+    return [...filteredNFTs].sort((a, b) => {
       if (sortBy === "id") {
         const diff = BigInt(a.token_id) > BigInt(b.token_id) ? 1 : -1
         return sortDir === "asc" ? diff : -diff
@@ -303,7 +303,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
           <div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 pr-2">
               <AnimatePresence>
-                {sortedNFTs.map((nft: any) => (
+                {sortedNFTs.map((nft) => (
                   <NFTCard
                     key={`${nft.token_id}-${nft.collection_address}`}
                     token={{

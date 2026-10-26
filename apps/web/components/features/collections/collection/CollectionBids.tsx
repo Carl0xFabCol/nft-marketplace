@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
-import { FaEthereum, FaInbox } from "react-icons/fa"
+import { useMemo, useState } from "react"
+import { FaInbox } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useAccount } from "wagmi"
 import { Address } from "viem"
 import { UserCollectionBid } from "@/types/user.types"
@@ -18,14 +19,14 @@ interface CollectionBidsProps {
 
 export default function CollectionBids({ collectionBids, allBids = true, collectionAddress }: CollectionBidsProps) {
   const [bids, setBids] = useState<UserCollectionBid[]>(collectionBids)
-  const [totalSize, setTotalSize] = useState<number>(0)
-  const [sorted, setSorted] = useState<UserCollectionBid[]>([])
   const { address } = useAccount()
 
   // Sync when the server re-delivers fresh bids (e.g. router.refresh()).
-  useEffect(() => {
+  const [prevCollectionBids, setPrevCollectionBids] = useState(collectionBids)
+  if (collectionBids !== prevCollectionBids) {
+    setPrevCollectionBids(collectionBids)
     setBids(collectionBids)
-  }, [collectionBids])
+  }
 
   // Live bid updates: a new collection bid shows up instantly; a cancelled one
   // disappears without a reload.
@@ -45,15 +46,12 @@ export default function CollectionBids({ collectionBids, allBids = true, collect
     },
   })
 
-  useEffect(() => {
-    if (!bids) return
-    const _collectionBids = allBids ? bids : bids.filter((bid) => String(bid.bidder_wallet).toLowerCase() === String(address).toLowerCase())
-    setTotalSize(
-      _collectionBids.reduce((size, bid) => {
-        return size + Number(bid.quantity)
-      }, 0),
-    )
-    setSorted([..._collectionBids].sort((a, b) => Number(b.price) - Number(a.price)))
+  const { totalSize, sorted } = useMemo(() => {
+    const visibleBids = allBids ? bids : bids.filter((bid) => String(bid.bidder_wallet).toLowerCase() === String(address).toLowerCase())
+    return {
+      totalSize: visibleBids.reduce((size, bid) => size + Number(bid.quantity), 0),
+      sorted: [...visibleBids].sort((a, b) => Number(b.price) - Number(a.price)),
+    }
   }, [bids, allBids, address])
 
   return (
@@ -65,7 +63,7 @@ export default function CollectionBids({ collectionBids, allBids = true, collect
               <span>Price</span>
               <div className="flex gap-2">
                 <span>(</span>
-                <FaEthereum />
+                <HypeIcon />
                 <span>)</span>
               </div>
             </div>
@@ -75,11 +73,11 @@ export default function CollectionBids({ collectionBids, allBids = true, collect
         </div>
 
         <div className="rounded overflow-hidden">
-          {sorted.map((c: any, index: number) => {
+          {sorted.map((c) => {
             const percent = ((Number(c.quantity) / totalSize) * 100).toFixed(0)
 
             return (
-              <div key={index} className=" relative flex  ">
+              <div key={c.id} className=" relative flex  ">
                 <span className="p-2 flex-1  relative z-3 ">{Number(c.price) / 1e18}</span>
                 <span className="p-2 flex-1 relative z-3">{c.quantity}</span>
                 <Link href={`/user/${c.bidder_wallet}`} className="p-2 flex-1 relative z-3 hover:opacity-50">

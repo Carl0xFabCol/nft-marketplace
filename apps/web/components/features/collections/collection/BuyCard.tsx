@@ -1,20 +1,22 @@
 "use client"
 
-import { FaShoppingCart, FaTrash, FaEthereum } from "react-icons/fa"
+import { FaShoppingCart, FaTrash } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { RiNftFill } from "react-icons/ri"
 import { useBuy, useBuyBatch } from "@/hooks/useBuyActions"
 import { useTx } from "@/app/context/TxContext"
-import { UserNFT } from "@/types/user.types"
-import { Address } from "viem"
+import { BatchNFT } from "@/types/user.types"
 import { usePublicClient } from "wagmi"
 import { Modal } from "@/components/ui/Modal"
+import { IpfsImage } from "@/components/features/nft/IpfsImage"
+import { waitForTxConfirmation } from "@/lib/tx"
 
 interface BuyCardProps {
-  items: UserNFT[]
+  items: BatchNFT[]
   collectionName?: string
   onClose: () => void
-  onSuccess?: (tokenIds: any[]) => void
-  onRemoveItem: (item: UserNFT) => void
+  onSuccess?: (tokenIds: string[]) => void
+  onRemoveItem: (item: BatchNFT) => void
 }
 
 export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveItem }: BuyCardProps) {
@@ -23,17 +25,18 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
   const publicClient = usePublicClient()
   const { addTx, removeTx, updateTx } = useTx()
 
-  const totalPrice = items.reduce((total, item: any) => {
-    return total + BigInt(item.price || 0)
+  const totalPrice = items.reduce((total, item) => {
+    const price = item.active_listing?.price ?? item.price ?? 0
+    return total + BigInt(price)
   }, BigInt(0))
 
   const handleBuy = async () => {
     if (!items.length) return
 
-    let hash: any
+    let hash: `0x${string}` | undefined
     try {
       if (items.length > 1) {
-        // Compra batch
+        // Batch purchase
         const collections = items.map((item) => item.collection_address)
         const tokenIds = items.map((item) => BigInt(item.token_id))
 
@@ -44,9 +47,10 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
           label: `Buying ${items.length} items...`,
         })
       } else {
-        // Compra individual
-        const item: any = items[0]
-        hash = await buy(item.collection_address, BigInt(item.token_id), BigInt(item.price))
+        // Single purchase
+        const item = items[0]
+        const price = item.active_listing?.price ?? item.price ?? 0
+        hash = await buy(item.collection_address, BigInt(item.token_id), BigInt(price))
         addTx({
           hash,
           status: "loading",
@@ -54,23 +58,21 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
         })
       }
 
-      if (hash && publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash })
-        updateTx(hash, {
-          status: "success",
-          label: items.length > 1 ? `Bought ${items.length} items!` : "Item purchased!",
-        })
-        const tokenIds = items.map((item) => String(item.token_id))
-        removeTx(hash)
+      await waitForTxConfirmation(publicClient, hash)
+      updateTx(hash, {
+        status: "success",
+        label: items.length > 1 ? `Bought ${items.length} items!` : "Item purchased!",
+      })
+      const tokenIds = items.map((item) => String(item.token_id))
+      setTimeout(() => removeTx(hash!), 5000)
 
-        onSuccess?.(tokenIds)
-        onClose()
-      }
+      onSuccess?.(tokenIds)
+      onClose()
     } catch (error) {
       console.error("Buy error:", error)
       if (hash) {
         updateTx(hash, { status: "error", label: "Purchase failed!" })
-        removeTx(hash)
+        setTimeout(() => removeTx(hash!), 6000)
       }
     }
   }
@@ -96,11 +98,11 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
 
           {/* Items list - scrollable */}
           <div className="overflow-y-auto max-h-[50vh]">
-            {items.map((item: any) => (
+            {items.map((item) => (
               <div key={`${item.collection_address}-${item.token_id}`} className="flex justify-between items-center px-6 py-3  ">
                 {/* Token info */}
                 <div className="flex flex-2 items-center gap-4">
-                  <div className="w-13 rounded-xl overflow-hidden">{item.image_url ? <img src={item.image_url} /> : <RiNftFill className="text-2xl opacity-75" />}</div>
+                  <div className="w-13 rounded-xl overflow-hidden">{item.image_url ? <IpfsImage src={item.image_url} alt={`#${item.token_id}`} className="w-full h-full object-cover" /> : <RiNftFill className="text-2xl opacity-75" />}</div>
 
                   <div className="flex flex-col items-start">
                     <span className="font-bold">#{item.token_id}</span>
@@ -111,7 +113,7 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
                 {/* Price */}
                 <div className="flex flex-1 justify-center items-center gap-2 font-bold">
                   <span>{(Number(item.price) / 1e18).toFixed(4)}</span>
-                  <FaEthereum />
+                  <HypeIcon />
                 </div>
 
                 {/* Remove button */}
@@ -130,7 +132,7 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
               <span className="text-xl font-bold">Total Price: </span>
               <div className="flex items-center gap-2 text-xl ">
                 <span>{(Number(totalPrice) / 1e18).toFixed(4)}</span>
-                <FaEthereum />
+                <HypeIcon />
               </div>
             </div>
 

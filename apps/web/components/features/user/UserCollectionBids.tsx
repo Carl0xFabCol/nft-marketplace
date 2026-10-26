@@ -3,9 +3,11 @@
 import { useCancelCollectionBid } from "@/hooks/useBidActions"
 import { Collection, UserCollectionBid } from "@/types/user.types"
 import Link from "next/link"
-import { useEffect, useState } from "react"
-import { FaEthereum, FaInbox } from "react-icons/fa"
+import { useMemo, useState } from "react"
+import { FaInbox } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useTx } from "@/app/context/TxContext"
+import { waitForTxConfirmation } from "@/lib/tx"
 import { usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
@@ -22,17 +24,17 @@ interface UserCollectionBidsProps {
 
 export default function UserCollectionBids({ collectionBids, collections, batchOps, userAddress }: UserCollectionBidsProps) {
   const [bids, setBids] = useState<UserCollectionBid[]>(collectionBids)
-  const [totalSize, setTotalSize] = useState<number>(0)
-  const [sorted, setSorted] = useState<UserCollectionBid[]>([])
   const publicClient = usePublicClient()
   const { cancelCollectionBidBatch, addToBatch, removeFromBatch, isInBatch } = batchOps
   const { cancelCollectionBid } = useCancelCollectionBid()
   const { addTx, removeTx, updateTx } = useTx()
 
   // Sync when the server re-delivers a fresh list (e.g. router.refresh()).
-  useEffect(() => {
+  const [prevCollectionBids, setPrevCollectionBids] = useState(collectionBids)
+  if (collectionBids !== prevCollectionBids) {
+    setPrevCollectionBids(collectionBids)
     setBids(collectionBids)
-  }, [collectionBids])
+  }
 
   // Live bid updates: new/updated/cancelled rows from the indexer arrive here
   // without a reload, so the "my bids" view reflects the DB as it changes.
@@ -52,51 +54,44 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
     },
   })
 
-  useEffect(() => {
-    if (bids) {
-      setSorted([...bids].sort((a, b) => Number(a.price) - Number(b.price)))
-      setTotalSize(
-        bids.reduce((sum, bid) => {
-          return (sum += Number(bid.price))
-        }, 0),
-      )
-    }
-  }, [bids])
+  const { sorted, totalSize } = useMemo(
+    () => ({
+      sorted: [...bids].sort((a, b) => Number(a.price) - Number(b.price)),
+      totalSize: bids.reduce((sum, bid) => sum + Number(bid.price), 0),
+    }),
+    [bids],
+  )
 
   const handleCancelCollectionBids = async () => {
-    const collectionAddresses = cancelCollectionBidBatch.map((i: any) => i.collection_address)
+    const collectionAddresses = cancelCollectionBidBatch.map((i) => i.collection_address).filter((address): address is Address => Boolean(address))
     if (!collectionAddresses.length) return
 
-    let hash: any
     try {
-      hash = await cancelCollectionBid(collectionAddresses[0])
-      addTx({
-        hash,
-        status: "loading",
-        label: `Cancelling ${collectionAddresses.length} bids...`,
-      })
-
-      // The contract has no batch cancel for collection bids — cancel each
-      // remaining collection sequentially (one tx per collection).
-      for (let i = 1; i < collectionAddresses.length; i++) {
-        await cancelCollectionBid(collectionAddresses[i])
-      }
-
-      if (hash && publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash })
-        updateTx(hash, {
-          status: "success",
-          label: `Cancelled ${collectionAddresses.length} bids!`,
+      // The contract has no batch cancel for collection bids — send and
+      // confirm one transaction per collection so every tx is tracked.
+      for (let i = 0; i < collectionAddresses.length; i++) {
+        const hash = await cancelCollectionBid(collectionAddresses[i])
+        addTx({
+          hash,
+          status: "loading",
+          label: `Cancelling bid ${i + 1}/${collectionAddresses.length}...`,
         })
 
-        removeTx(hash)
+        try {
+          await waitForTxConfirmation(publicClient, hash)
+          updateTx(hash, {
+            status: "success",
+            label: `Cancelled ${i + 1}/${collectionAddresses.length} bids!`,
+          })
+          setTimeout(() => removeTx(hash), 5000)
+        } catch (error) {
+          updateTx(hash, { status: "error", label: "Cancellation failed!" })
+          setTimeout(() => removeTx(hash), 6000)
+          throw error
+        }
       }
     } catch (error) {
       console.error("Cancel col bid error:", error)
-      if (hash) {
-        updateTx(hash, { status: "error", label: "Cancellation failed!" })
-        removeTx(hash)
-      }
     }
   }
 
@@ -127,13 +122,13 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
         </div>
 
         <div>
-          {sorted.map((c: any, index: number) => {
+          {sorted.map((c) => {
             const percent = ((Number(c.quantity) / totalSize) * 100).toFixed(0)
-            const collection = collections.find((col: Collection) => col.contract_address == c.collection_address)
+            const collection = collections.find((col) => col.contract_address == c.collection_address)
             const name = collection ? collection.name : "-"
             const col_address = collection ? collection.contract_address : "-"
             return (
-              <div key={index} className=" relative flex  ">
+              <div key={c.id} className=" relative flex  ">
                 <div className=" flex-1 py-2 pr-2   relative z-10">
                   <Link className="flex gap-2 items-center hover:opacity-75 w-fit" href={`/collection/${col_address}`}>
                     <span className=" ">{name}</span>
@@ -143,7 +138,7 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
                 <div className="p-2 flex-1 pr-5 pl-5 relative z-10  ">
                   <div className="flex gap-2 items-center">
                     <span>{Number(c.price) / 1e18}</span>
-                    <FaEthereum />
+                    <HypeIcon />
                   </div>
                 </div>
                 <span className="p-2 flex-1 relative z-10  ">{c.quantity}</span>

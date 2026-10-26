@@ -4,7 +4,8 @@
 "use client"
 
 import { useState } from "react"
-import { FaEthereum, FaExternalLinkAlt, FaInbox } from "react-icons/fa"
+import { FaExternalLinkAlt, FaInbox } from "react-icons/fa"
+import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useAccount } from "wagmi"
 import { RiNftFill } from "react-icons/ri"
 import Link from "next/link"
@@ -136,7 +137,7 @@ export default function UserHistory({ activity: initialActivity, userAddress, to
               {a.price ? (
                 <div className="flex gap-2 items-center">
                   <span>{Number(a.price) / 1e18}</span>
-                  <FaEthereum />
+                  <HypeIcon />
                 </div>
               ) : (
                 <span>-</span>

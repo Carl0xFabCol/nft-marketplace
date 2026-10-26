@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { AnimatePresence } from "framer-motion"
 import { Rocket } from "lucide-react"
 import { useAccount } from "wagmi"
@@ -8,6 +8,7 @@ import { formatEther, parseEther, decodeEventLog, type Hex } from "viem"
 import { useRouter } from "next/navigation"
 import { Modal } from "@/components/ui/Modal"
 import { useTx } from "@/app/context/TxContext"
+import { waitForTxConfirmation } from "@/lib/tx"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 import { useCreateCollection, useLaunchpadInfo } from "@/hooks/useLaunchpadActions"
 import { LaunchPadABI } from "@/lib/abi"
@@ -28,7 +29,11 @@ export function LaunchCollection() {
   const { createCollection, publicClient } = useCreateCollection()
   const { addTx, updateTx, removeTx } = useTx()
 
-  const [mounted, setMounted] = useState(false)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [symbol, setSymbol] = useState("")
@@ -41,10 +46,6 @@ export function LaunchCollection() {
   const [status, setStatus] = useState<Status>("idle")
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [createdAddress, setCreatedAddress] = useState<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // The factory only exists on chains where it has been deployed (Elysium).
   // Wait for mount so the server and client first render agree (the wallet
@@ -136,19 +137,17 @@ export function LaunchCollection() {
       addTx({ hash, status: "loading", label: "Launch collection" })
       setStatus("loading")
 
-      if (!publicClient) throw new Error("No public client available")
-      const receipt = await publicClient.waitForTransactionReceipt({ hash })
-      if (receipt.status === "reverted") throw new Error("Transaction reverted")
+      const receipt = await waitForTxConfirmation(publicClient, hash)
 
       for (const log of receipt.logs) {
         try {
-          const decoded: any = decodeEventLog({
+          const decoded = decodeEventLog({
             abi: LaunchPadABI,
             data: log.data,
             topics: log.topics as [Hex, ...Hex[]],
-          })
-          if (decoded?.eventName === "CollectionDeployed") {
-            setCreatedAddress(decoded.args.collection as string)
+          }) as unknown as { eventName?: string; args?: { collection?: string } }
+          if (decoded.eventName === "CollectionDeployed") {
+            setCreatedAddress(decoded.args?.collection as string)
             break
           }
         } catch {
@@ -156,7 +155,7 @@ export function LaunchCollection() {
         }
       }
 
-      updateTx(hash, { status: "success" })
+      updateTx(hash, { status: "success", label: "Collection launched!" })
       setStatus("success")
       router.refresh()
 
@@ -165,16 +164,17 @@ export function LaunchCollection() {
         setOpen(false)
         reset()
       }, 5000)
-    } catch (e: any) {
+    } catch (e) {
       if (hash) {
-        updateTx(hash, { status: "error" })
-        removeTx(hash)
+        updateTx(hash, { status: "error", label: "Launch failed" })
+        setTimeout(() => removeTx(hash!), 6000)
       }
-      if (e?.shortMessage === "User rejected the request.") {
+      const err = e as { shortMessage?: string; message?: string }
+      if (err.shortMessage === "User rejected the request.") {
         setStatus("idle")
       } else {
         setStatus("error")
-        setErrorMsg(e?.shortMessage || e?.message || "Transaction failed")
+        setErrorMsg(err.shortMessage || err.message || "Transaction failed")
       }
     }
   }

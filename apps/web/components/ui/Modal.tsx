@@ -36,8 +36,8 @@ export function Modal({ id, onClose, title, icon, children, panelClassName, back
   return (
     <motion.div
       id={`${id}-bg`}
-      onClick={(e: any) => {
-        if (e.target.id === `${id}-bg`) onClose()
+      onClick={(e) => {
+        if ((e.target as HTMLElement).id === `${id}-bg`) onClose()
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}

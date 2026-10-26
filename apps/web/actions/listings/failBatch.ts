@@ -5,6 +5,8 @@ import { getServerSupabase } from "@/lib/supabase/server"
 import { requireWalletMatch } from "@/lib/supabase/auth"
 import { revalidatePath } from "next/cache"
 
+const HASH_PATTERN = /^0x[a-fA-F0-9]{64}$/
+
 // Marks every listing for `txHash` as failed + inactive. Called from the list
 // flow when the tx reverts, so the optimistic `pending` rows written by
 // saveBatchListingToDB don't linger forever (mirrors
@@ -16,6 +18,10 @@ import { revalidatePath } from "next/cache"
 // null out another seller's pending rows.
 export async function failListingsByTxHash(txHash: string) {
   try {
+    if (typeof txHash !== "string" || !HASH_PATTERN.test(txHash)) {
+      throw new Error("Invalid transaction hash")
+    }
+
     const hash = txHash.toLowerCase()
     const supabase = await getServerSupabase()
 
@@ -34,10 +40,19 @@ export async function failListingsByTxHash(txHash: string) {
     const updates = { is_active: false, status: "failed" }
     const { error } = await supabase.from("listings").update(updates).eq("tx_hash", hash)
 
-    if (error) throw new Error(`Database error: ${error.message}`)
+    if (error) {
+      console.error("Failed to mark listings as failed:", error)
+      throw new Error("Failed to update listings")
+    }
 
     return { success: true }
-  } catch (err: any) {
-    throw new Error(err.message || "Internal Server Error")
+  } catch (err) {
+    const message = err instanceof Error ? err.message : ""
+    if (message === "Unauthorized" || message.startsWith("Forbidden") || message === "Invalid transaction hash") {
+      throw err
+    }
+
+    console.error("failListingsByTxHash error:", err)
+    throw new Error("Failed to update listings")
   }
 }
