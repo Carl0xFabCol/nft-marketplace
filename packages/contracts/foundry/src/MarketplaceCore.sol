@@ -368,6 +368,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (royaltyAmount > 0) {
             _credit(royaltyReceiver, royaltyAmount);
         }
+        totalPendingWithdrawals += listing.price;
 
         unchecked {
             totalVolume += listing.price;
@@ -626,7 +627,6 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (account == address(0)) revert InvalidAddress();
 
         pendingWithdrawals[account] += amount;
-        totalPendingWithdrawals += amount;
     }
 
     function withdrawFor(address account) external nonReentrant onlyRouter returns (bool withdrawn) {
