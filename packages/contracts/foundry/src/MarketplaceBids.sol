@@ -63,6 +63,11 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     mapping(address => uint256) public pendingWithdrawals;
     uint256 public totalPendingWithdrawals;
 
+    // Total ETH currently held as escrow for live bids. Kept in sync with the
+    // sum of all live collection/token bids so sweepExcessETH can never touch
+    // funds backing an outstanding bid (H-01).
+    uint256 public totalBidEscrow;
+
     // ═══════════════════════════════════════════════════════════════════════════════
     // EVENTS
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -139,9 +144,11 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         CollectionBid storage existingBid = collectionBids[collection][bidder];
         if (existingBid.quantity > 0) {
             uint256 refund = uint256(existingBid.pricePerItem) * existingBid.quantity;
+            totalBidEscrow -= refund;
             _credit(bidder, refund);
         }
 
+        totalBidEscrow += totalValue;
         collectionBids[collection][bidder] = CollectionBid({bidder: bidder, pricePerItem: pricePerItem, quantity: quantity, expiresAt: expiresAt});
 
         emit CollectionBidPlaced(collection, bidder, pricePerItem, quantity, expiresAt);
@@ -157,6 +164,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
 
         uint128 pricePerItem = bid.pricePerItem;
         uint128 totalPrice = pricePerItem * uint128(tokenIds.length);
+        totalBidEscrow -= totalPrice;
 
         if (bid.quantity == tokenIds.length) {
             delete collectionBids[collection][bidder];
@@ -219,6 +227,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         delete collectionBids[collection][bidder];
 
         uint256 refund = uint256(bid.pricePerItem) * bid.quantity;
+        totalBidEscrow -= refund;
         _credit(bidder, refund);
 
         emit CollectionBidCancelled(collection, bidder);
@@ -237,9 +246,11 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
 
         TokenBid storage existingBid = tokenBids[collection][tokenId][bidder];
         if (existingBid.price > 0) {
+            totalBidEscrow -= existingBid.price;
             _credit(bidder, existingBid.price);
         }
 
+        totalBidEscrow += price;
         tokenBids[collection][tokenId][bidder] = TokenBid({bidder: bidder, price: price, expiresAt: expiresAt});
 
         emit TokenBidPlaced(collection, tokenId, bidder, price, expiresAt);
@@ -282,9 +293,11 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         for (uint256 i; i < length; ) {
             TokenBid memory existingBid = tokenBids[collection][tokenIds[i]][bidder];
             if (existingBid.price > 0) {
+                totalBidEscrow -= existingBid.price;
                 _credit(bidder, existingBid.price);
             }
 
+            totalBidEscrow += prices[i];
             tokenBids[collection][tokenIds[i]][bidder] = TokenBid({bidder: bidder, price: prices[i], expiresAt: expiresAts[i]});
 
             emit TokenBidPlaced(collection, tokenIds[i], bidder, prices[i], expiresAts[i]);
@@ -305,6 +318,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (!nft.isApprovedForAll(seller, address(core))) revert NotApproved();
 
         uint128 price = bid.price;
+        totalBidEscrow -= price;
         delete tokenBids[collection][tokenId][bidder];
 
         (uint128 marketplaceFeeAmount, address royaltyReceiver, uint256 royaltyAmount) = core.executeSaleFromBid(collection, tokenId, seller, bidder, price);
@@ -324,6 +338,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (bid.price == 0) revert BidNotFound();
 
         delete tokenBids[collection][tokenId][bidder];
+        totalBidEscrow -= bid.price;
         _credit(bidder, bid.price);
 
         emit TokenBidCancelled(collection, tokenId, bidder);
@@ -337,6 +352,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
             TokenBid memory bid = tokenBids[collections_[i]][tokenIds[i]][bidder];
             if (bid.price > 0) {
                 delete tokenBids[collections_[i]][tokenIds[i]][bidder];
+                totalBidEscrow -= bid.price;
                 _credit(bidder, bid.price);
                 emit TokenBidCancelled(collections_[i], tokenIds[i], bidder);
             }
@@ -411,9 +427,10 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (recipient == address(0)) revert InvalidAddress();
 
         uint256 balance = address(this).balance;
-        if (balance <= totalPendingWithdrawals) revert InsufficientExcess();
+        uint256 obligations = totalPendingWithdrawals + totalBidEscrow;
+        if (balance <= obligations) revert InsufficientExcess();
 
-        uint256 amount = balance - totalPendingWithdrawals;
+        uint256 amount = balance - obligations;
         (bool success, ) = recipient.call{value: amount}("");
         if (!success) revert TransferFailed();
 
