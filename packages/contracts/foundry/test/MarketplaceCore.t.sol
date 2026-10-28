@@ -394,7 +394,7 @@ contract MarketplaceCoreTest is TestSetup {
         assertEq(bids.owner(), address(marketplace));
         assertEq(core.pendingOwner(), address(0));
         assertEq(bids.pendingOwner(), address(0));
-        assertTrue(core.authorizedContracts(address(marketplace)));
+        assertEq(core.router(), address(marketplace));
         assertEq(core.bidsContract(), address(bids));
     }
 

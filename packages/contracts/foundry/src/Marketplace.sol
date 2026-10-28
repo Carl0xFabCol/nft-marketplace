@@ -69,8 +69,9 @@ interface IMarketplaceCore {
 
     function updateFeeReceiver(address newReceiver) external;
 
-    function setAuthorizedContract(address contractAddr, bool authorized) external;
+    
 
+    function setRouter(address newRouter) external;
     function setBidsContract(address newBids) external;
 
     function setAuthorizedLaunchpad(address launchpad, bool authorized) external;
@@ -395,9 +396,7 @@ contract Marketplace is Ownable2Step {
         core.updateFeeReceiver(newReceiver);
     }
 
-    function setAuthorizedContract(address contractAddr, bool authorized) external onlyOwner {
-        core.setAuthorizedContract(contractAddr, authorized);
-    }
+    
 
     function setAuthorizedLaunchpad(address launchpad, bool authorized) external onlyOwner {
         core.setAuthorizedLaunchpad(launchpad, authorized);
@@ -429,6 +428,7 @@ contract Marketplace is Ownable2Step {
     }
 
     function configureBidsMarketplace() external onlyOwner {
+        core.setRouter(address(this));
         core.setBidsContract(address(bids));
         bids.setMarketplaceAddress(address(this));
     }

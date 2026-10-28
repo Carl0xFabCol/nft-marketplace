@@ -110,6 +110,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     error SelfBid();
     error BatchTooLarge();
     error CorePaused();
+    error AlreadySet();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -404,10 +405,10 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
 
     function setMarketplaceAddress(address _marketplace) external onlyOwner {
         if (_marketplace == address(0)) revert InvalidAddress();
-
-        address oldMarketplace = marketplace;
+        if (marketplace != address(0)) revert AlreadySet();
+        
         marketplace = _marketplace;
-        emit MarketplaceAddressUpdated(oldMarketplace, _marketplace);
+        emit MarketplaceAddressUpdated(address(0), _marketplace);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

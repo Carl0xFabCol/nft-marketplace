@@ -64,8 +64,8 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     mapping(address => CollectionInfo) public collections;
     mapping(address => mapping(uint256 => Listing)) public listings;
 
-    // Contracts allowed to drive router-gated entrypoints (the router itself).
-    mapping(address => bool) public authorizedContracts;
+    // N-01: immutable router address, set once.
+    address public router;
 
     // Dedicated bids executor. Bids are the only caller allowed to execute a
     // sale on behalf of a bid (H-02).
@@ -92,7 +92,6 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     event FeeReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
     event CollectionVerified(address indexed collection);
     event CollectionUnverified(address indexed collection);
-    event ContractAuthorized(address indexed contractAddr, bool authorized);
     event LaunchpadAuthorized(address indexed launchpad, bool authorized);
     event BidsContractUpdated(address indexed oldBids, address indexed newBids);
     event CollectionRoyaltyUpdated(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee);
@@ -128,13 +127,14 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     error BatchTooLarge();
     error DuplicateTokenId();
     error RoyaltyExceedsPrice();
+    error AlreadySet();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
     // ═══════════════════════════════════════════════════════════════════════════════
 
     modifier onlyRouter() {
-        if (msg.sender != owner() && !authorizedContracts[msg.sender]) revert Unauthorized();
+        if (msg.sender != router) revert Unauthorized();
         _;
     }
 
@@ -579,16 +579,17 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         emit FeeReceiverUpdated(oldReceiver, newReceiver);
     }
 
-    function setAuthorizedContract(address contractAddr, bool authorized) external onlyOwner {
-        authorizedContracts[contractAddr] = authorized;
-        emit ContractAuthorized(contractAddr, authorized);
+    function setRouter(address newRouter) external onlyOwner {
+        if (newRouter == address(0)) revert InvalidAddress();
+        if (router != address(0)) revert AlreadySet();
+        router = newRouter;
     }
 
     function setBidsContract(address newBids) external onlyOwner {
         if (newBids == address(0)) revert InvalidAddress();
-        address oldBids = bidsContract;
+        if (bidsContract != address(0)) revert AlreadySet();
         bidsContract = newBids;
-        emit BidsContractUpdated(oldBids, newBids);
+        emit BidsContractUpdated(address(0), newBids);
     }
 
     function setAuthorizedLaunchpad(address launchpad, bool authorized) external onlyOwner {

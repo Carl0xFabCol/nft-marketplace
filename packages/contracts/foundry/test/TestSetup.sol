@@ -61,9 +61,8 @@ contract TestSetup is Test {
         marketplace = new Marketplace(address(core), address(bids));
 
         // Initial wiring is done while the deployer still owns Core/Bids.
-        // Only the router is authorized to drive listing entrypoints; Bids is
-        // wired through Core's dedicated bidsContract slot (H-02).
-        core.setAuthorizedContract(address(marketplace), true);
+        // N-01: Router is set via setRouter, bids via setBidsContract during
+        // configureBidsMarketplace().
 
         // Move component ownership to the router using Ownable2Step.
         core.transferOwnership(address(marketplace));
