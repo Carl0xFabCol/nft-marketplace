@@ -11,6 +11,7 @@ interface IMarketplaceCore {
         uint48 listedAt;
         uint48 expiresAt;
         uint16 feeBps;
+        uint16 royaltyBps;
     }
 
     struct CollectionInfo {
@@ -35,7 +36,7 @@ interface IMarketplaceCore {
 
     function collections(address) external view returns (address, uint16, uint256, uint32, bool, bool);
 
-    function listings(address, uint256) external view returns (address, uint128, uint48, uint48, uint16);
+    function listings(address, uint256) external view returns (address, uint128, uint48, uint48, uint16, uint16);
 
     // Listing functions
     function createListing(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address seller) external;
@@ -186,6 +187,7 @@ contract Marketplace is Ownable2Step {
         uint48 listedAt;
         uint48 expiresAt;
         uint16 feeBps;
+        uint16 royaltyBps;
     }
 
     struct CollectionBid {
@@ -265,8 +267,8 @@ contract Marketplace is Ownable2Step {
     }
 
     function listings(address collection, uint256 tokenId) external view returns (Listing memory) {
-        (address seller, uint128 price, uint48 listedAt, uint48 expiresAt, uint16 feeBps) = core.listings(collection, tokenId);
-        return Listing(seller, price, listedAt, expiresAt, feeBps);
+        (address seller, uint128 price, uint48 listedAt, uint48 expiresAt, uint16 feeBps, uint16 royaltyBps) = core.listings(collection, tokenId);
+        return Listing(seller, price, listedAt, expiresAt, feeBps, royaltyBps);
     }
 
     function collectionBids(address collection, address bidder) external view returns (CollectionBid memory) {

@@ -25,7 +25,7 @@ contract AuditN02Test is TestSetup {
         vm.stopPrank();
         
         // Check listing still exists (dead code delete doesn't persist due to revert)
-        (address s, uint128 price, , , ) = core.listings(address(nft), 1);
+        (address s, uint128 price, , , , ) = core.listings(address(nft), 1);
         assertEq(s, seller); // Still exists!
         assertEq(price, SALE_PRICE);
         assertEq(core.totalListings(), 1); // Should be 0 but is 1
@@ -47,7 +47,7 @@ contract AuditN02Test is TestSetup {
         vm.stopPrank();
         
         // Listing should still exist
-        (address s, , , , ) = core.listings(address(nft), 1);
+        (address s, , , , , ) = core.listings(address(nft), 1);
         assertEq(s, seller);
         assertEq(core.totalListings(), 1);
     }

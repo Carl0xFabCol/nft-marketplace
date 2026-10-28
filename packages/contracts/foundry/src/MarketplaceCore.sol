@@ -39,6 +39,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         uint48 listedAt;
         uint48 expiresAt;
         uint16 feeBps;
+        uint16 royaltyBps;
     }
 
     struct CollectionInfo {
@@ -191,12 +192,22 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             }
         }
 
+        // N-03: snapshot royalty at listing time
+        (, uint256 royaltyAmount) = _getRoyalty(collection, tokenId, uint256(price));
+        uint16 royaltyBps = 0;
+        if (royaltyAmount > 0) {
+            // ceilDiv to round up, capped at MAX_ROYALTY_FEE
+            royaltyBps = uint16((royaltyAmount * BASIS_POINTS + price - 1) / price);
+            if (royaltyBps > MAX_ROYALTY_FEE) royaltyBps = uint16(MAX_ROYALTY_FEE);
+        }
+
         listings[collection][tokenId] = Listing({
             seller: seller,
             price: price,
             listedAt: uint48(block.timestamp),
             expiresAt: uint48(expiresAt),
-            feeBps: marketplaceFee
+            feeBps: marketplaceFee,
+            royaltyBps: royaltyBps
         });
 
         unchecked {
@@ -342,6 +353,11 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         uint16 effectiveFee = listing.feeBps < marketplaceFee ? listing.feeBps : marketplaceFee;
         uint128 marketplaceFeeAmount = uint128((uint256(listing.price) * effectiveFee) / BASIS_POINTS);
         (address royaltyReceiver, uint256 royaltyAmount) = _getRoyalty(collection, tokenId, uint256(listing.price));
+        
+        // N-03: cap royalty at the snapshot value
+        uint256 snapshotRoyalty = (uint256(listing.price) * listing.royaltyBps) / BASIS_POINTS;
+        if (royaltyAmount > snapshotRoyalty) royaltyAmount = snapshotRoyalty;
+        
         if (uint256(marketplaceFeeAmount) + royaltyAmount > listing.price) revert RoyaltyExceedsPrice();
         uint128 sellerProceeds = listing.price - marketplaceFeeAmount - uint128(royaltyAmount);
 

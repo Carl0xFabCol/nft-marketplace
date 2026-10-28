@@ -22,7 +22,7 @@ contract AuditN02FixedTest is TestSetup {
         marketplace.cleanStaleListing(address(nft), 1);
         
         // Verify listing is gone
-        (address s, uint128 price, , , ) = core.listings(address(nft), 1);
+        (address s, uint128 price, , , , ) = core.listings(address(nft), 1);
         assertEq(s, address(0));
         assertEq(price, 0);
         assertEq(core.totalListings(), 0);
@@ -59,7 +59,7 @@ contract AuditN02FixedTest is TestSetup {
         vm.stopPrank();
         
         // Listing should still exist (not cleaned by buy)
-        (address s, , , , ) = core.listings(address(nft), 1);
+        (address s, , , , , ) = core.listings(address(nft), 1);
         assertEq(s, seller);
     }
     
@@ -79,7 +79,7 @@ contract AuditN02FixedTest is TestSetup {
         vm.stopPrank();
         
         // Listing should still exist
-        (address s, , , , ) = core.listings(address(nft), 1);
+        (address s, , , , , ) = core.listings(address(nft), 1);
         assertEq(s, seller);
     }
     
@@ -110,7 +110,7 @@ contract AuditN02FixedTest is TestSetup {
         vm.stopPrank();
         
         // New listing exists
-        (address s, uint128 price, , , ) = core.listings(address(nft), 1);
+        (address s, uint128 price, , , , ) = core.listings(address(nft), 1);
         assertEq(s, buyer);
         assertEq(price, SALE_PRICE * 2);
         assertEq(core.totalListings(), 1);
