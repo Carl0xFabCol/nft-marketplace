@@ -449,7 +449,7 @@ contract MarketplaceCoreTest is TestSetup {
         assertEq(address(core).balance, pending);
 
         vm.prank(owner);
-        _expectRevert(MarketplaceCore.InsufficientExcess.selector);
+        vm.expectRevert(Marketplace.SweepFailed.selector);
         marketplace.sweepExcessETH(payable(owner));
     }
 
