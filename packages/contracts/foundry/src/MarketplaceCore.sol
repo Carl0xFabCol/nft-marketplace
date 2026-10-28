@@ -24,6 +24,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     uint256 public constant MAX_MARKETPLACE_FEE = 1_000; // 10%
     uint256 public constant MAX_ROYALTY_FEE = 2_000; // 20%
     uint128 public constant MIN_LISTING_PRICE = 1 wei;
+    uint256 public constant ROYALTY_QUERY_GAS = 50_000;
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // STRUCTS
@@ -122,6 +123,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     error CorePaused();
     error BatchTooLarge();
     error DuplicateTokenId();
+    error RoyaltyExceedsPrice();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -326,6 +328,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         uint16 effectiveFee = listing.feeBps < marketplaceFee ? listing.feeBps : marketplaceFee;
         uint128 marketplaceFeeAmount = uint128((uint256(listing.price) * effectiveFee) / BASIS_POINTS);
         (address royaltyReceiver, uint256 royaltyAmount) = _getRoyalty(collection, tokenId, uint256(listing.price));
+        if (uint256(marketplaceFeeAmount) + royaltyAmount > listing.price) revert RoyaltyExceedsPrice();
         uint128 sellerProceeds = listing.price - marketplaceFeeAmount - uint128(royaltyAmount);
 
         // Effects before interaction: clear the listing before ERC721 receiver code runs.
@@ -369,6 +372,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
 
         marketplaceFeeAmount = uint128((uint256(price) * marketplaceFee) / BASIS_POINTS);
         (royaltyReceiver, royaltyAmount) = _getRoyalty(collection, tokenId, uint256(price));
+        if (uint256(marketplaceFeeAmount) + royaltyAmount > price) revert RoyaltyExceedsPrice();
 
         // Effects before interaction.
         if (listings[collection][tokenId].price > 0) {
@@ -492,6 +496,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external onlyRouter {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
+        if (royaltyReceiver == address(0) && royaltyFee != 0) revert InvalidAddress();
 
         (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
         if (!hasOwner || collectionOwner != sender) revert NotCollectionOwner();
@@ -649,18 +654,32 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     }
 
     function _getRoyalty(address collection, uint256 tokenId, uint256 salePrice) internal view returns (address receiver, uint256 amount) {
-        if (IERC165(collection).supportsInterface(type(IMarketplaceRoyalty).interfaceId)) {
-            try IMarketplaceRoyalty(collection).royaltyInfo(tokenId, salePrice) returns (address r, uint256 a) {
+        // M-04: query ERC-2981 defensively. A malicious collection must not be
+        // able to grief or drain a sale via unbounded gas/revert/receiver tricks.
+        (bool success, bytes memory data) = collection.staticcall{gas: ROYALTY_QUERY_GAS}(
+            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IMarketplaceRoyalty).interfaceId)
+        );
+
+        if (success && data.length >= 32 && abi.decode(data, (bool))) {
+            (success, data) = collection.staticcall{gas: ROYALTY_QUERY_GAS}(
+                abi.encodeWithSelector(IMarketplaceRoyalty.royaltyInfo.selector, tokenId, salePrice)
+            );
+
+            if (success && data.length >= 64) {
+                (address r, uint256 a) = abi.decode(data, (address, uint256));
                 uint256 maxRoyalty = (salePrice * MAX_ROYALTY_FEE) / BASIS_POINTS;
-                if (a <= maxRoyalty) {
+                if (r != address(0) && a <= maxRoyalty) {
                     return (r, a);
                 }
-            } catch {}
+            }
         }
 
         CollectionInfo memory info = collections[collection];
         receiver = info.royaltyReceiver;
         amount = (salePrice * info.royaltyFee) / BASIS_POINTS;
+        if (receiver == address(0)) {
+            amount = 0;
+        }
     }
 
     receive() external payable {}
