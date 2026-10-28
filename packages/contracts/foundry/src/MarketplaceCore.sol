@@ -409,6 +409,8 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             ++collections[collection].totalSales;
         }
 
+        emit Sale(collection, tokenId, seller, buyer, price, marketplaceFeeAmount, uint128(royaltyAmount));
+
         return (marketplaceFeeAmount, royaltyReceiver, royaltyAmount);
     }
 
