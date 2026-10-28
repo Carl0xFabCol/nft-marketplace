@@ -147,6 +147,8 @@ interface IMarketplaceBids {
     function pause() external;
 
     function unpause() external;
+
+    function paused() external view returns (bool);
 }
 
 /**
@@ -208,6 +210,8 @@ contract Marketplace is Ownable2Step {
     // ═══════════════════════════════════════════════════════════════════════════════
     // CONSTRUCTOR
     // ═══════════════════════════════════════════════════════════════════════════════
+
+    error SweepFailed();
 
     constructor(address _core, address _bids) Ownable(msg.sender) {
         if (_core == address(0) || _bids == address(0)) revert("Invalid addresses");
@@ -394,13 +398,15 @@ contract Marketplace is Ownable2Step {
     }
 
     function pause() external onlyOwner {
-        core.pause();
-        bids.pause();
+        // M-06: idempotent across components; one already-paused component must
+        // not block pausing the other.
+        if (!core.paused()) core.pause();
+        if (!bids.paused()) bids.pause();
     }
 
     function unpause() external onlyOwner {
-        core.unpause();
-        bids.unpause();
+        if (core.paused()) core.unpause();
+        if (bids.paused()) bids.unpause();
     }
 
 
@@ -428,8 +434,16 @@ contract Marketplace is Ownable2Step {
     }
 
     function sweepExcessETH(address payable recipient) external onlyOwner {
-        core.sweepExcessETH(recipient);
-        bids.sweepExcessETH(recipient);
+        // M-06: a component without excess must not make the whole sweep fail.
+        bool coreSwept;
+        bool bidsSwept;
+        try core.sweepExcessETH(recipient) {
+            coreSwept = true;
+        } catch {}
+        try bids.sweepExcessETH(recipient) {
+            bidsSwept = true;
+        } catch {}
+        if (!coreSwept && !bidsSwept) revert SweepFailed();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
