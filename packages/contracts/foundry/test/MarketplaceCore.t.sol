@@ -395,7 +395,7 @@ contract MarketplaceCoreTest is TestSetup {
         assertEq(core.pendingOwner(), address(0));
         assertEq(bids.pendingOwner(), address(0));
         assertTrue(core.authorizedContracts(address(marketplace)));
-        assertTrue(core.authorizedContracts(address(bids)));
+        assertEq(core.bidsContract(), address(bids));
     }
 
     function testMarketplaceOwnership_RequiresAcceptance() public {

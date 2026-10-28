@@ -63,14 +63,14 @@ contract DeployMarketplace is Script {
 
         console.log("\n4. Authorizing contracts in Core...");
 
-        core.setAuthorizedContract(address(bids), true);
         core.setAuthorizedContract(address(marketplace), true);
+        core.setBidsContract(address(bids));
 
-        require(core.authorizedContracts(address(bids)), "Bids authorization failed");
+        require(core.bidsContract() == address(bids), "Bids contract wiring failed");
 
         require(core.authorizedContracts(address(marketplace)), "Marketplace authorization failed");
 
-        console.log("Bids authorized");
+        console.log("Bids contract wired");
         console.log("Marketplace authorized");
 
         // ================================================================
@@ -136,7 +136,7 @@ contract DeployMarketplace is Script {
 
         require(bids.owner() == address(marketplace), "Bids owner incorrect");
 
-        require(core.authorizedContracts(address(bids)), "Bids is not authorized in Core");
+        require(core.bidsContract() == address(bids), "Bids contract is not wired in Core");
 
         require(core.authorizedContracts(address(marketplace)), "Marketplace is not authorized in Core");
 

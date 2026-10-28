@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 
@@ -53,7 +53,9 @@ interface IMarketplaceCore {
     function buyBatch(address collection, uint256[] calldata tokenIds, address buyer) external payable;
 
     // Collection management
-    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address sender) external;
+    function registerCollectionFromRouter(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
+    function registerCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
+    function isRegistered(address collection) external view returns (bool);
     function emergencyUpdateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external;
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external;
@@ -66,6 +68,8 @@ interface IMarketplaceCore {
     function updateFeeReceiver(address newReceiver) external;
 
     function setAuthorizedContract(address contractAddr, bool authorized) external;
+
+    function setBidsContract(address newBids) external;
 
     function setAuthorizedLaunchpad(address launchpad, bool authorized) external;
 
@@ -352,7 +356,7 @@ contract Marketplace is Ownable2Step {
     /// @notice External collection registration is restricted to the owner/admin.
     ///         Launchpad collections are registered automatically by the factory.
     function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver) external onlyOwner {
-        core.registerCollection(collection, royaltyFee, royaltyReceiver, msg.sender);
+        core.registerCollectionFromRouter(collection, royaltyFee, royaltyReceiver, msg.sender);
     }
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external {
@@ -407,6 +411,7 @@ contract Marketplace is Ownable2Step {
     }
 
     function configureBidsMarketplace() external onlyOwner {
+        core.setBidsContract(address(bids));
         bids.setMarketplaceAddress(address(this));
     }
 

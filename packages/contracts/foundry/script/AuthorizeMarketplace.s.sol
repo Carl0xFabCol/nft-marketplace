@@ -105,7 +105,7 @@ contract AuthorizeMarketplace is Script {
         console.log("\nBids marketplace:");
         console.log(bids.marketplace());
 
-        require(core.authorizedContracts(BIDS), "Bids is not authorized");
+        require(core.bidsContract() == BIDS, "Bids is not wired");
 
         require(core.authorizedContracts(MARKETPLACE), "Marketplace is not authorized");
 

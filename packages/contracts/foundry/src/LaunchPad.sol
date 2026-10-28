@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./MERC721.sol";
 
 interface IMarketplaceCoreRegistry {
-    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address sender) external;
+    function registerCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
 }
 
 /**
@@ -67,7 +67,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         _collectionsByCreator[msg.sender].push(collection);
         isLaunchpadCollection[collection] = true;
 
-        core.registerCollection(collection, royaltyFee, royaltyReceiver, msg.sender);
+        core.registerCollectionFromLaunchpad(collection, royaltyFee, royaltyReceiver, msg.sender);
 
         if (msg.value != 0) {
             accruedFees += msg.value;
@@ -105,6 +105,10 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
 
     function getCollectionsCreatedCount(address creator) external view returns (uint256) {
         return _collectionsByCreator[creator].length;
+    }
+
+    function isCollection(address collection) external view returns (bool) {
+        return isLaunchpadCollection[collection];
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

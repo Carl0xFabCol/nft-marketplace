@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -59,8 +59,12 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     mapping(address => CollectionInfo) public collections;
     mapping(address => mapping(uint256 => Listing)) public listings;
 
-    // Authorized contracts (bids contract)
+    // Contracts allowed to drive router-gated entrypoints (the router itself).
     mapping(address => bool) public authorizedContracts;
+
+    // Dedicated bids executor. Bids are the only caller allowed to execute a
+    // sale on behalf of a bid (H-02).
+    address public bidsContract;
 
     // Authorized launchpad factories. Collections deployed by these contracts
     // are registered with the creator auto-filled by the factory.
@@ -84,6 +88,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     event CollectionVerified(address indexed collection);
     event ContractAuthorized(address indexed contractAddr, bool authorized);
     event LaunchpadAuthorized(address indexed launchpad, bool authorized);
+    event BidsContractUpdated(address indexed oldBids, address indexed newBids);
     event CollectionRoyaltyUpdated(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee);
     event Withdrawal(address indexed account, uint256 amount);
     event ExcessETHSwept(address indexed recipient, uint256 amount);
@@ -112,13 +117,25 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     error NoWithdrawal();
     error InsufficientExcess();
     error CorePaused();
+    error BatchTooLarge();
+    error DuplicateTokenId();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    modifier onlyAuthorized() {
-        if (!authorizedContracts[msg.sender] && !authorizedLaunchpads[msg.sender] && msg.sender != owner()) revert Unauthorized();
+    modifier onlyRouter() {
+        if (msg.sender != owner() && !authorizedContracts[msg.sender]) revert Unauthorized();
+        _;
+    }
+
+    modifier onlyBids() {
+        if (msg.sender != bidsContract) revert Unauthorized();
+        _;
+    }
+
+    modifier onlyLaunchpad() {
+        if (!authorizedLaunchpads[msg.sender]) revert Unauthorized();
         _;
     }
 
@@ -138,7 +155,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // LISTING FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function createListing(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address seller) public whenNotPaused onlyAuthorized {
+    function createListing(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address seller) public whenNotPaused onlyRouter {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (price < MIN_LISTING_PRICE) revert InvalidPrice();
         if (expiresAt != 0 && expiresAt <= block.timestamp) revert ListingExpired();
@@ -166,7 +183,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         uint128[] calldata prices,
         uint64[] calldata expiresAts,
         address seller
-    ) external whenNotPaused onlyAuthorized {
+    ) external whenNotPaused onlyRouter {
         uint256 length = collections_.length;
         if (length != tokenIds.length || length != prices.length || length != expiresAts.length) revert ArrayLengthMismatch();
 
@@ -178,7 +195,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         }
     }
 
-    function updateListingPrice(address collection, uint256 tokenId, uint128 newPrice, address seller) external whenNotPaused onlyAuthorized {
+    function updateListingPrice(address collection, uint256 tokenId, uint128 newPrice, address seller) external whenNotPaused onlyRouter {
         Listing storage listing = listings[collection][tokenId];
         if (listing.price == 0) revert ListingNotFound();
         if (IERC721(collection).ownerOf(tokenId) != seller) revert NotTokenOwner();
@@ -189,11 +206,11 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         emit ListingUpdated(collection, tokenId, newPrice);
     }
 
-    function cancelListing(address collection, uint256 tokenId, address seller) external onlyAuthorized {
+    function cancelListing(address collection, uint256 tokenId, address seller) external onlyRouter {
         _cancelListing(collection, tokenId, seller);
     }
 
-    function cancelListingBatch(address[] calldata collections_, uint256[] calldata tokenIds, address seller) external onlyAuthorized {
+    function cancelListingBatch(address[] calldata collections_, uint256[] calldata tokenIds, address seller) external onlyRouter {
         uint256 length = collections_.length;
         if (length != tokenIds.length) revert ArrayLengthMismatch();
 
@@ -222,7 +239,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // BUYING FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function buy(address collection, uint256 tokenId, address buyer) external payable whenNotPaused nonReentrant onlyAuthorized {
+    function buy(address collection, uint256 tokenId, address buyer) external payable whenNotPaused nonReentrant onlyRouter {
         Listing memory listing = listings[collection][tokenId];
         if (listing.price == 0) revert ListingNotFound();
         if (listing.expiresAt != 0 && listing.expiresAt < block.timestamp) revert ListingExpired();
@@ -231,7 +248,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         _executeSale(collection, tokenId, listing, buyer);
     }
 
-    function buyBatch(address collection, uint256[] calldata tokenIds, address buyer) external payable whenNotPaused nonReentrant onlyAuthorized {
+    function buyBatch(address collection, uint256[] calldata tokenIds, address buyer) external payable whenNotPaused nonReentrant onlyRouter {
         uint256 totalPrice;
         uint256 length = tokenIds.length;
 
@@ -298,7 +315,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         address seller,
         address buyer,
         uint128 price
-    ) external onlyAuthorized nonReentrant returns (uint128 marketplaceFeeAmount, address royaltyReceiver, uint256 royaltyAmount) {
+    ) external onlyBids nonReentrant returns (uint128 marketplaceFeeAmount, address royaltyReceiver, uint256 royaltyAmount) {
         IERC721 nft = IERC721(collection);
         if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
         if (!nft.isApprovedForAll(seller, address(this))) revert NotApproved();
@@ -333,39 +350,65 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Registers a collection so it can be traded on the marketplace.
-     * @dev Two distinct paths, both gated by `onlyAuthorized`:
-     *      - Launchpad path (caller is an authorized launchpad): the `creator` is
-     *        auto-filled by the factory and must match the deployed collection owner.
-     *      - External path (caller is the marketplace router/admin): reserved for the
-     *        owner/admin. The `creator` is derived from the collection itself.
+     * @notice Registers a collection deployed by an authorized launchpad.
+     * @dev H-02: launchpads get their own entrypoint. They can only register a
+     *      collection they actually deployed and whose on-chain owner matches
+     *      the factory-supplied creator.
      */
-    function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyAuthorized {
+    function registerCollectionFromLaunchpad(
+        address collection,
+        uint16 royaltyFee,
+        address royaltyReceiver,
+        address creator
+    ) external onlyLaunchpad {
+        _validateNewCollection(collection, royaltyFee, royaltyReceiver);
+
+        if (creator == address(0)) revert InvalidAddress();
+        (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
+        if (!hasOwner || collectionOwner != creator) revert NotCollectionOwner();
+
+        // Factory provenance check. LaunchPad exposes isCollection(); other
+        // factories must implement the same hook (TODO(audit): allow an
+        // explicit factory allow-list if a launchpad has a different surface).
+        if (!_isFactoryCollection(msg.sender, collection)) revert InvalidCollection();
+
+        _storeCollection(collection, royaltyFee, royaltyReceiver, creator);
+    }
+
+    /**
+     * @notice Registers an externally-deployed collection via the router.
+     * @dev H-02: the router is the only path for arbitrary collections. The
+     *      creator is derived from the collection owner when available.
+     */
+    function registerCollectionFromRouter(
+        address collection,
+        uint16 royaltyFee,
+        address royaltyReceiver,
+        address creator
+    ) external onlyRouter {
+        _validateNewCollection(collection, royaltyFee, royaltyReceiver);
+
+        (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
+        if (hasOwner) {
+            creator = collectionOwner;
+        } else if (creator == address(0)) {
+            creator = owner();
+        }
+
+        _storeCollection(collection, royaltyFee, royaltyReceiver, creator);
+    }
+
+    function _validateNewCollection(address collection, uint16 royaltyFee, address royaltyReceiver) internal view {
         if (collection == address(0)) revert InvalidCollection();
         if (collections[collection].exists) revert CollectionAlreadyRegistered();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
-
-        try IERC165(collection).supportsInterface(type(IERC721).interfaceId) returns (bool ok) {
-            if (!ok) revert InvalidCollection();
-        } catch {
-            revert InvalidCollection();
-        }
-
         if (royaltyReceiver == address(0) && royaltyFee != 0) revert InvalidAddress();
 
-        (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
+        (bool ok165, bool ok721) = _supportsERC721(collection);
+        if (!ok165 || !ok721) revert InvalidCollection();
+    }
 
-        if (authorizedLaunchpads[msg.sender]) {
-            // Launchpad-deployed collection: the factory auto-fills the creator.
-            if (creator == address(0)) revert InvalidAddress();
-            if (hasOwner && collectionOwner != creator) revert NotCollectionOwner();
-        } else {
-            // External collection: only the owner/admin (via the router) may register.
-            // The router enforces onlyOwner, so trust it; the creator is derived.
-            if (msg.sender != owner() && !authorizedContracts[msg.sender]) revert NotCollectionOwner();
-            creator = hasOwner ? collectionOwner : owner();
-        }
-
+    function _storeCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) internal {
         collections[collection] = CollectionInfo({
             royaltyReceiver: royaltyReceiver,
             royaltyFee: royaltyFee,
@@ -378,7 +421,28 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         emit CollectionRegistered(collection, creator, royaltyFee, false);
     }
 
-    function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external onlyAuthorized {
+    function _supportsERC721(address collection) internal view returns (bool ok165, bool ok721) {
+        (bool success, bytes memory data) = collection.staticcall(
+            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IERC165).interfaceId)
+        );
+        if (!success || data.length < 32 || !abi.decode(data, (bool))) return (false, false);
+        ok165 = true;
+
+        (success, data) = collection.staticcall(
+            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IERC721).interfaceId)
+        );
+        ok721 = success && data.length >= 32 && abi.decode(data, (bool));
+    }
+
+    function _isFactoryCollection(address factory, address collection) internal view returns (bool) {
+        (bool success, bytes memory data) = factory.staticcall(
+            abi.encodeWithSelector(IFactory.isCollection.selector, collection)
+        );
+        if (!success || data.length < 32) return false;
+        return abi.decode(data, (bool));
+    }
+
+    function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external onlyRouter {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
 
@@ -435,6 +499,13 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         emit ContractAuthorized(contractAddr, authorized);
     }
 
+    function setBidsContract(address newBids) external onlyOwner {
+        if (newBids == address(0)) revert InvalidAddress();
+        address oldBids = bidsContract;
+        bidsContract = newBids;
+        emit BidsContractUpdated(oldBids, newBids);
+    }
+
     function setAuthorizedLaunchpad(address launchpad, bool authorized) external onlyOwner {
         if (launchpad == address(0)) revert InvalidAddress();
         authorizedLaunchpads[launchpad] = authorized;
@@ -458,6 +529,10 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         return (info.totalVolume, info.totalSales, info.isVerified, info.exists);
     }
 
+    function isRegistered(address collection) external view returns (bool) {
+        return collections[collection].exists;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════════
     // INTERNAL HELPERS
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -470,7 +545,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         totalPendingWithdrawals += amount;
     }
 
-    function withdrawFor(address account) external nonReentrant onlyAuthorized returns (bool withdrawn) {
+    function withdrawFor(address account) external nonReentrant onlyRouter returns (bool withdrawn) {
         if (pendingWithdrawals[account] == 0) return false;
         _withdraw(account);
         return true;
@@ -550,4 +625,8 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
 
 interface IMarketplaceRoyalty is IERC165 {
     function royaltyInfo(uint256 tokenId, uint256 salePrice) external view returns (address receiver, uint256 royaltyAmount);
+}
+
+interface IFactory {
+    function isCollection(address collection) external view returns (bool);
 }
