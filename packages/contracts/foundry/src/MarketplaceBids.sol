@@ -256,7 +256,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (length != prices.length || length != expiresAts.length) revert ArrayLengthMismatch();
 
         uint256 totalNewValue;
-        uint256 totalRefunds;
 
         for (uint256 i; i < length; ) {
             if (prices[i] < MIN_LISTING_PRICE) revert InvalidPrice();
@@ -270,17 +269,15 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
             }
 
             totalNewValue += prices[i];
-            TokenBid storage existingBid = tokenBids[collection][tokenIds[i]][bidder];
-            if (existingBid.price > 0) {
-                totalRefunds += existingBid.price;
-            }
             unchecked {
                 ++i;
             }
         }
 
-        uint256 netRequired = totalNewValue > totalRefunds ? totalNewValue - totalRefunds : 0;
-        if (msg.value != netRequired) revert InsufficientValue();
+        // C-01: the batch re-escrows every new bid at full price. Replaced bids
+        // are credited back in full, so the caller must fund the entire new
+        // value; netting the refund out counted the old escrow twice.
+        if (msg.value != totalNewValue) revert InsufficientValue();
 
         for (uint256 i; i < length; ) {
             TokenBid memory existingBid = tokenBids[collection][tokenIds[i]][bidder];
@@ -296,9 +293,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
                 ++i;
             }
         }
-
-        // Any old-bid value not needed for the new batch is represented by
-        // the withdrawal credits above; no ETH push is required.
     }
 
     function acceptTokenBid(address collection, uint256 tokenId, address bidder, address seller) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {

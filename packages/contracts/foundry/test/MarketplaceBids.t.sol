@@ -188,7 +188,7 @@ contract MarketplaceBidsTest is TestSetup {
         marketplace.placeTokenBidBatch{value: 2 ether}(address(nft), ids, prices, expiries);
     }
 
-    function testPlaceTokenBidBatch_NetReplacementAccounting() public {
+    function testPlaceTokenBidBatch_FullReplacementAccounting() public {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
 
         vm.prank(bidder);
@@ -204,7 +204,7 @@ contract MarketplaceBidsTest is TestSetup {
         prices[1] = 1 ether;
 
         vm.prank(bidder);
-        marketplace.placeTokenBidBatch{value: 2 ether}(address(nft), ids, prices, expiries);
+        marketplace.placeTokenBidBatch{value: 3 ether}(address(nft), ids, prices, expiries);
 
         assertEq(bids.pendingWithdrawals(bidder), 1 ether);
         assertEq(marketplace.tokenBids(address(nft), 1, bidder).price, 2 ether);
@@ -337,5 +337,25 @@ contract MarketplaceBidsTest is TestSetup {
         assertEq(bids.owner(), address(marketplace));
         assertEq(bids.pendingOwner(), address(0));
         assertEq(bids.marketplace(), address(marketplace));
+    }
+
+    // C-01: replacing a token bid through the batch entrypoint must still be
+    // fully funded. The old implementation only required the *net* difference,
+    // so a zero-value call could re-escrow an existing bid for free.
+    function testC01_PlaceTokenBidBatchRequiresFullValueOnReplacement() public {
+        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+
+        vm.prank(bidder);
+        marketplace.placeTokenBid{value: 1 ether}(address(nft), 1, 1 ether, 0);
+
+        uint256[] memory ids = new uint256[](1);
+        uint128[] memory prices = new uint128[](1);
+        uint64[] memory expiries = new uint64[](1);
+        ids[0] = 1;
+        prices[0] = 1 ether;
+
+        vm.prank(bidder);
+        _expectRevert(MarketplaceBids.InsufficientValue.selector);
+        marketplace.placeTokenBidBatch{value: 0}(address(nft), ids, prices, expiries);
     }
 }
