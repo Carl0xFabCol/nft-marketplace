@@ -163,6 +163,10 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     function createListing(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address seller) public whenNotPaused onlyRouter {
+        _createListing(collection, tokenId, price, expiresAt, seller);
+    }
+
+    function _createListing(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address seller) internal {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (price < MIN_LISTING_PRICE) revert InvalidPrice();
         if (expiresAt != 0 && expiresAt <= block.timestamp) revert ListingExpired();
@@ -211,7 +215,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (length != tokenIds.length || length != prices.length || length != expiresAts.length) revert ArrayLengthMismatch();
 
         for (uint256 i; i < length; ) {
-            createListing(collections_[i], tokenIds[i], prices[i], expiresAts[i], seller);
+            _createListing(collections_[i], tokenIds[i], prices[i], expiresAts[i], seller);
             unchecked {
                 ++i;
             }
