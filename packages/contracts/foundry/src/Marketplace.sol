@@ -458,13 +458,4 @@ contract Marketplace is Ownable2Step {
         if (!coreSwept && !bidsSwept) revert SweepFailed();
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // RECEIVE & FALLBACK
-    // ═══════════════════════════════════════════════════════════════════════════════
-
-    receive() external payable {}
-
-    fallback() external payable {
-        revert("Invalid call");
-    }
 }
