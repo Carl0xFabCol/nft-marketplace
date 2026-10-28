@@ -212,6 +212,9 @@ contract Marketplace is Ownable2Step {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     error SweepFailed();
+    error InvalidAddress();
+
+    event ComponentOwnershipTransferStarted(address indexed newOwner);
 
     constructor(address _core, address _bids) Ownable(msg.sender) {
         if (_core == address(0) || _bids == address(0)) revert("Invalid addresses");
@@ -421,6 +424,15 @@ contract Marketplace is Ownable2Step {
     function configureBidsMarketplace() external onlyOwner {
         core.setBidsContract(address(bids));
         bids.setMarketplaceAddress(address(this));
+    }
+
+    /// @notice M-07: migrate the whole system to a new owner (e.g. a new
+    ///         timelock) by starting the Ownable2Step handoff on both components.
+    function transferComponentOwnership(address newOwner) external onlyOwner {
+        if (newOwner == address(0)) revert InvalidAddress();
+        core.transferOwnership(newOwner);
+        bids.transferOwnership(newOwner);
+        emit ComponentOwnershipTransferStarted(newOwner);
     }
 
     function pendingWithdrawals(address account) external view returns (uint256 coreAmount, uint256 bidsAmount) {
