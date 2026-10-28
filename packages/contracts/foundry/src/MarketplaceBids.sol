@@ -105,6 +105,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     error DuplicateTokenId();
     error PriceTooLow();
     error SellerProceedsTooLow();
+    error SelfBid();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -252,6 +253,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (price < MIN_LISTING_PRICE) revert InvalidPrice();
         if (expiresAt != 0 && expiresAt <= block.timestamp) revert BidExpired();
         if (msg.value != price) revert InsufficientValue();
+        _revertIfOwnsToken(collection, tokenId, bidder);
 
         TokenBid storage existingBid = tokenBids[collection][tokenId][bidder];
         if (existingBid.price > 0) {
@@ -280,6 +282,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         for (uint256 i; i < length; ) {
             if (prices[i] < MIN_LISTING_PRICE) revert InvalidPrice();
             if (expiresAts[i] != 0 && expiresAts[i] <= block.timestamp) revert BidExpired();
+            _revertIfOwnsToken(collection, tokenIds[i], bidder);
 
             for (uint256 j; j < i; ) {
                 if (tokenIds[j] == tokenIds[i]) revert DuplicateTokenId();
@@ -370,6 +373,17 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
             unchecked {
                 ++i;
             }
+        }
+    }
+
+    /// @dev M-05 best-effort wash-trading guard. Tokens may not exist yet, so
+    ///      a failed ownerOf call is treated as "not owned".
+    function _revertIfOwnsToken(address collection, uint256 tokenId, address bidder) internal view {
+        (bool success, bytes memory data) = collection.staticcall(
+            abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId)
+        );
+        if (success && data.length >= 32 && abi.decode(data, (address)) == bidder) {
+            revert SelfBid();
         }
     }
 

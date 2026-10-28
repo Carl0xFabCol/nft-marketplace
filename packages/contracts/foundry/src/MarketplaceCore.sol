@@ -366,6 +366,8 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         address buyer,
         uint128 price
     ) external onlyBids nonReentrant returns (uint128 marketplaceFeeAmount, address royaltyReceiver, uint256 royaltyAmount) {
+        if (seller == buyer) revert SelfPurchase();
+
         IERC721 nft = IERC721(collection);
         if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
         if (!nft.isApprovedForAll(seller, address(this))) revert NotApproved();
