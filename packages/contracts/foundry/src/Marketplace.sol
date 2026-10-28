@@ -47,6 +47,7 @@ interface IMarketplaceCore {
     function cancelListing(address collection, uint256 tokenId, address seller) external;
 
     function cancelListingBatch(address[] calldata collections_, uint256[] calldata tokenIds, address seller) external;
+    function cleanStaleListing(address collection, uint256 tokenId) external;
 
     // Buying functions
     function buy(address collection, uint256 tokenId, address buyer) external payable;
@@ -308,6 +309,10 @@ contract Marketplace is Ownable2Step {
 
     function cancelListingBatch(address[] calldata collections_, uint256[] calldata tokenIds) external {
         core.cancelListingBatch(collections_, tokenIds, msg.sender);
+    }
+
+    function cleanStaleListing(address collection, uint256 tokenId) external {
+        core.cleanStaleListing(collection, tokenId);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

@@ -229,18 +229,9 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         Listing storage listing = listings[collection][tokenId];
         if (listing.price == 0) revert ListingNotFound();
 
-        address currentOwner = IERC721(collection).ownerOf(tokenId);
-        if (listing.seller != currentOwner) {
-            // M-01: stale listing. Drop it and fail the update. NOTE: the
-            // revert rolls back the delete; cleanup happens the next time the
-            // owner calls createListing (TODO(audit): optionally add an
-            // explicit permissionless cleanup entrypoint).
-            address staleSeller = listing.seller;
-            delete listings[collection][tokenId];
-            --totalListings;
-            emit ListingCancelled(collection, tokenId, staleSeller);
-            revert ListingNotFound();
-        }
+        // N-02: check if listing is stale using safe ownerOf check
+        address currentOwner = _tryOwnerOf(collection, tokenId);
+        if (listing.seller != currentOwner) revert ListingNotFound();
 
         if (currentOwner != seller) revert NotTokenOwner();
         if (listing.seller != seller) revert NotSeller();
@@ -289,15 +280,9 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (listing.price == 0) revert ListingNotFound();
         if (listing.expiresAt != 0 && listing.expiresAt <= block.timestamp) revert ListingExpired();
 
-        // M-01: never execute against a listing whose seller no longer owns the
-        // token. NOTE: the revert rolls back the delete; the stale entry is
-        // overwritten by createListing or ignored by future buyers.
-        if (IERC721(collection).ownerOf(tokenId) != listing.seller) {
-            delete listings[collection][tokenId];
-            --totalListings;
-            emit ListingCancelled(collection, tokenId, listing.seller);
-            revert ListingNotFound();
-        }
+        // N-02: check if listing is stale using safe ownerOf check
+        address currentOwner = _tryOwnerOf(collection, tokenId);
+        if (currentOwner != listing.seller) revert ListingNotFound();
 
         if (msg.value != listing.price) revert InsufficientValue();
 
@@ -324,6 +309,11 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             if (listing.price == 0) revert ListingNotFound();
             if (listing.expiresAt != 0 && listing.expiresAt <= block.timestamp) revert ListingExpired();
             if (buyer == listing.seller) revert SelfPurchase();
+            
+            // N-02: check if listing is stale
+            address currentOwner = _tryOwnerOf(collection, tokenIds[i]);
+            if (currentOwner != listing.seller) revert ListingNotFound();
+            
             cached[i] = listing;
             totalPrice += listing.price;
             unchecked {
@@ -680,6 +670,17 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         return nft.isApprovedForAll(tokenOwner, address(this));
     }
 
+    /// @notice N-02: Safe ownerOf check that doesn't bubble reverts
+    function _tryOwnerOf(address collection, uint256 tokenId) internal view returns (address owner) {
+        (bool success, bytes memory data) = collection.staticcall(
+            abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId)
+        );
+        if (!success || data.length < 32) {
+            return address(0); // Token doesn't exist or call reverted
+        }
+        owner = abi.decode(data, (address));
+    }
+
     function _tryCollectionOwner(address collection)
         internal
         view
@@ -731,6 +732,21 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
 
     function renounceOwnership() public override {
         revert RenounceOwnershipDisabled();
+    }
+
+    /// @notice N-02: Permissionless cleanup of stale listings
+    function cleanStaleListing(address collection, uint256 tokenId) external {
+        Listing storage listing = listings[collection][tokenId];
+        if (listing.price == 0) revert ListingNotFound();
+        
+        address currentOwner = _tryOwnerOf(collection, tokenId);
+        if (currentOwner == listing.seller) revert InvalidCall();
+        
+        // Listing is stale, clean it up
+        address staleSeller = listing.seller;
+        delete listings[collection][tokenId];
+        --totalListings;
+        emit ListingCancelled(collection, tokenId, staleSeller);
     }
 }
 
