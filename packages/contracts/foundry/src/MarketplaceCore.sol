@@ -161,11 +161,21 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (expiresAt != 0 && expiresAt <= block.timestamp) revert ListingExpired();
 
         IERC721 nft = IERC721(collection);
-        if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
+        address currentOwner = nft.ownerOf(tokenId);
+        if (currentOwner != seller) revert NotTokenOwner();
         if (!nft.isApprovedForAll(seller, address(this))) revert NotApproved();
 
-        if (listings[collection][tokenId].price > 0) {
-            _cancelListing(collection, tokenId, seller);
+        Listing memory existing = listings[collection][tokenId];
+        if (existing.price > 0) {
+            if (existing.seller != currentOwner) {
+                // M-01: stale listing (the token moved). Replacing it must not
+                // require the old seller's cooperation.
+                delete listings[collection][tokenId];
+                --totalListings;
+                emit ListingCancelled(collection, tokenId, existing.seller);
+            } else {
+                _cancelListing(collection, tokenId, seller);
+            }
         }
 
         listings[collection][tokenId] = Listing({seller: seller, price: price, listedAt: uint64(block.timestamp), expiresAt: expiresAt});
@@ -198,7 +208,21 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function updateListingPrice(address collection, uint256 tokenId, uint128 newPrice, address seller) external whenNotPaused onlyRouter {
         Listing storage listing = listings[collection][tokenId];
         if (listing.price == 0) revert ListingNotFound();
-        if (IERC721(collection).ownerOf(tokenId) != seller) revert NotTokenOwner();
+
+        address currentOwner = IERC721(collection).ownerOf(tokenId);
+        if (listing.seller != currentOwner) {
+            // M-01: stale listing. Drop it and fail the update. NOTE: the
+            // revert rolls back the delete; cleanup happens the next time the
+            // owner calls createListing (TODO(audit): optionally add an
+            // explicit permissionless cleanup entrypoint).
+            address staleSeller = listing.seller;
+            delete listings[collection][tokenId];
+            --totalListings;
+            emit ListingCancelled(collection, tokenId, staleSeller);
+            revert ListingNotFound();
+        }
+
+        if (currentOwner != seller) revert NotTokenOwner();
         if (listing.seller != seller) revert NotSeller();
         if (newPrice < MIN_LISTING_PRICE) revert InvalidPrice();
 
@@ -243,6 +267,17 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         Listing memory listing = listings[collection][tokenId];
         if (listing.price == 0) revert ListingNotFound();
         if (listing.expiresAt != 0 && listing.expiresAt < block.timestamp) revert ListingExpired();
+
+        // M-01: never execute against a listing whose seller no longer owns the
+        // token. NOTE: the revert rolls back the delete; the stale entry is
+        // overwritten by createListing or ignored by future buyers.
+        if (IERC721(collection).ownerOf(tokenId) != listing.seller) {
+            delete listings[collection][tokenId];
+            --totalListings;
+            emit ListingCancelled(collection, tokenId, listing.seller);
+            revert ListingNotFound();
+        }
+
         if (msg.value != listing.price) revert InsufficientValue();
 
         _executeSale(collection, tokenId, listing, buyer);
