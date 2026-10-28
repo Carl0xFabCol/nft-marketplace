@@ -42,7 +42,7 @@ contract IntegrationTest is TestSetup {
         ids[0] = 1;
 
         vm.prank(seller);
-        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0, 0);
 
         assertEq(nft.ownerOf(1), bidder);
         assertEq(core.totalSales(), 1);
@@ -61,7 +61,7 @@ contract IntegrationTest is TestSetup {
         );
 
         vm.prank(seller);
-        marketplace.acceptTokenBid(address(nft), 1, bidder, 0);
+        marketplace.acceptTokenBid(address(nft), 1, bidder, 0, 0);
 
         assertEq(nft.ownerOf(1), bidder);
         assertEq(core.totalSales(), 1);

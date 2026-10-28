@@ -8,8 +8,9 @@ interface IMarketplaceCore {
     struct Listing {
         address seller;
         uint128 price;
-        uint64 listedAt;
-        uint64 expiresAt;
+        uint48 listedAt;
+        uint48 expiresAt;
+        uint16 feeBps;
     }
 
     struct CollectionInfo {
@@ -34,7 +35,7 @@ interface IMarketplaceCore {
 
     function collections(address) external view returns (address, uint16, uint256, uint32, bool, bool);
 
-    function listings(address, uint256) external view returns (address, uint128, uint64, uint64);
+    function listings(address, uint256) external view returns (address, uint128, uint48, uint48, uint16);
 
     // Listing functions
     function createListing(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address seller) external;
@@ -117,7 +118,7 @@ interface IMarketplaceBids {
     // Collection bid functions
     function placeCollectionBid(address collection, uint128 pricePerItem, uint32 quantity, uint64 expiresAt, address bidder) external payable;
 
-    function acceptCollectionBid(address collection, address bidder, uint256[] calldata tokenIds, address seller, uint128 minPricePerItem) external;
+    function acceptCollectionBid(address collection, address bidder, uint256[] calldata tokenIds, address seller, uint128 minPricePerItem, uint128 minSellerProceeds) external;
 
     function cancelCollectionBid(address collection, address bidder) external;
 
@@ -126,7 +127,7 @@ interface IMarketplaceBids {
 
     function placeTokenBidBatch(address collection, uint256[] calldata tokenIds, uint128[] calldata prices, uint64[] calldata expiresAts, address bidder) external payable;
 
-    function acceptTokenBid(address collection, uint256 tokenId, address bidder, address seller, uint128 minPrice) external;
+    function acceptTokenBid(address collection, uint256 tokenId, address bidder, address seller, uint128 minPrice, uint128 minSellerProceeds) external;
 
     function cancelTokenBid(address collection, uint256 tokenId, address bidder) external;
 
@@ -177,8 +178,9 @@ contract Marketplace is Ownable2Step {
     struct Listing {
         address seller;
         uint128 price;
-        uint64 listedAt;
-        uint64 expiresAt;
+        uint48 listedAt;
+        uint48 expiresAt;
+        uint16 feeBps;
     }
 
     struct CollectionBid {
@@ -251,8 +253,8 @@ contract Marketplace is Ownable2Step {
     }
 
     function listings(address collection, uint256 tokenId) external view returns (Listing memory) {
-        (address seller, uint128 price, uint64 listedAt, uint64 expiresAt) = core.listings(collection, tokenId);
-        return Listing(seller, price, listedAt, expiresAt);
+        (address seller, uint128 price, uint48 listedAt, uint48 expiresAt, uint16 feeBps) = core.listings(collection, tokenId);
+        return Listing(seller, price, listedAt, expiresAt, feeBps);
     }
 
     function collectionBids(address collection, address bidder) external view returns (CollectionBid memory) {
@@ -317,8 +319,8 @@ contract Marketplace is Ownable2Step {
         bids.placeCollectionBid{value: msg.value}(collection, pricePerItem, quantity, expiresAt, msg.sender);
     }
 
-    function acceptCollectionBid(address collection, address bidder, uint256[] calldata tokenIds, uint128 minPricePerItem) external {
-        bids.acceptCollectionBid(collection, bidder, tokenIds, msg.sender, minPricePerItem);
+    function acceptCollectionBid(address collection, address bidder, uint256[] calldata tokenIds, uint128 minPricePerItem, uint128 minSellerProceeds) external {
+        bids.acceptCollectionBid(collection, bidder, tokenIds, msg.sender, minPricePerItem, minSellerProceeds);
     }
 
     function cancelCollectionBid(address collection) external {
@@ -337,8 +339,8 @@ contract Marketplace is Ownable2Step {
         bids.placeTokenBidBatch{value: msg.value}(collection, tokenIds, prices, expiresAts, msg.sender);
     }
 
-    function acceptTokenBid(address collection, uint256 tokenId, address bidder, uint128 minPrice) external {
-        bids.acceptTokenBid(collection, tokenId, bidder, msg.sender, minPrice);
+    function acceptTokenBid(address collection, uint256 tokenId, address bidder, uint128 minPrice, uint128 minSellerProceeds) external {
+        bids.acceptTokenBid(collection, tokenId, bidder, msg.sender, minPrice, minSellerProceeds);
     }
 
     function cancelTokenBid(address collection, uint256 tokenId) external {

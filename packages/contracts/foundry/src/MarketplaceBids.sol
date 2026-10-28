@@ -104,6 +104,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     error InsufficientExcess();
     error DuplicateTokenId();
     error PriceTooLow();
+    error SellerProceedsTooLow();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -155,7 +156,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         emit CollectionBidPlaced(collection, bidder, pricePerItem, quantity, expiresAt);
     }
 
-    function acceptCollectionBid(address collection, address bidder, uint256[] calldata tokenIds, address seller, uint128 minPricePerItem) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
+    function acceptCollectionBid(address collection, address bidder, uint256[] calldata tokenIds, address seller, uint128 minPricePerItem, uint128 minSellerProceeds) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         CollectionBid storage bid = collectionBids[collection][bidder];
         if (bid.quantity == 0) revert BidNotFound();
         if (bid.expiresAt != 0 && bid.expiresAt < block.timestamp) revert BidExpired();
@@ -177,6 +178,9 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         (uint128 totalMarketplaceFee, uint256 totalRoyalty) = _executeCollectionBidSales(collection, tokenIds, bidder, pricePerItem, seller);
 
         uint128 sellerProceeds = totalPrice - totalMarketplaceFee - uint128(totalRoyalty);
+        // M-03: the seller can bound the net proceeds to protect against fee or
+        // royalty changes between signing and execution.
+        if (sellerProceeds < minSellerProceeds) revert SellerProceedsTooLow();
         _distributePayments(seller, sellerProceeds, totalMarketplaceFee);
 
         emit CollectionBidAccepted(collection, bidder, seller, tokenIds, totalPrice);
@@ -313,7 +317,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         }
     }
 
-    function acceptTokenBid(address collection, uint256 tokenId, address bidder, address seller, uint128 minPrice) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
+    function acceptTokenBid(address collection, uint256 tokenId, address bidder, address seller, uint128 minPrice, uint128 minSellerProceeds) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         TokenBid memory bid = tokenBids[collection][tokenId][bidder];
         if (bid.price == 0) revert BidNotFound();
         if (bid.expiresAt != 0 && bid.expiresAt < block.timestamp) revert BidExpired();
@@ -330,6 +334,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         (uint128 marketplaceFeeAmount, address royaltyReceiver, uint256 royaltyAmount) = core.executeSaleFromBid(collection, tokenId, seller, bidder, price);
 
         uint128 sellerProceeds = price - marketplaceFeeAmount - uint128(royaltyAmount);
+        if (sellerProceeds < minSellerProceeds) revert SellerProceedsTooLow();
         _credit(seller, sellerProceeds);
         _credit(core.feeReceiver(), marketplaceFeeAmount);
         if (royaltyAmount > 0) {

@@ -98,7 +98,7 @@ contract BidsHandler is Test {
         ids[0] = id;
 
         vm.prank(seller);
-        try marketplace.acceptCollectionBid(address(nft), b, ids, 0) {} catch {}
+        try marketplace.acceptCollectionBid(address(nft), b, ids, 0, 0) {} catch {}
     }
 
     function acceptTokenBid(uint256 bidderSeed, uint256 tokenId, uint256 sellerSeed) external {
@@ -108,7 +108,7 @@ contract BidsHandler is Test {
         _ensureToken(id, seller);
 
         vm.prank(seller);
-        try marketplace.acceptTokenBid(address(nft), id, b, 0) {} catch {}
+        try marketplace.acceptTokenBid(address(nft), id, b, 0, 0) {} catch {}
     }
 
     function withdraw(uint256 accountSeed) external {

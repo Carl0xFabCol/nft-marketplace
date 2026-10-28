@@ -24,7 +24,7 @@ contract AuditRoyaltyAttributionTest is TestSetup {
         ids[1] = 2;
 
         vm.prank(seller);
-        marketplace.acceptCollectionBid(address(nftWithRoyalty), bidder, ids, 0);
+        marketplace.acceptCollectionBid(address(nftWithRoyalty), bidder, ids, 0, 0);
 
         assertEq(bids.pendingWithdrawals(royaltyReceiverAddr), 0.05 ether);
         assertEq(bids.pendingWithdrawals(newOwner), 0.1 ether);

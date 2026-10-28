@@ -8,7 +8,7 @@ contract MarketplaceCoreTest is TestSetup {
     function testCreateListing_Valid() public {
         _setupListing();
 
-        (address s, uint128 price, , uint64 expiresAt) =
+        (address s, uint128 price, , uint48 expiresAt, ) =
             core.listings(address(nft), 1);
 
         assertEq(s, seller);
@@ -71,7 +71,7 @@ contract MarketplaceCoreTest is TestSetup {
         vm.prank(seller);
         marketplace.createListing(address(nft), 1, uint128(2 ether), 0);
 
-        (, uint128 price, , ) = core.listings(address(nft), 1);
+        (, uint128 price, , , ) = core.listings(address(nft), 1);
         assertEq(price, 2 ether);
         assertEq(core.totalListings(), 1);
     }
@@ -82,7 +82,7 @@ contract MarketplaceCoreTest is TestSetup {
         vm.prank(seller);
         marketplace.updateListingPrice(address(nft), 1, uint128(2 ether));
 
-        (, uint128 price, , ) = core.listings(address(nft), 1);
+        (, uint128 price, , , ) = core.listings(address(nft), 1);
         assertEq(price, 2 ether);
     }
 
@@ -111,7 +111,7 @@ contract MarketplaceCoreTest is TestSetup {
         vm.prank(seller);
         marketplace.cancelListing(address(nft), 1);
 
-        (address s, uint128 price, , ) = core.listings(address(nft), 1);
+        (address s, uint128 price, , , ) = core.listings(address(nft), 1);
         assertEq(s, address(0));
         assertEq(price, 0);
         assertEq(core.totalListings(), 0);

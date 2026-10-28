@@ -93,7 +93,7 @@ contract MarketplaceBidsTest is TestSetup {
         ids[0] = 1;
 
         vm.prank(seller);
-        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0, 0);
         (, , uint32 quantity, ) = bids.collectionBids(address(nft), bidder);
 
         assertEq(nft.ownerOf(1), bidder);
@@ -117,7 +117,7 @@ contract MarketplaceBidsTest is TestSetup {
         ids[0] = 1;
 
         vm.prank(seller);
-        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0, 0);
 
         Marketplace.CollectionBid memory bid = marketplace.collectionBids(address(nft), bidder);
 
@@ -135,7 +135,7 @@ contract MarketplaceBidsTest is TestSetup {
 
         vm.prank(buyer);
         _expectRevert(MarketplaceBids.NotApproved.selector);
-        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0, 0);
     }
 
     function testAcceptCollectionBid_NotApproved() public {
@@ -147,7 +147,7 @@ contract MarketplaceBidsTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(MarketplaceBids.NotApproved.selector);
-        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0, 0);
     }
 
     function testPlaceTokenBid_Valid() public {
@@ -215,7 +215,7 @@ contract MarketplaceBidsTest is TestSetup {
         _setupTokenBid();
 
         vm.prank(seller);
-        marketplace.acceptTokenBid(address(nft), 1, bidder, 0);
+        marketplace.acceptTokenBid(address(nft), 1, bidder, 0, 0);
         (, uint128 price_, ) = bids.tokenBids(address(nft), 1, bidder);
 
         assertEq(nft.ownerOf(1), bidder);
@@ -235,7 +235,7 @@ contract MarketplaceBidsTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(MarketplaceBids.BidExpired.selector);
-        marketplace.acceptTokenBid(address(nft), 1, bidder, 0);
+        marketplace.acceptTokenBid(address(nft), 1, bidder, 0, 0);
     }
 
     function testAcceptTokenBid_NotApproved() public {
@@ -247,7 +247,7 @@ contract MarketplaceBidsTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(MarketplaceBids.NotApproved.selector);
-        marketplace.acceptTokenBid(address(nft), 1, bidder, 0);
+        marketplace.acceptTokenBid(address(nft), 1, bidder, 0, 0);
     }
 
     function testCancelTokenBid_Valid_CreatesWithdrawalCredit() public {

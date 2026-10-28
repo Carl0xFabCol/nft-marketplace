@@ -30,10 +30,13 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     struct Listing {
+        // M-03: two storage slots. The fee is snapshotted at listing time so an
+        // admin fee change cannot front-run a pending sale.
         address seller;
         uint128 price;
-        uint64 listedAt;
-        uint64 expiresAt;
+        uint48 listedAt;
+        uint48 expiresAt;
+        uint16 feeBps;
     }
 
     struct CollectionInfo {
@@ -178,7 +181,13 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             }
         }
 
-        listings[collection][tokenId] = Listing({seller: seller, price: price, listedAt: uint64(block.timestamp), expiresAt: expiresAt});
+        listings[collection][tokenId] = Listing({
+            seller: seller,
+            price: price,
+            listedAt: uint48(block.timestamp),
+            expiresAt: uint48(expiresAt),
+            feeBps: marketplaceFee
+        });
 
         unchecked {
             ++totalListings;
@@ -312,7 +321,10 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function _executeSale(address collection, uint256 tokenId, Listing memory listing, address buyer) internal {
         if (buyer == listing.seller) revert SelfPurchase();
 
-        uint128 marketplaceFeeAmount = uint128((uint256(listing.price) * marketplaceFee) / BASIS_POINTS);
+        // M-03: never charge more than the fee that was in force when the
+        // listing was created; a fee reduction still benefits the seller.
+        uint16 effectiveFee = listing.feeBps < marketplaceFee ? listing.feeBps : marketplaceFee;
+        uint128 marketplaceFeeAmount = uint128((uint256(listing.price) * effectiveFee) / BASIS_POINTS);
         (address royaltyReceiver, uint256 royaltyAmount) = _getRoyalty(collection, tokenId, uint256(listing.price));
         uint128 sellerProceeds = listing.price - marketplaceFeeAmount - uint128(royaltyAmount);
 

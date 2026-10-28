@@ -18,7 +18,7 @@ contract AuditSlippageTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(MarketplaceBids.PriceTooLow.selector);
-        marketplace.acceptTokenBid(address(nft), 1, bidder, 10 ether);
+        marketplace.acceptTokenBid(address(nft), 1, bidder, 10 ether, 0);
     }
 
     function testH03_CollectionBidCannotBeReplacedBelowSellerMinimum() public {
@@ -36,14 +36,14 @@ contract AuditSlippageTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(MarketplaceBids.PriceTooLow.selector);
-        marketplace.acceptCollectionBid(address(nft), bidder, ids, 10 ether);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids, 10 ether, 0);
     }
 
     function testH03_AcceptStillWorksAtMinimum() public {
         _setupTokenBid();
 
         vm.prank(seller);
-        marketplace.acceptTokenBid(address(nft), 1, bidder, uint128(SALE_PRICE));
+        marketplace.acceptTokenBid(address(nft), 1, bidder, uint128(SALE_PRICE), 0);
 
         assertEq(nft.ownerOf(1), bidder);
     }
