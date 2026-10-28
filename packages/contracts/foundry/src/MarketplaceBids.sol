@@ -32,6 +32,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     uint128 public constant MIN_LISTING_PRICE = 1 wei;
+    uint256 public constant MAX_BATCH_SIZE = 50;
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // STRUCTS
@@ -107,6 +108,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     error PriceTooLow();
     error SellerProceedsTooLow();
     error SelfBid();
+    error BatchTooLarge();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -164,6 +166,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (bid.expiresAt != 0 && bid.expiresAt <= block.timestamp) revert BidExpired();
         if (bid.pricePerItem < minPricePerItem) revert PriceTooLow();
         if (tokenIds.length == 0 || tokenIds.length > bid.quantity) revert InvalidQuantity();
+        if (tokenIds.length > MAX_BATCH_SIZE) revert BatchTooLarge();
 
         // G-03: ownership/approval are validated inside Core.executeSaleFromBid.
         uint128 pricePerItem = bid.pricePerItem;
@@ -264,6 +267,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     ) external payable whenNotPaused whenCoreNotPaused onlyMarketplace {
         uint256 length = tokenIds.length;
         if (length != prices.length || length != expiresAts.length) revert ArrayLengthMismatch();
+        if (length > MAX_BATCH_SIZE) revert BatchTooLarge();
 
         uint256 totalNewValue;
 
@@ -346,6 +350,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     function cancelTokenBidBatch(address[] calldata collections_, uint256[] calldata tokenIds, address bidder) external nonReentrant onlyMarketplace {
         uint256 length = collections_.length;
         if (length != tokenIds.length) revert ArrayLengthMismatch();
+        if (length > MAX_BATCH_SIZE) revert BatchTooLarge();
 
         for (uint256 i; i < length; ) {
             TokenBid memory bid = tokenBids[collections_[i]][tokenIds[i]][bidder];

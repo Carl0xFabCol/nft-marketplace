@@ -25,6 +25,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     uint256 public constant MAX_ROYALTY_FEE = 2_000; // 20%
     uint128 public constant MIN_LISTING_PRICE = 1 wei;
     uint256 public constant ROYALTY_QUERY_GAS = 50_000;
+    uint256 public constant MAX_BATCH_SIZE = 50;
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // STRUCTS
@@ -213,6 +214,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     ) external whenNotPaused onlyRouter {
         uint256 length = collections_.length;
         if (length != tokenIds.length || length != prices.length || length != expiresAts.length) revert ArrayLengthMismatch();
+        if (length > MAX_BATCH_SIZE) revert BatchTooLarge();
 
         for (uint256 i; i < length; ) {
             _createListing(collections_[i], tokenIds[i], prices[i], expiresAts[i], seller);
@@ -254,6 +256,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function cancelListingBatch(address[] calldata collections_, uint256[] calldata tokenIds, address seller) external onlyRouter {
         uint256 length = collections_.length;
         if (length != tokenIds.length) revert ArrayLengthMismatch();
+        if (length > MAX_BATCH_SIZE) revert BatchTooLarge();
 
         for (uint256 i; i < length; ) {
             _cancelListing(collections_[i], tokenIds[i], seller);
@@ -303,6 +306,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function buyBatch(address collection, uint256[] calldata tokenIds, address buyer) external payable whenNotPaused nonReentrant onlyRouter {
         uint256 totalPrice;
         uint256 length = tokenIds.length;
+        if (length > MAX_BATCH_SIZE) revert BatchTooLarge();
 
         for (uint256 i; i < length; ) {
             for (uint256 j; j < i; ) {
