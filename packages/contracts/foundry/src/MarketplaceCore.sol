@@ -299,6 +299,13 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         uint256 length = tokenIds.length;
 
         for (uint256 i; i < length; ) {
+            for (uint256 j; j < i; ) {
+                if (tokenIds[j] == tokenIds[i]) revert DuplicateTokenId();
+                unchecked {
+                    ++j;
+                }
+            }
+
             Listing memory listing = listings[collection][tokenIds[i]];
             if (listing.price == 0) revert ListingNotFound();
             if (listing.expiresAt != 0 && listing.expiresAt < block.timestamp) revert ListingExpired();
@@ -313,6 +320,9 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
 
         for (uint256 i; i < length; ) {
             Listing memory listing = listings[collection][tokenIds[i]];
+            // L-01: never execute a listing that was already cleared (duplicate
+            // ids are rejected above, but this also protects future refactors).
+            if (listing.price == 0) revert ListingNotFound();
             _executeSale(collection, tokenIds[i], listing, buyer);
             unchecked {
                 ++i;
