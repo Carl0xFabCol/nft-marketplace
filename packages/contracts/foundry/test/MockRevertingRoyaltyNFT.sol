@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @notice ERC721 whose royaltyInfo always reverts.
  *         Used to test the catch {} fallback in _getRoyalty — when royaltyInfo
  *         reverts, the marketplace falls back to collection-level royalty.
- *         Uses hardcoded ERC2981 interface ID (0x2a552323) to avoid
+ *         Uses the standard ERC2981 interface ID (0x2a55205a) to avoid
  *         conflicts with the local IERC2981 defined in MarketplaceCore.sol.
  */
 contract MockRevertingRoyaltyNFT is ERC721, Ownable {
@@ -24,6 +24,6 @@ contract MockRevertingRoyaltyNFT is ERC721, Ownable {
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721) returns (bool) {
-        return interfaceId == 0x2a552323 || super.supportsInterface(interfaceId);
+        return interfaceId == 0x2a55205a || interfaceId == 0x2a552323 || super.supportsInterface(interfaceId);
     }
 }

@@ -174,10 +174,10 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
             bid.quantity -= uint32(tokenIds.length);
         }
 
-        (uint128 totalMarketplaceFee, address royaltyReceiver, uint256 totalRoyalty) = _executeCollectionBidSales(collection, tokenIds, bidder, pricePerItem, seller);
+        (uint128 totalMarketplaceFee, uint256 totalRoyalty) = _executeCollectionBidSales(collection, tokenIds, bidder, pricePerItem, seller);
 
         uint128 sellerProceeds = totalPrice - totalMarketplaceFee - uint128(totalRoyalty);
-        _distributePayments(seller, sellerProceeds, totalMarketplaceFee, royaltyReceiver, totalRoyalty);
+        _distributePayments(seller, sellerProceeds, totalMarketplaceFee);
 
         emit CollectionBidAccepted(collection, bidder, seller, tokenIds, totalPrice);
     }
@@ -200,13 +200,19 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         address bidder,
         uint128 pricePerItem,
         address seller
-    ) internal returns (uint128 totalMarketplaceFee, address royaltyReceiver, uint256 totalRoyalty) {
+    ) internal returns (uint128 totalMarketplaceFee, uint256 totalRoyalty) {
         for (uint256 i; i < tokenIds.length; ) {
             (uint128 fee, address receiver, uint256 royalty) = core.executeSaleFromBid(collection, tokenIds[i], seller, bidder, pricePerItem);
 
             totalMarketplaceFee += fee;
             totalRoyalty += royalty;
-            royaltyReceiver = receiver;
+
+            // M-02: credit each token's royalty to its own receiver immediately.
+            // Different tokens in the same collection bid may nominate
+            // different ERC-2981 receivers.
+            if (royalty > 0) {
+                _credit(receiver, royalty);
+            }
 
             unchecked {
                 ++i;
@@ -214,12 +220,9 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         }
     }
 
-    function _distributePayments(address seller, uint128 sellerProceeds, uint128 marketplaceFee, address royaltyReceiver, uint256 royaltyAmount) internal {
+    function _distributePayments(address seller, uint128 sellerProceeds, uint128 marketplaceFee) internal {
         _credit(core.feeReceiver(), marketplaceFee);
         _credit(seller, sellerProceeds);
-        if (royaltyAmount > 0) {
-            _credit(royaltyReceiver, royaltyAmount);
-        }
     }
 
     function cancelCollectionBid(address collection, address bidder) external nonReentrant onlyMarketplace {

@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @title MockNFTWithRoyalty
  * @notice ERC721 mock with royalty support for testing royalty paths.
  *         Implements a simplified ERC2981-like royalty mechanism.
- *         Uses hardcoded ERC2981 interface ID (0x2a552323) to avoid
+ *         Uses the standard ERC2981 interface ID (0x2a55205a) to avoid
  *         conflicts with the local IERC2981 defined in MarketplaceCore.sol.
  */
 contract MockNFTWithRoyalty is ERC721, Ownable {
@@ -52,6 +52,6 @@ contract MockNFTWithRoyalty is ERC721, Ownable {
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721) returns (bool) {
-        return interfaceId == 0x2a552323 || super.supportsInterface(interfaceId);
+        return interfaceId == 0x2a55205a || interfaceId == 0x2a552323 || super.supportsInterface(interfaceId);
     }
 }
