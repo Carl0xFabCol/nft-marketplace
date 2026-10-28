@@ -308,6 +308,9 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         uint256 length = tokenIds.length;
         if (length > MAX_BATCH_SIZE) revert BatchTooLarge();
 
+        // G-06: read each listing from storage exactly once.
+        Listing[] memory cached = new Listing[](length);
+
         for (uint256 i; i < length; ) {
             for (uint256 j; j < i; ) {
                 if (tokenIds[j] == tokenIds[i]) revert DuplicateTokenId();
@@ -320,6 +323,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             if (listing.price == 0) revert ListingNotFound();
             if (listing.expiresAt != 0 && listing.expiresAt <= block.timestamp) revert ListingExpired();
             if (buyer == listing.seller) revert SelfPurchase();
+            cached[i] = listing;
             totalPrice += listing.price;
             unchecked {
                 ++i;
@@ -329,11 +333,10 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (msg.value != totalPrice) revert InsufficientValue();
 
         for (uint256 i; i < length; ) {
-            Listing memory listing = listings[collection][tokenIds[i]];
             // L-01: never execute a listing that was already cleared (duplicate
             // ids are rejected above, but this also protects future refactors).
-            if (listing.price == 0) revert ListingNotFound();
-            _executeSale(collection, tokenIds[i], listing, buyer);
+            if (listings[collection][tokenIds[i]].price == 0) revert ListingNotFound();
+            _executeSale(collection, tokenIds[i], cached[i], buyer);
             unchecked {
                 ++i;
             }
