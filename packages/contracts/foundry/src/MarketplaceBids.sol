@@ -161,7 +161,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     function acceptCollectionBid(address collection, address bidder, uint256[] calldata tokenIds, address seller, uint128 minPricePerItem, uint128 minSellerProceeds) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         CollectionBid storage bid = collectionBids[collection][bidder];
         if (bid.quantity == 0) revert BidNotFound();
-        if (bid.expiresAt != 0 && bid.expiresAt < block.timestamp) revert BidExpired();
+        if (bid.expiresAt != 0 && bid.expiresAt <= block.timestamp) revert BidExpired();
         if (bid.pricePerItem < minPricePerItem) revert PriceTooLow();
         if (tokenIds.length == 0 || tokenIds.length > bid.quantity) revert InvalidQuantity();
 
@@ -324,7 +324,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     function acceptTokenBid(address collection, uint256 tokenId, address bidder, address seller, uint128 minPrice, uint128 minSellerProceeds) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         TokenBid memory bid = tokenBids[collection][tokenId][bidder];
         if (bid.price == 0) revert BidNotFound();
-        if (bid.expiresAt != 0 && bid.expiresAt < block.timestamp) revert BidExpired();
+        if (bid.expiresAt != 0 && bid.expiresAt <= block.timestamp) revert BidExpired();
         if (bid.price < minPrice) revert PriceTooLow();
 
         IERC721 nft = IERC721(collection);

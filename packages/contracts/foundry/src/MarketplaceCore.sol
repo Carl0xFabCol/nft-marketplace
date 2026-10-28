@@ -278,7 +278,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function buy(address collection, uint256 tokenId, address buyer) external payable whenNotPaused nonReentrant onlyRouter {
         Listing memory listing = listings[collection][tokenId];
         if (listing.price == 0) revert ListingNotFound();
-        if (listing.expiresAt != 0 && listing.expiresAt < block.timestamp) revert ListingExpired();
+        if (listing.expiresAt != 0 && listing.expiresAt <= block.timestamp) revert ListingExpired();
 
         // M-01: never execute against a listing whose seller no longer owns the
         // token. NOTE: the revert rolls back the delete; the stale entry is
@@ -309,7 +309,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
 
             Listing memory listing = listings[collection][tokenIds[i]];
             if (listing.price == 0) revert ListingNotFound();
-            if (listing.expiresAt != 0 && listing.expiresAt < block.timestamp) revert ListingExpired();
+            if (listing.expiresAt != 0 && listing.expiresAt <= block.timestamp) revert ListingExpired();
             if (buyer == listing.seller) revert SelfPurchase();
             totalPrice += listing.price;
             unchecked {
