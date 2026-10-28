@@ -212,6 +212,7 @@ contract Marketplace is Ownable2Step {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     error SweepFailed();
+    error RenounceOwnershipDisabled();
     error InvalidAddress();
 
     event ComponentOwnershipTransferStarted(address indexed newOwner);
@@ -458,4 +459,7 @@ contract Marketplace is Ownable2Step {
         if (!coreSwept && !bidsSwept) revert SweepFailed();
     }
 
+    function renounceOwnership() public override {
+        revert RenounceOwnershipDisabled();
+    }
 }

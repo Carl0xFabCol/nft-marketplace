@@ -102,6 +102,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     error InvalidCollection();
+    error RenounceOwnershipDisabled();
     error CollectionAlreadyRegistered();
     error CollectionNotRegistered();
     error NotCollectionOwner();
@@ -698,6 +699,10 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
 
     fallback() external payable {
         revert("Invalid call");
+    }
+
+    function renounceOwnership() public override {
+        revert RenounceOwnershipDisabled();
     }
 }
 

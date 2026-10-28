@@ -87,6 +87,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     error CollectionNotRegistered();
+    error RenounceOwnershipDisabled();
     error InvalidPrice();
     error InvalidQuantity();
     error NotTokenOwner();
@@ -463,4 +464,8 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     }
 
     receive() external payable {}
+
+    function renounceOwnership() public override {
+        revert RenounceOwnershipDisabled();
+    }
 }
