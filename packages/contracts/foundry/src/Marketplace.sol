@@ -215,11 +215,12 @@ contract Marketplace is Ownable2Step {
     error SweepFailed();
     error RenounceOwnershipDisabled();
     error InvalidAddress();
+    error ComponentsNotOwned();
 
     event ComponentOwnershipTransferStarted(address indexed newOwner);
 
     constructor(address _core, address _bids) Ownable(msg.sender) {
-        if (_core == address(0) || _bids == address(0)) revert("Invalid addresses");
+        if (_core == address(0) || _bids == address(0)) revert InvalidAddress();
         core = IMarketplaceCore(_core);
         bids = IMarketplaceBids(_bids);
     }
@@ -229,7 +230,7 @@ contract Marketplace is Ownable2Step {
     function acceptComponentOwnership() external onlyOwner {
         if (core.pendingOwner() == address(this)) core.acceptOwnership();
         if (bids.pendingOwner() == address(this)) bids.acceptOwnership();
-        require(core.owner() == address(this) && bids.owner() == address(this), "Components not owned");
+        if (core.owner() != address(this) || bids.owner() != address(this)) revert ComponentsNotOwned();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

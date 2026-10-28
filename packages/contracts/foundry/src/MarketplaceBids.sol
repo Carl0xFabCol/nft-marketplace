@@ -109,13 +109,14 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     error SellerProceedsTooLow();
     error SelfBid();
     error BatchTooLarge();
+    error CorePaused();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
     // ═══════════════════════════════════════════════════════════════════════════════
 
     modifier whenCoreNotPaused() {
-        require(!core.paused(), "Core paused");
+        if (core.paused()) revert CorePaused();
         _;
     }
 
