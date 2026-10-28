@@ -170,7 +170,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         IERC721 nft = IERC721(collection);
         address currentOwner = nft.ownerOf(tokenId);
         if (currentOwner != seller) revert NotTokenOwner();
-        if (!nft.isApprovedForAll(seller, address(this))) revert NotApproved();
+        if (!_isApproved(collection, seller, tokenId)) revert NotApproved();
 
         Listing memory existing = listings[collection][tokenId];
         if (existing.price > 0) {
@@ -382,7 +382,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
 
         IERC721 nft = IERC721(collection);
         if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
-        if (!nft.isApprovedForAll(seller, address(this))) revert NotApproved();
+        if (!_isApproved(collection, seller, tokenId)) revert NotApproved();
 
         marketplaceFeeAmount = uint128((uint256(price) * marketplaceFee) / BASIS_POINTS);
         (royaltyReceiver, royaltyAmount) = _getRoyalty(collection, tokenId, uint256(price));
@@ -657,6 +657,14 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (!success) revert TransferFailed();
 
         emit ExcessETHSwept(recipient, amount);
+    }
+
+    function _isApproved(address collection, address tokenOwner, uint256 tokenId) internal view returns (bool) {
+        IERC721 nft = IERC721(collection);
+        try nft.getApproved(tokenId) returns (address approved) {
+            if (approved == address(this)) return true;
+        } catch {}
+        return nft.isApprovedForAll(tokenOwner, address(this));
     }
 
     function _tryCollectionOwner(address collection)

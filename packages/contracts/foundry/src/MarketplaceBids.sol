@@ -190,14 +190,22 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
 
     function _verifyOwnershipAndApproval(address collection, uint256[] calldata tokenIds, address _owner) internal view {
         IERC721 nft = IERC721(collection);
-        if (!nft.isApprovedForAll(_owner, address(core))) revert NotApproved();
 
         for (uint256 i; i < tokenIds.length; ) {
             if (nft.ownerOf(tokenIds[i]) != _owner) revert NotTokenOwner();
+            if (!_isApproved(collection, _owner, tokenIds[i])) revert NotApproved();
             unchecked {
                 ++i;
             }
         }
+    }
+
+    function _isApproved(address collection, address tokenOwner, uint256 tokenId) internal view returns (bool) {
+        IERC721 nft = IERC721(collection);
+        try nft.getApproved(tokenId) returns (address approved) {
+            if (approved == address(core)) return true;
+        } catch {}
+        return nft.isApprovedForAll(tokenOwner, address(core));
     }
 
     function _executeCollectionBidSales(
@@ -329,7 +337,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
 
         IERC721 nft = IERC721(collection);
         if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
-        if (!nft.isApprovedForAll(seller, address(core))) revert NotApproved();
+        if (!_isApproved(collection, seller, tokenId)) revert NotApproved();
 
         uint128 price = bid.price;
         totalBidEscrow -= price;
