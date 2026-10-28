@@ -153,7 +153,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
             uint256 refund = uint256(existingBid.pricePerItem) * existingBid.quantity;
             totalBidEscrow -= refund;
             _credit(bidder, refund);
-            totalPendingWithdrawals += refund;
         }
 
         totalBidEscrow += totalValue;
@@ -190,8 +189,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
 
         // G-07: read the fee receiver once per acceptance.
         _distributePayments(seller, sellerProceeds, totalMarketplaceFee, core.feeReceiver());
-        // G-09: one ledger update per sale.
-        totalPendingWithdrawals += totalPrice;
 
         emit CollectionBidAccepted(collection, bidder, seller, tokenIds, totalPrice);
     }
@@ -236,7 +233,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         uint256 refund = uint256(bid.pricePerItem) * bid.quantity;
         totalBidEscrow -= refund;
         _credit(bidder, refund);
-        totalPendingWithdrawals += refund;
 
         emit CollectionBidCancelled(collection, bidder);
     }
@@ -256,7 +252,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (existingBid.price > 0) {
             totalBidEscrow -= existingBid.price;
             _credit(bidder, existingBid.price);
-            totalPendingWithdrawals += existingBid.price;
         }
 
         totalBidEscrow += price;
@@ -307,7 +302,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
             if (existingBid.price > 0) {
                 totalBidEscrow -= existingBid.price;
                 _credit(bidder, existingBid.price);
-                totalPendingWithdrawals += existingBid.price;
             }
 
             totalBidEscrow += prices[i];
@@ -342,8 +336,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (royaltyAmount > 0) {
             _credit(royaltyReceiver, royaltyAmount);
         }
-        // G-09: one ledger update per sale.
-        totalPendingWithdrawals += price;
 
         emit TokenBidAccepted(collection, tokenId, bidder, seller, price);
     }
@@ -355,7 +347,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         delete tokenBids[collection][tokenId][bidder];
         totalBidEscrow -= bid.price;
         _credit(bidder, bid.price);
-        totalPendingWithdrawals += bid.price;
 
         emit TokenBidCancelled(collection, tokenId, bidder);
     }
@@ -371,7 +362,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
                 delete tokenBids[collections_[i]][tokenIds[i]][bidder];
                 totalBidEscrow -= bid.price;
                 _credit(bidder, bid.price);
-                totalPendingWithdrawals += bid.price;
                 emit TokenBidCancelled(collections_[i], tokenIds[i], bidder);
             }
             unchecked {
@@ -420,6 +410,9 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (account == address(0)) revert InvalidAddress();
 
         pendingWithdrawals[account] += amount;
+        unchecked {
+            totalPendingWithdrawals += amount;
+        }
     }
 
     function withdrawFor(address account) external nonReentrant onlyMarketplace returns (bool withdrawn) {
