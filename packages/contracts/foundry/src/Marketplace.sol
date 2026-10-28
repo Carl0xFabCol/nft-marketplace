@@ -62,6 +62,7 @@ interface IMarketplaceCore {
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external;
 
     function verifyCollection(address collection) external;
+    function unverifyCollection(address collection) external;
 
     // Admin functions
     function updateMarketplaceFee(uint16 newFee) external;
@@ -375,6 +376,10 @@ contract Marketplace is Ownable2Step {
 
     function verifyCollection(address collection) external onlyOwner {
         core.verifyCollection(collection);
+    }
+
+    function unverifyCollection(address collection) external onlyOwner {
+        core.unverifyCollection(collection);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

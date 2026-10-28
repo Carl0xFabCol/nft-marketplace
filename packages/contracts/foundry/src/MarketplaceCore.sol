@@ -90,6 +90,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     event MarketplaceFeeUpdated(uint16 oldFee, uint16 newFee);
     event FeeReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
     event CollectionVerified(address indexed collection);
+    event CollectionUnverified(address indexed collection);
     event ContractAuthorized(address indexed contractAddr, bool authorized);
     event LaunchpadAuthorized(address indexed launchpad, bool authorized);
     event BidsContractUpdated(address indexed oldBids, address indexed newBids);
@@ -544,6 +545,12 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         collections[collection].isVerified = true;
         emit CollectionVerified(collection);
+    }
+
+    function unverifyCollection(address collection) external onlyOwner {
+        if (!collections[collection].exists) revert CollectionNotRegistered();
+        collections[collection].isVerified = false;
+        emit CollectionUnverified(collection);
     }
     function updateMarketplaceFee(uint16 newFee) external onlyOwner {
         if (newFee > MAX_MARKETPLACE_FEE) revert FeeTooHigh();
