@@ -99,6 +99,22 @@ contract AuditAuthorizationTest is TestSetup {
         core.registerCollectionFromLaunchpad(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr, owner);
     }
 
+    function testL07_WithdrawForIsRouterOnly() public {
+        _setupListing();
+
+        vm.prank(buyer);
+        marketplace.buy{value: SALE_PRICE}(address(nft), 1);
+
+        vm.prank(unauthorized);
+        _expectRevert(MarketplaceCore.Unauthorized.selector);
+        core.withdrawFor(seller);
+
+        uint256 before = seller.balance;
+        vm.prank(seller);
+        marketplace.withdraw();
+        assertGt(seller.balance, before);
+    }
+
     function testH02_LaunchpadCanOnlyRegisterOwnLaunch() public {
         address collection = _launchCollection();
         (, , , , , bool exists) = core.collections(collection);
