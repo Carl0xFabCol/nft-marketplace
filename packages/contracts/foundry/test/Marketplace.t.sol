@@ -129,7 +129,7 @@ contract MarketplaceTest is TestSetup {
         ids[0] = 1;
 
         vm.prank(seller);
-        marketplace.acceptCollectionBid(address(nft), bidder, ids);
+        marketplace.acceptCollectionBid(address(nft), bidder, ids, 0);
 
         assertEq(nft.ownerOf(1), bidder);
     }
@@ -138,7 +138,7 @@ contract MarketplaceTest is TestSetup {
         _setupTokenBid();
 
         vm.prank(seller);
-        marketplace.acceptTokenBid(address(nft), 1, bidder);
+        marketplace.acceptTokenBid(address(nft), 1, bidder, 0);
 
         assertEq(nft.ownerOf(1), bidder);
     }
