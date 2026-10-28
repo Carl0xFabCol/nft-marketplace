@@ -134,7 +134,7 @@ contract MarketplaceBidsTest is TestSetup {
         ids[0] = 1;
 
         vm.prank(buyer);
-        _expectRevert(MarketplaceBids.NotApproved.selector);
+        _expectRevert(MarketplaceBids.NotTokenOwner.selector);
         marketplace.acceptCollectionBid(address(nft), bidder, ids, 0, 0);
     }
 

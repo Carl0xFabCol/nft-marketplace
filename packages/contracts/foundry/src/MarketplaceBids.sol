@@ -165,8 +165,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (bid.pricePerItem < minPricePerItem) revert PriceTooLow();
         if (tokenIds.length == 0 || tokenIds.length > bid.quantity) revert InvalidQuantity();
 
-        _verifyOwnershipAndApproval(collection, tokenIds, seller);
-
+        // G-03: ownership/approval are validated inside Core.executeSaleFromBid.
         uint128 pricePerItem = bid.pricePerItem;
         uint128 totalPrice = pricePerItem * uint128(tokenIds.length);
         totalBidEscrow -= totalPrice;
@@ -186,26 +185,6 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         _distributePayments(seller, sellerProceeds, totalMarketplaceFee);
 
         emit CollectionBidAccepted(collection, bidder, seller, tokenIds, totalPrice);
-    }
-
-    function _verifyOwnershipAndApproval(address collection, uint256[] calldata tokenIds, address _owner) internal view {
-        IERC721 nft = IERC721(collection);
-
-        for (uint256 i; i < tokenIds.length; ) {
-            if (nft.ownerOf(tokenIds[i]) != _owner) revert NotTokenOwner();
-            if (!_isApproved(collection, _owner, tokenIds[i])) revert NotApproved();
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    function _isApproved(address collection, address tokenOwner, uint256 tokenId) internal view returns (bool) {
-        IERC721 nft = IERC721(collection);
-        try nft.getApproved(tokenId) returns (address approved) {
-            if (approved == address(core)) return true;
-        } catch {}
-        return nft.isApprovedForAll(tokenOwner, address(core));
     }
 
     function _executeCollectionBidSales(
@@ -335,10 +314,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         if (bid.expiresAt != 0 && bid.expiresAt <= block.timestamp) revert BidExpired();
         if (bid.price < minPrice) revert PriceTooLow();
 
-        IERC721 nft = IERC721(collection);
-        if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
-        if (!_isApproved(collection, seller, tokenId)) revert NotApproved();
-
+        // G-03: Core.executeSaleFromBid performs the ownership/approval checks.
         uint128 price = bid.price;
         totalBidEscrow -= price;
         delete tokenBids[collection][tokenId][bidder];
