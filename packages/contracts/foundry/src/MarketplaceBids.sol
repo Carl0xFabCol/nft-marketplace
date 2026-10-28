@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
 interface IMarketplaceCoreForBids {
-    function collections(address) external view returns (address royaltyReceiver, uint16 royaltyFee, uint256 totalVolume, uint32 totalSales, bool isVerified, bool exists);
+    function isRegistered(address collection) external view returns (bool);
 
     function executeSaleFromBid(
         address collection,
@@ -138,8 +138,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     function placeCollectionBid(address collection, uint128 pricePerItem, uint32 quantity, uint64 expiresAt, address bidder) external payable whenNotPaused whenCoreNotPaused onlyMarketplace {
-        (, , , , , bool exists) = core.collections(collection);
-        if (!exists) revert CollectionNotRegistered();
+        if (!core.isRegistered(collection)) revert CollectionNotRegistered();
         if (pricePerItem < MIN_LISTING_PRICE) revert InvalidPrice();
         if (quantity == 0) revert InvalidQuantity();
         if (expiresAt != 0 && expiresAt <= block.timestamp) revert BidExpired();
@@ -185,7 +184,9 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         // M-03: the seller can bound the net proceeds to protect against fee or
         // royalty changes between signing and execution.
         if (sellerProceeds < minSellerProceeds) revert SellerProceedsTooLow();
-        _distributePayments(seller, sellerProceeds, totalMarketplaceFee);
+
+        // G-07: read the fee receiver once per acceptance.
+        _distributePayments(seller, sellerProceeds, totalMarketplaceFee, core.feeReceiver());
 
         emit CollectionBidAccepted(collection, bidder, seller, tokenIds, totalPrice);
     }
@@ -216,8 +217,8 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         }
     }
 
-    function _distributePayments(address seller, uint128 sellerProceeds, uint128 marketplaceFee) internal {
-        _credit(core.feeReceiver(), marketplaceFee);
+    function _distributePayments(address seller, uint128 sellerProceeds, uint128 marketplaceFee, address feeRecipient) internal {
+        _credit(feeRecipient, marketplaceFee);
         _credit(seller, sellerProceeds);
     }
 
@@ -239,8 +240,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     function placeTokenBid(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address bidder) external payable whenNotPaused whenCoreNotPaused onlyMarketplace {
-        (, , , , , bool exists) = core.collections(collection);
-        if (!exists) revert CollectionNotRegistered();
+        if (!core.isRegistered(collection)) revert CollectionNotRegistered();
         if (price < MIN_LISTING_PRICE) revert InvalidPrice();
         if (expiresAt != 0 && expiresAt <= block.timestamp) revert BidExpired();
         if (msg.value != price) revert InsufficientValue();
@@ -268,6 +268,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         uint256 length = tokenIds.length;
         if (length != prices.length || length != expiresAts.length) revert ArrayLengthMismatch();
         if (length > MAX_BATCH_SIZE) revert BatchTooLarge();
+        if (!core.isRegistered(collection)) revert CollectionNotRegistered();
 
         uint256 totalNewValue;
 
@@ -328,6 +329,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
         uint128 sellerProceeds = price - marketplaceFeeAmount - uint128(royaltyAmount);
         if (sellerProceeds < minSellerProceeds) revert SellerProceedsTooLow();
         _credit(seller, sellerProceeds);
+        // G-07: read the fee receiver once.
         _credit(core.feeReceiver(), marketplaceFeeAmount);
         if (royaltyAmount > 0) {
             _credit(royaltyReceiver, royaltyAmount);
