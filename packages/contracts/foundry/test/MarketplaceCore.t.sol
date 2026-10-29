@@ -13,7 +13,7 @@ contract MarketplaceCoreTest is TestSetup {
 
         assertEq(s, seller);
         assertEq(price, SALE_PRICE);
-        assertEq(expiresAt, 0);
+        assertEq(expiresAt, _listingExpiry());
         assertEq(core.totalListings(), 1);
     }
 
@@ -23,7 +23,7 @@ contract MarketplaceCoreTest is TestSetup {
         _approveOnCore(address(nft), seller);
 
         vm.prank(seller);
-        _expectRevert(MarketplaceCore.ListingExpired.selector);
+        _expectRevert(MarketplaceCore.InvalidExpiry.selector);
         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 1);
     }
 
@@ -34,7 +34,7 @@ contract MarketplaceCoreTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(MarketplaceCore.InvalidPrice.selector);
-        marketplace.createListing(address(nft), 1, 0, 0);
+        marketplace.createListing(address(nft), 1, 0, _listingExpiry());
     }
 
     function testCreateListing_Unregistered() public {
@@ -43,7 +43,7 @@ contract MarketplaceCoreTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(MarketplaceCore.CollectionNotRegistered.selector);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
     }
 
     function testCreateListing_NotOwner() public {
@@ -53,7 +53,7 @@ contract MarketplaceCoreTest is TestSetup {
 
         vm.prank(buyer);
         _expectRevert(MarketplaceCore.NotTokenOwner.selector);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
     }
 
     function testCreateListing_NotApproved() public {
@@ -62,14 +62,14 @@ contract MarketplaceCoreTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(MarketplaceCore.NotApproved.selector);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
     }
 
     function testCreateListing_ReplacesExisting() public {
         _setupListing();
 
         vm.prank(seller);
-        marketplace.createListing(address(nft), 1, uint128(2 ether), 0);
+        marketplace.createListing(address(nft), 1, uint128(2 ether), _listingExpiry());
 
         (, uint128 price, , , , ) = core.listings(address(nft), 1);
         assertEq(price, 2 ether);
@@ -207,8 +207,8 @@ contract MarketplaceCoreTest is TestSetup {
         _approveOnCore(address(nft), seller);
 
         vm.startPrank(seller);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
-        marketplace.createListing(address(nft), 2, uint128(2 ether), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+        marketplace.createListing(address(nft), 2, uint128(2 ether), _listingExpiry());
         vm.stopPrank();
 
         uint256[] memory ids = new uint256[](2);

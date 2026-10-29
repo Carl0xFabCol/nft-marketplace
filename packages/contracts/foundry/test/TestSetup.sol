@@ -112,13 +112,17 @@ contract TestSetup is Test {
         IERC721(collection).setApprovalForAll(address(core), true);
     }
 
+    function _listingExpiry() internal view returns (uint64) {
+        return uint64(block.timestamp + 1 days);
+    }
+
     function _setupListing() internal {
         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
         _mintNFT(seller, 1);
         _approveOnCore(address(nft), seller);
 
         vm.prank(seller);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
     }
 
     function _setupTokenBid() internal {

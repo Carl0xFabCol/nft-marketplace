@@ -106,7 +106,7 @@ contract AuditN02FixedTest is TestSetup {
         // Buyer creates new listing (should overwrite stale)
         vm.startPrank(buyer);
         nft.setApprovalForAll(address(core), true);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE * 2), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE * 2), _listingExpiry());
         vm.stopPrank();
         
         // New listing exists

@@ -27,6 +27,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     uint128 public constant MIN_LISTING_PRICE = 1 wei;
     uint256 public constant ROYALTY_QUERY_GAS = 50_000;
     uint256 public constant MAX_BATCH_SIZE = 50;
+    uint256 public constant MAX_LISTING_DURATION = 30 days;
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // STRUCTS
@@ -131,6 +132,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     error RoyaltyExceedsPrice();
     error AlreadySet();
     error ExpiryTooLarge();
+    error InvalidExpiry();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -174,8 +176,15 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function _createListing(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address seller) internal {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (price < MIN_LISTING_PRICE) revert InvalidPrice();
-        if (expiresAt != 0 && expiresAt <= block.timestamp) revert ListingExpired();
         if (uint256(expiresAt) > type(uint48).max) revert ExpiryTooLarge();
+        // L-N3: listings must expire and can live for at most 30 days. A zero
+        // expiry stays valid only for bids, so an expired listing can never be
+        // resurrected as an unlimited-duration listing.
+        if (
+            expiresAt == 0 ||
+            expiresAt <= block.timestamp ||
+            expiresAt > block.timestamp + MAX_LISTING_DURATION
+        ) revert InvalidExpiry();
 
         IERC721 nft = IERC721(collection);
         address currentOwner = nft.ownerOf(tokenId);

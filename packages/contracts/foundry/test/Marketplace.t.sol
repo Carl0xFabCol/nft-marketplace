@@ -42,7 +42,7 @@ contract MarketplaceTest is TestSetup {
         _approveOnCore(address(nft), seller);
 
         vm.prank(seller);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
 
         assertEq(marketplace.listings(address(nft), 1).seller, seller);
     }
@@ -54,7 +54,7 @@ contract MarketplaceTest is TestSetup {
 
         vm.prank(buyer);
         _expectRevert(MarketplaceCore.NotTokenOwner.selector);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
     }
 
     function testCancelListing_UsesActualSeller() public {

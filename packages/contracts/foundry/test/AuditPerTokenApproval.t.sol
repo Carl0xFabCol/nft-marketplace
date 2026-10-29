@@ -13,7 +13,7 @@ contract AuditPerTokenApprovalTest is TestSetup {
         nft.approve(address(core), 1);
 
         vm.prank(seller);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
 
         vm.prank(buyer);
         marketplace.buy{value: SALE_PRICE}(address(nft), 1);

@@ -11,7 +11,7 @@ contract IntegrationTest is TestSetup {
         _approveOnCore(address(nft), seller);
 
         vm.prank(seller);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
 
         vm.prank(buyer);
         marketplace.buy{value: SALE_PRICE}(address(nft), 1);
@@ -74,7 +74,7 @@ contract IntegrationTest is TestSetup {
         _approveOnCore(address(nft), seller);
 
         vm.prank(seller);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
 
         vm.prank(owner);
         marketplace.pause();
@@ -85,7 +85,7 @@ contract IntegrationTest is TestSetup {
 
         vm.prank(seller);
         _expectRevert(Pausable.EnforcedPause.selector);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
     }
 
     function testEndToEnd_RoyaltyERC2981UsesPendingWithdrawal() public {
@@ -106,7 +106,7 @@ contract IntegrationTest is TestSetup {
 
         vm.prank(seller);
         marketplace.createListing(
-            address(nftWithRoyalty), 1, uint128(SALE_PRICE), 0
+            address(nftWithRoyalty), 1, uint128(SALE_PRICE), _listingExpiry()
         );
 
         vm.prank(buyer);

@@ -16,7 +16,7 @@ contract AuditStaleListingsTest is TestSetup {
 
         _approveOnCore(address(nft), buyer);
         vm.prank(buyer);
-        marketplace.createListing(address(nft), 1, uint128(2 ether), 0);
+        marketplace.createListing(address(nft), 1, uint128(2 ether), _listingExpiry());
 
         Marketplace.Listing memory listing = marketplace.listings(address(nft), 1);
         assertEq(listing.seller, buyer);

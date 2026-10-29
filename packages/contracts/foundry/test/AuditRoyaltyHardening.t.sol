@@ -11,7 +11,7 @@ contract AuditRoyaltyHardeningTest is TestSetup {
         _approveOnCore(address(nftWithRoyalty), seller);
 
         vm.prank(seller);
-        marketplace.createListing(address(nftWithRoyalty), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nftWithRoyalty), 1, uint128(SALE_PRICE), _listingExpiry());
 
         vm.prank(buyer);
         marketplace.buy{value: SALE_PRICE}(address(nftWithRoyalty), 1);
@@ -43,7 +43,7 @@ contract AuditRoyaltyHardeningTest is TestSetup {
         _approveOnCore(address(revertingRoyaltyNFT), seller);
 
         vm.prank(seller);
-        marketplace.createListing(address(revertingRoyaltyNFT), 1, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(revertingRoyaltyNFT), 1, uint128(SALE_PRICE), _listingExpiry());
 
         vm.prank(buyer);
         marketplace.buy{value: SALE_PRICE}(address(revertingRoyaltyNFT), 1);

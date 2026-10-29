@@ -32,7 +32,7 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [x] `expiresAt = 2**48` reverts (`LN1_CastSafetyTest::testExpiresAtAboveUint48Reverts`)
       - [x] every downcast documented in `AUDIT_FIXES.md` (section L-N1)
 
-- [ ] **L-N3** - `MAX_LISTING_DURATION = 30 days`
+- [x] **L-N3** - `MAX_LISTING_DURATION = 30 days`
       - [ ] zero expiry reverts for listings (`LN3_ListingDurationTest::testListingZeroExpiryReverts`)
       - [ ] expiry over 30 days reverts (`LN3_ListingDurationTest::testListingBeyondMaxDurationReverts`)
       - [ ] A -> B -> A resurrection fails after expiry (`LN3_ListingDurationTest::testListingResurrectionAfterExpiryFails`)

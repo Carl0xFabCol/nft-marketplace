@@ -81,8 +81,8 @@ contract AccountingInvariantsTest is TestSetup {
         _approveOnCore(address(nft), seller);
 
         vm.startPrank(seller);
-        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
-        marketplace.createListing(address(nft), 2, uint128(SALE_PRICE), 0);
+        marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+        marketplace.createListing(address(nft), 2, uint128(SALE_PRICE), _listingExpiry());
         vm.stopPrank();
 
         // Make multiple sales
