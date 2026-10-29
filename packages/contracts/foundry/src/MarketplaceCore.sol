@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "./BoundedStaticCall.sol";
 
 interface IERC173 {
     function owner() external view returns (address);
@@ -16,7 +17,7 @@ interface IERC173 {
  * @title MarketplaceCore
  * @notice Core marketplace functionality: listings, sales, and collection management
  */
-contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
+contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
     // CONSTANTS
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -521,24 +522,26 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     }
 
     function _supportsERC721(address collection) internal view returns (bool ok165, bool ok721) {
-        (bool success, bytes memory data) = collection.staticcall(
+        (bool success, uint256 word) = _staticcallBounded(
+            collection,
             abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IERC165).interfaceId)
         );
-        if (!success || data.length < 32 || !abi.decode(data, (bool))) return (false, false);
+        if (!success || word != 1) return (false, false);
         ok165 = true;
 
-        (success, data) = collection.staticcall(
+        (success, word) = _staticcallBounded(
+            collection,
             abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IERC721).interfaceId)
         );
-        ok721 = success && data.length >= 32 && abi.decode(data, (bool));
+        ok721 = success && word == 1;
     }
 
     function _isFactoryCollection(address factory, address collection) internal view returns (bool) {
-        (bool success, bytes memory data) = factory.staticcall(
+        (bool success, uint256 word) = _staticcallBounded(
+            factory,
             abi.encodeWithSelector(IFactory.isCollection.selector, collection)
         );
-        if (!success || data.length < 32) return false;
-        return abi.decode(data, (bool));
+        return success && word == 1;
     }
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external onlyRouter {
@@ -699,22 +702,32 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     }
 
     function _isApproved(address collection, address tokenOwner, uint256 tokenId) internal view returns (bool) {
-        IERC721 nft = IERC721(collection);
-        try nft.getApproved(tokenId) returns (address approved) {
-            if (approved == address(this)) return true;
-        } catch {}
-        return nft.isApprovedForAll(tokenOwner, address(this));
+        (bool success, uint256 approvedWord) = _staticcallBounded(
+            collection,
+            abi.encodeWithSelector(IERC721.getApproved.selector, tokenId)
+        );
+        if (
+            success &&
+            _isAddressWord(approvedWord) &&
+            address(uint160(approvedWord)) == address(this)
+        ) {
+            return true;
+        }
+
+        (success, approvedWord) = _staticcallBounded(
+            collection,
+            abi.encodeWithSelector(IERC721.isApprovedForAll.selector, tokenOwner, address(this))
+        );
+        return success && approvedWord == 1;
     }
 
-    /// @notice N-02: Safe ownerOf check that doesn't bubble reverts
     function _tryOwnerOf(address collection, uint256 tokenId) internal view returns (address owner) {
-        (bool success, bytes memory data) = collection.staticcall(
+        (bool success, uint256 word) = _staticcallBounded(
+            collection,
             abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId)
         );
-        if (!success || data.length < 32) {
-            return address(0); // Token doesn't exist or call reverted
-        }
-        owner = abi.decode(data, (address));
+        if (!success || !_isAddressWord(word)) return address(0);
+        owner = address(uint160(word));
     }
 
     function _tryCollectionOwner(address collection)
@@ -722,11 +735,13 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         view
         returns (bool hasOwner, address collectionOwner)
     {
-        (bool success, bytes memory data) =
-            collection.staticcall(abi.encodeWithSelector(IERC173.owner.selector));
+        (bool success, uint256 word) = _staticcallBounded(
+            collection,
+            abi.encodeWithSelector(IERC173.owner.selector)
+        );
 
-        if (success && data.length >= 32) {
-            collectionOwner = abi.decode(data, (address));
+        if (success && _isAddressWord(word)) {
+            collectionOwner = address(uint160(word));
             hasOwner = true;
         }
     }
@@ -734,20 +749,26 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function _getRoyalty(address collection, uint256 tokenId, uint256 salePrice) internal view returns (address receiver, uint256 amount) {
         // M-04: query ERC-2981 defensively. A malicious collection must not be
         // able to grief or drain a sale via unbounded gas/revert/receiver tricks.
-        (bool success, bytes memory data) = collection.staticcall{gas: ROYALTY_QUERY_GAS}(
-            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IMarketplaceRoyalty).interfaceId)
+        (bool success, uint256 word) = _staticcallBounded(
+            collection,
+            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IMarketplaceRoyalty).interfaceId),
+            ROYALTY_QUERY_GAS
         );
 
-        if (success && data.length >= 32 && abi.decode(data, (bool))) {
-            (success, data) = collection.staticcall{gas: ROYALTY_QUERY_GAS}(
-                abi.encodeWithSelector(IMarketplaceRoyalty.royaltyInfo.selector, tokenId, salePrice)
+        if (success && word == 1) {
+            uint256 receiverWord;
+            uint256 amountWord;
+            (success, receiverWord, amountWord) = _staticcallBounded2(
+                collection,
+                abi.encodeWithSelector(IMarketplaceRoyalty.royaltyInfo.selector, tokenId, salePrice),
+                ROYALTY_QUERY_GAS
             );
 
-            if (success && data.length >= 64) {
-                (address r, uint256 a) = abi.decode(data, (address, uint256));
+            if (success && _isAddressWord(receiverWord)) {
+                address r = address(uint160(receiverWord));
                 uint256 maxRoyalty = (salePrice * MAX_ROYALTY_FEE) / BASIS_POINTS;
-                if (r != address(0) && a <= maxRoyalty) {
-                    return (r, a);
+                if (r != address(0) && amountWord <= maxRoyalty) {
+                    return (r, amountWord);
                 }
             }
         }

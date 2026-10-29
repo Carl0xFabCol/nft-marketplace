@@ -83,3 +83,27 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [x] `invariant_totalListings`
 - [x] Full suite with the new invariants: 220 tests passed, 0 failed,
       0 skipped (same saved report).
+
+### Step 2 - L-N2 malformed return data
+
+- [x] Added `BoundedStaticCall`, an assembly helper that rejects failed calls and
+      any returndata that is not exactly one word (32 bytes) or two words
+      (64 bytes), and validates boolean/address encodings before use.
+- [x] Replaced every untrusted `abi.decode` / raw `staticcall` in Core and Bids:
+      `_supportsERC721`, `_isFactoryCollection`, `_isApproved`, `_tryOwnerOf`,
+      `_tryCollectionOwner`, `_getRoyalty` and `Bids._revertIfOwnsToken`.
+- [x] Malformed mocks cover non-canonical bools, dirty address words, malformed
+      royalty tuples and a factory returning a non-canonical bool.
+- [x] Dedicated tests saved to `reports/forge-test-session3-ln2.txt`:
+      `AuditLN2Test` 8 tests passed.
+      - [x] malformed `supportsInterface` rejected (`testLN2_MalformedSupportsInterfaceRejected`)
+      - [x] malformed `ownerOf` treated as stale (`testLN2_MalformedOwnerOfTreatedAsStale`)
+      - [x] malformed `getApproved` handled as not approved (`testLN2_MalformedGetApprovedTreatedAsNotApproved`)
+      - [x] malformed `isApprovedForAll` handled as not approved (`testLN2_MalformedIsApprovedForAllTreatedAsNotApproved`)
+      - [x] malformed collection owner rejected (`testLN2_MalformedCollectionOwnerRejected`)
+      - [x] malformed royalty falls back (`testLN2_MalformedRoyaltyInfoFallsBackToCollectionRoyalty`)
+      - [x] malformed factory check rejected (`testLN2_MalformedFactoryCheckRejected`)
+      - [x] malformed `ownerOf` does not block bids (`testLN2_MalformedOwnerOfDoesNotBlockBid`)
+- [x] Full suite excluding the I-N3 test added next: 228 tests passed, 0 failed,
+      0 skipped (same saved report).
+

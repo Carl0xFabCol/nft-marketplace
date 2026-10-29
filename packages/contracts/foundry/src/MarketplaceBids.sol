@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "./BoundedStaticCall.sol";
 
 interface IMarketplaceCoreForBids {
     function isRegistered(address collection) external view returns (bool);
@@ -27,7 +28,7 @@ interface IMarketplaceCoreForBids {
  * @title MarketplaceBids
  * @notice Handles collection-wide and token-specific bidding
  */
-contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
+contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════════
     // CONSTANTS
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -374,10 +375,11 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
     /// @dev M-05 best-effort wash-trading guard. Tokens may not exist yet, so
     ///      a failed ownerOf call is treated as "not owned".
     function _revertIfOwnsToken(address collection, uint256 tokenId, address bidder) internal view {
-        (bool success, bytes memory data) = collection.staticcall(
+        (bool success, uint256 word) = _staticcallBounded(
+            collection,
             abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId)
         );
-        if (success && data.length >= 32 && abi.decode(data, (address)) == bidder) {
+        if (success && _isAddressWord(word) && address(uint160(word)) == bidder) {
             revert SelfBid();
         }
     }
