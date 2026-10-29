@@ -767,15 +767,18 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         revert RenounceOwnershipDisabled();
     }
 
-    /// @notice N-02: Permissionless cleanup of stale listings
+    /// @notice N-02 / O-2: Permissionless cleanup of stale or expired listings.
     function cleanStaleListing(address collection, uint256 tokenId) external {
         Listing storage listing = listings[collection][tokenId];
         if (listing.price == 0) revert ListingNotFound();
-        
-        address currentOwner = _tryOwnerOf(collection, tokenId);
-        if (currentOwner == listing.seller) revert InvalidCall();
-        
-        // Listing is stale, clean it up
+
+        bool expired = listing.expiresAt != 0 && listing.expiresAt <= block.timestamp;
+        if (!expired) {
+            address currentOwner = _tryOwnerOf(collection, tokenId);
+            if (currentOwner == listing.seller) revert InvalidCall();
+        }
+
+        // Listing is stale or expired, clean it up
         address staleSeller = listing.seller;
         delete listings[collection][tokenId];
         --totalListings;

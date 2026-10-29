@@ -37,7 +37,7 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [ ] expiry over 30 days reverts (`LN3_ListingDurationTest::testListingBeyondMaxDurationReverts`)
       - [ ] A -> B -> A resurrection fails after expiry (`LN3_ListingDurationTest::testListingResurrectionAfterExpiryFails`)
 
-- [ ] **O-2** - `cleanStaleListing` removes expired listings
+- [x] **O-2** - `cleanStaleListing` removes expired listings
       - [ ] expired listing cleaned and `totalListings` exact (`O2_ExpiredCleanupTest::testExpiredListingIsCleaned`)
       - [ ] live non-stale listing still reverts `InvalidCall` (`O2_ExpiredCleanupTest::testLiveListingStillReverts`)
 
