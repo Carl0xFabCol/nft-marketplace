@@ -107,3 +107,13 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
 - [x] Full suite excluding the I-N3 test added next: 228 tests passed, 0 failed,
       0 skipped (same saved report).
 
+### Step 3 - I-N3 royalty query gas cap
+
+- [x] `ROYALTY_QUERY_GAS` remains `50_000` and is asserted by the test.
+- [x] Added a registry-style mock whose `royaltyInfo` burns 5,000 hash
+      iterations (well above the cap).
+- [x] Test verifies the capped query fails closed and the sale falls back to the
+      registered collection royalty: `AuditIN3Test::testIN3_ExpensiveRoyaltyQueryFallsBack`.
+- [x] Full suite saved to `reports/forge-test-session3-in3.txt`: 229 tests
+      passed, 0 failed, 0 skipped.
+
