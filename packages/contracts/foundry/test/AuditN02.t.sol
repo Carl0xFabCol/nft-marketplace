@@ -6,6 +6,7 @@ import "../src/Marketplace.sol";
 import "../src/MarketplaceCore.sol";
 import "../src/MarketplaceBids.sol";
 import "./TestSetup.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 /// @notice N-02: Stale-listing cleanup never persists
 contract AuditN02Test is TestSetup {
@@ -55,12 +56,14 @@ contract AuditN02Test is TestSetup {
     function testN02_BurnedTokenMakesListingStale() public {
         // Create a listing
         _setupListing();
-        
-        // Transfer to address(0) to simulate burn
-        vm.startPrank(seller);
-        nft.safeTransferFrom(seller, address(0), 1);
-        vm.stopPrank();
-        
+
+        // Simulate a burn: ERC721 ownerOf reverts for a non-existent token.
+        vm.mockCallRevert(
+            address(nft),
+            abi.encodeWithSelector(IERC721.ownerOf.selector, 1),
+            abi.encode("burned")
+        );
+
         // Try to buy - currently might bubble ownerOf revert
         vm.startPrank(buyer);
         // Should revert with ListingNotFound, not bubble ownerOf revert

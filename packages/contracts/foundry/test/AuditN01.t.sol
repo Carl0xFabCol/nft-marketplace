@@ -7,119 +7,51 @@ import "../src/MarketplaceCore.sol";
 import "../src/MarketplaceBids.sol";
 import "./TestSetup.sol";
 
-/// @notice N-01: Owner/multisig can steal any NFT that has an approval to Core
-contract AuditN01Test is Test {
-    MarketplaceCore public core;
-    MarketplaceBids public bids;
-    Marketplace public router;
-    MockNFT public nft;
-    
-    address public owner = address(0x111);
-    address public victim = address(0x222);
-    address public attacker = address(0x333);
-    
-    function setUp() public {
-        vm.startPrank(owner);
-        
-        // Deploy the system - owner KEEPS ownership (showing the vulnerability)
-        core = new MarketplaceCore(250, address(owner)); // 2.5% fee
-        bids = new MarketplaceBids(address(core));
-        
-        // Set bids contract in core
-        core.setBidsContract(address(bids));
-        
-        // Deploy router
-        router = new Marketplace(address(core), address(bids));
-        
-        // Owner DOES NOT transfer ownership to router (showing the issue)
-        // In a real attack, owner would keep ownership
-        
-        // N-01: configure the system using the router's one-shot setup
-        router.configureBidsMarketplace();
-        
-        vm.stopPrank();
-        
-        // Deploy test NFT
-        nft = new MockNFT();
-    }
-    
-    function testN01_OwnerCanStealNFTViaDirectCoreCall() public {
-        // First register the collection
-        vm.startPrank(owner);
-        core.registerCollectionFromRouter(address(nft), 500, victim, victim);
-        vm.stopPrank();
-        
-        // Setup: victim approves Core and lists NFT
-        vm.startPrank(victim);
-        nft.mint(victim, 1);
-        nft.setApprovalForAll(address(core), true);
-        
-        // Victim creates a listing through router (normal flow)
-        router.createListing(address(nft), 1, 1 wei, 0);
-        vm.stopPrank();
-        
-        // Verify NFT is owned by victim
-        assertEq(nft.ownerOf(1), victim);
-        
-        // Give owner ETH
+/// @notice N-01: owner/multisig cannot steal an NFT that has an approval to Core.
+///         These are the regression expectations after the router-only fix.
+contract AuditN01Test is TestSetup {
+    function testN01_OwnerCannotStealNFTViaDirectCoreCall() public {
+        _setupListing();
+
         vm.deal(owner, 1 ether);
-        
-        // Attacker (owner) can call Core directly and buy NFT for 1 wei
-        vm.startPrank(owner);
-        core.buy{value: 1 wei}(address(nft), 1, attacker);
-        vm.stopPrank();
-        
-        // NFT was stolen!
-        assertEq(nft.ownerOf(1), attacker);
+
+        // The owner is not the router, so a direct Core call must be rejected.
+        vm.expectRevert(MarketplaceCore.Unauthorized.selector);
+        vm.prank(owner);
+        core.buy{value: 1 wei}(address(nft), 1, owner);
+
+        assertEq(nft.ownerOf(1), seller);
     }
-    
-    function testN01_OwnerCanCreateListingForVictim() public {
-        // First register the collection
-        vm.startPrank(owner);
-        core.registerCollectionFromRouter(address(nft), 500, victim, victim);
-        vm.stopPrank();
-        
-        // Setup: victim approves Core
-        vm.startPrank(victim);
-        nft.mint(victim, 1);
-        nft.setApprovalForAll(address(core), true);
-        vm.stopPrank();
-        
-        // Give owner ETH
-        vm.deal(owner, 1 ether);
-        
-        // Owner creates listing for victim's NFT
-        vm.startPrank(owner);
-        core.createListing(address(nft), 1, 1 wei, 0, victim);
-        
-        // Owner buys it cheap
-        core.buy{value: 1 wei}(address(nft), 1, attacker);
-        vm.stopPrank();
-        
-        // NFT stolen
-        assertEq(nft.ownerOf(1), attacker);
+
+    function testN01_OwnerCannotCreateListingForVictim() public {
+        _registerCollection(address(nft), 0, address(0));
+        _mintNFT(seller, 1);
+        _approveOnCore(address(nft), seller);
+
+        // The owner cannot forge a listing on the victim's behalf.
+        vm.expectRevert(MarketplaceCore.Unauthorized.selector);
+        vm.prank(owner);
+        core.createListing(address(nft), 1, 1 wei, 0, seller);
     }
-    
-    function testN01_SetBidsContractIsReassignable() public {
-        // Current issue: setBidsContract can be called multiple times
-        address newBids = address(0x999);
-        
+
+    function testN01_SetBidsContractIsNotReassignable() public {
         vm.startPrank(owner);
-        core.setBidsContract(newBids);
-        
-        // Can be called again!
-        core.setBidsContract(address(bids));
+        MarketplaceCore freshCore = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+        freshCore.setBidsContract(address(0x999));
+
+        vm.expectRevert(MarketplaceCore.AlreadySet.selector);
+        freshCore.setBidsContract(address(0x888));
         vm.stopPrank();
     }
-    
-    function testN01_SetMarketplaceAddressIsReassignable() public {
-        address newMarketplace = address(0x888);
-        
+
+    function testN01_SetMarketplaceAddressIsNotReassignable() public {
         vm.startPrank(owner);
-        bids.setMarketplaceAddress(newMarketplace);
-        
-        // Can be called again!
-        bids.setMarketplaceAddress(address(router));
+        MarketplaceCore freshCore = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+        MarketplaceBids freshBids = new MarketplaceBids(address(freshCore));
+        freshBids.setMarketplaceAddress(address(0x999));
+
+        vm.expectRevert(MarketplaceBids.AlreadySet.selector);
+        freshBids.setMarketplaceAddress(address(0x888));
         vm.stopPrank();
     }
 }
