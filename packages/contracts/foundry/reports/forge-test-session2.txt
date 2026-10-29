@@ -1,0 +1,963 @@
+Compiling 34 files with Solc 0.8.24
+Solc 0.8.24 finished in 787.00s
+Compiler run successful with warnings:
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingNFT.sol:23:31:
+   |
+23 |     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public pure override(ERC721) {
+   |                               ^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingNFT.sol:23:45:
+   |
+23 |     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public pure override(ERC721) {
+   |                                             ^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingNFT.sol:23:57:
+   |
+23 |     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public pure override(ERC721) {
+   |                                                         ^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingNFT.sol:23:74:
+   |
+23 |     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public pure override(ERC721) {
+   |                                                                          ^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingRoyaltyNFT.sol:22:26:
+   |
+22 |     function royaltyInfo(uint256 tokenId, uint256 salePrice) public view returns (address, uint256) {
+   |                          ^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingRoyaltyNFT.sol:22:43:
+   |
+22 |     function royaltyInfo(uint256 tokenId, uint256 salePrice) public view returns (address, uint256) {
+   |                                           ^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+  --> test/AuditN02Fixed.t.sol:91:9:
+   |
+91 |         address revertingNFT = address(revertingNFT);
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/Marketplace.sol:475:5:
+    |
+475 |     function renounceOwnership() public override {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/MarketplaceBids.sol:464:5:
+    |
+464 |     function renounceOwnership() public override {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/MarketplaceCore.sol:769:5:
+    |
+769 |     function renounceOwnership() public override {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+  --> test/MockRevertingRoyaltyNFT.sol:22:5:
+   |
+22 |     function royaltyInfo(uint256 tokenId, uint256 salePrice) public view returns (address, uint256) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+ --> test/Marketplace.t.sol:8:5:
+  |
+8 |     function testConstructor_DeploysCorrectly() public {
+  |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/Marketplace.t.sol:14:5:
+   |
+14 |     function testViews() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+   --> test/Marketplace.t.sol:162:5:
+    |
+162 |     function testComponentOwnersAreRouter() public {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+   --> test/MarketplaceBids.t.sol:336:5:
+    |
+336 |     function testBidsOwnershipArchitecture() public {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+   --> test/MarketplaceCore.t.sol:391:5:
+    |
+391 |     function testOwnershipArchitecture() public {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 1 test for test/AuditO3.t.sol:O3_RouterUpdatedTest
+[PASS] testSetRouterEmitsRouterUpdated() (gas: 2675700)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 13.67ms (4.01ms CPU time)
+
+Ran 1 test for test/AuditLN1.t.sol:LN1_CastSafetyTest
+[PASS] testExpiresAtAboveUint48Reverts() (gas: 144989)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 14.73ms (344.70µs CPU time)
+
+Ran 1 test for test/AuditBatchSafety.t.sol:AuditBatchSafetyTest
+[PASS] testL01_BuyBatchRejectsDuplicateTokenIds() (gas: 276598)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 14.76ms (527.20µs CPU time)
+
+Ran 2 tests for test/AuditBatchCap.t.sol:AuditBatchCapTest
+[PASS] testG05_BuyBatchRejectsTooManyTokens() (gas: 41699)
+[PASS] testG05_TokenBidBatchRejectsTooManyTokens() (gas: 155595)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 15.23ms (990.10µs CPU time)
+
+Ran 3 tests for test/AuditCustomErrors.t.sol:AuditCustomErrorsTest
+[PASS] testG08_BidsCorePausedUsesCustomError() (gas: 136840)
+[PASS] testG08_CoreFallbackUsesCustomError() (gas: 7185)
+[PASS] testG08_RouterConstructorUsesCustomError() (gas: 67547)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 15.98ms (1.65ms CPU time)
+
+Ran 3 tests for test/AuditStaleListings.t.sol:AuditStaleListingsTest
+[PASS] testM01_BuyRejectsStaleListing() (gas: 281628)
+[PASS] testM01_CreateListingOverwritesStaleListing() (gas: 306308)
+[PASS] testM01_UpdateRejectsStaleListing() (gas: 263206)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 16.65ms (2.50ms CPU time)
+
+Ran 5 tests for test/AuditAccountingInvariants.t.sol:AccountingInvariantsTest
+[PASS] testBidsCreditUpdatesTotalPendingWithdrawals() (gas: 175640)
+[PASS] testBidsInvariantBalanceGeTotalPendingPlusEscrow() (gas: 241370)
+[PASS] testCoreCreditUpdatesTotalPendingWithdrawals() (gas: 395205)
+[PASS] testInvariantTotalPendingEqualsSumOfIndividualPending() (gas: 426655)
+[PASS] testWithdrawFailureReaddsToTotalPendingWithdrawals() (gas: 465631)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 16.98ms (3.18ms CPU time)
+
+Ran 2 tests for test/AuditPerTokenApproval.t.sol:AuditPerTokenApprovalTest
+[PASS] testL06_PerTokenApprovalAllowsBidAcceptance() (gas: 382318)
+[PASS] testL06_PerTokenApprovalAllowsListingAndBuy() (gas: 365978)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 3.17ms (781.00µs CPU time)
+
+Ran 2 tests for test/AuditRouterEth.t.sol:AuditRouterEthTest
+[PASS] testL02_RouterRejectsPlainETH() (gas: 18212)
+[PASS] testL02_RouterRejectsUnknownCalldata() (gas: 19043)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.54ms (153.80µs CPU time)
+
+Ran 4 tests for test/AuditLN3.t.sol:LN3_ListingDurationTest
+[PASS] testBidsStillAllowZeroExpiry() (gas: 265283)
+[PASS] testListingBeyondMaxDurationReverts() (gas: 167285)
+[PASS] testListingResurrectionAfterExpiryFails() (gas: 291473)
+[PASS] testListingZeroExpiryReverts() (gas: 167047)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 4.69ms (2.26ms CPU time)
+
+Ran 4 tests for test/AuditFeeSnapshot.t.sol:AuditFeeSnapshotTest
+[PASS] testM03_CollectionBidMinSellerProceedsProtectsSeller() (gas: 445922)
+[PASS] testM03_FeeIncreaseAfterListingDoesNotAffectSeller() (gas: 392473)
+[PASS] testM03_LowerCurrentFeeIsUsed() (gas: 392151)
+[PASS] testM03_TokenBidMinSellerProceedsProtectsSeller() (gas: 400994)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.96ms (1.69ms CPU time)
+
+Ran 2 tests for test/AuditExpiry.t.sol:AuditExpiryTest
+[PASS] testL04_ListingExpiresAtExactTimestamp() (gas: 273523)
+[PASS] testL04_TokenBidExpiresAtExactTimestamp() (gas: 273337)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 3.41ms (718.20µs CPU time)
+
+Ran 1 test for test/AuditRenounce.t.sol:AuditRenounceTest
+[PASS] testL03_AllComponentsRejectRenounce() (gas: 23695)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.85ms (121.70µs CPU time)
+
+Ran 6 tests for test/Integration.t.sol:IntegrationTest
+[PASS] testEndToEnd_BidCancellationAndWithdrawal() (gas: 208760)
+[PASS] testEndToEnd_CollectionBidAndAccept() (gas: 405679)
+[PASS] testEndToEnd_ListAndBuy() (gas: 390955)
+[PASS] testEndToEnd_PauseBlocksMarketplaceOperations() (gas: 330160)
+[PASS] testEndToEnd_RoyaltyERC2981UsesPendingWithdrawal() (gas: 432031)
+[PASS] testEndToEnd_TokenBidAndAccept() (gas: 404736)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 4.91ms (2.42ms CPU time)
+
+Ran 1 test for test/AuditRoyaltyAttribution.t.sol:AuditRoyaltyAttributionTest
+[PASS] testM02_CollectionBidCreditsEachRoyaltyReceiver() (gas: 552718)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.37ms (898.10µs CPU time)
+
+Ran 3 tests for test/AuditMigration.t.sol:AuditMigrationTest
+[PASS] testM07_OnlyRouterOwnerCanMigrate() (gas: 15494)
+[PASS] testM07_RejectsZeroAddress() (gas: 14483)
+[PASS] testM07_TransferComponentOwnershipStartsHandoff() (gas: 75736)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.32ms (330.40µs CPU time)
+
+Ran 4 tests for test/AuditRouterAdmin.t.sol:AuditRouterAdminTest
+[PASS] testM06_PauseAndUnpauseAreIdempotent() (gas: 71674)
+[PASS] testM06_SweepRevertsWhenNeitherHasExcess() (gas: 30955)
+[PASS] testM06_SweepSucceedsWhenOnlyBidsHasExcess() (gas: 42499)
+[PASS] testM06_SweepSucceedsWhenOnlyCoreHasExcess() (gas: 41852)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.38ms (521.20µs CPU time)
+
+Ran 3 tests for test/AuditSlippage.t.sol:AuditSlippageTest
+[PASS] testH03_AcceptStillWorksAtMinimum() (gas: 399712)
+[PASS] testH03_CollectionBidCannotBeReplacedBelowSellerMinimum() (gas: 341278)
+[PASS] testH03_TokenBidCannotBeReplacedBelowSellerMinimum() (gas: 342514)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.61ms (1.06ms CPU time)
+
+Ran 2 tests for test/AuditUnverify.t.sol:AuditUnverifyTest
+[PASS] testL05_UnverifyCollection() (gas: 101434)
+[PASS] testL05_UnverifyOnlyOwner() (gas: 87364)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 3.38ms (516.70µs CPU time)
+
+Ran 4 tests for test/AuditN01.t.sol:AuditN01Test
+[PASS] testN01_OwnerCannotCreateListingForVictim() (gas: 142624)
+[PASS] testN01_OwnerCannotStealNFTViaDirectCoreCall() (gas: 263939)
+[PASS] testN01_SetBidsContractIsNotReassignable() (gas: 2679428)
+[PASS] testN01_SetMarketplaceAddressIsNotReassignable() (gas: 4681319)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.44ms (997.10µs CPU time)
+
+Ran 6 tests for test/AuditN01Fixed.t.sol:AuditN01FixedTest
+[PASS] testN01_ConfigureBidsMarketplaceIsOneShot() (gas: 7300913)
+[PASS] testN01_NewOwnerCannotCallRouterFunctions() (gas: 79113)
+[PASS] testN01_OwnerCannotCallRouterFunctionsDirectly() (gas: 72739)
+[PASS] testN01_SetBidsContractRevertsOnSecondCall() (gas: 2679032)
+[PASS] testN01_SetMarketplaceAddressRevertsOnSecondCall() (gas: 4681341)
+[PASS] testN01_SetRouterRevertsOnSecondCall() (gas: 2679714)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 4.32ms (1.90ms CPU time)
+
+Ran 21 tests for test/Marketplace.t.sol:MarketplaceTest
+[PASS] testAcceptCollectionBid_UsesActualSeller() (gas: 401097)
+[PASS] testAcceptTokenBid_UsesActualSeller() (gas: 400319)
+[PASS] testAdminFunctions_OnlyMarketplaceOwner() (gas: 69610)
+[PASS] testBuy_CannotCauseReceiverIssueForEOA() (gas: 381240)
+[PASS] testBuy_UsesActualBuyer() (gas: 381624)
+[PASS] testCancelListing_CannotBeCalledByOtherUser() (gas: 254174)
+[PASS] testCancelListing_UsesActualSeller() (gas: 202301)
+[PASS] testCollectionBid_UsesActualBidder() (gas: 188163)
+[PASS] testComponentOwnersAreRouter() (gas: 18655)
+[PASS] testConstructor_DeploysCorrectly() (gas: 18769)
+[PASS] testCreateListing_CannotSpoofSeller() (gas: 171159)
+[PASS] testCreateListing_UsesActualSeller() (gas: 251444)
+[PASS] testEmergencyRoyaltyRecoveryThroughRouter() (gas: 97551)
+[PASS] testPendingWithdrawalsAggregatesBothComponents() (gas: 390040)
+[PASS] testRegisterCollection_RejectsNonAdmin() (gas: 19162)
+[PASS] testRegisterCollection_ThroughRouter() (gas: 86475)
+[PASS] testRouterOwnershipIsIndependent() (gas: 49520)
+[PASS] testSweepExcessETH_OnlyOwner() (gas: 18673)
+[PASS] testTokenBid_UsesActualBidder() (gas: 191347)
+[PASS] testViews() (gas: 30636)
+[PASS] testWithdrawThroughRouter() (gas: 389020)
+Suite result: ok. 21 passed; 0 failed; 0 skipped; finished in 7.83ms (5.24ms CPU time)
+
+Ran 3 tests for test/AuditUnifiedSaleEvent.t.sol:UnifiedSaleEventTest
+[PASS] testExecuteSaleFromBidEmitsSaleEventForCollectionBid() (gas: 458647)
+[PASS] testExecuteSaleFromBidEmitsSaleEventForTokenBid() (gas: 402841)
+[PASS] testSaleEventValuesMatchCalculatedValues() (gas: 402955)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 16.84ms (14.08ms CPU time)
+
+Ran 4 tests for test/AuditN02.t.sol:AuditN02Test
+[PASS] testN02_BurnedTokenMakesListingStale() (gas: 275361)
+[PASS] testN02_CleanStaleListingNotImplemented() (gas: 5668)
+[PASS] testN02_StaleListingRemainsAfterFailedBuy() (gas: 288694)
+[PASS] testN02_StaleListingRemainsAfterFailedUpdateListingPrice() (gas: 269921)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.70ms (1.81ms CPU time)
+
+Ran 27 tests for test/MarketplaceBids.t.sol:MarketplaceBidsTest
+[PASS] testAcceptCollectionBid_NotApproved() (gas: 263033)
+[PASS] testAcceptCollectionBid_NotOwner() (gas: 285924)
+[PASS] testAcceptCollectionBid_PartialKeepsRemainingQuantity() (gas: 463929)
+[PASS] testAcceptCollectionBid_Valid() (gas: 413726)
+[PASS] testAcceptTokenBid_Expired() (gas: 274164)
+[PASS] testAcceptTokenBid_NotApproved() (gas: 262956)
+[PASS] testAcceptTokenBid_Valid() (gas: 405807)
+[PASS] testBidsOwnershipArchitecture() (gas: 17541)
+[PASS] testC01_PlaceTokenBidBatchRequiresFullValueOnReplacement() (gas: 201156)
+[PASS] testCancelBidStillWorksWhilePaused() (gas: 311600)
+[PASS] testCancelCollectionBid_AllowsExpiredBid() (gas: 190143)
+[PASS] testCancelCollectionBid_Valid_CreatesWithdrawalCredit() (gas: 192137)
+[PASS] testCancelTokenBidBatch_Valid() (gas: 253168)
+[PASS] testCancelTokenBid_Valid_CreatesWithdrawalCredit() (gas: 263535)
+[PASS] testOnlyRouterCanCallBidsDirectly() (gas: 107565)
+[PASS] testPauseBlocksNewBids() (gas: 161760)
+[PASS] testPlaceCollectionBid_Expired() (gas: 114094)
+[PASS] testPlaceCollectionBid_InsufficientValue() (gas: 113739)
+[PASS] testPlaceCollectionBid_InvalidPrice() (gas: 100397)
+[PASS] testPlaceCollectionBid_InvalidQuantity() (gas: 112911)
+[PASS] testPlaceCollectionBid_Unregistered() (gas: 45182)
+[PASS] testPlaceCollectionBid_Valid() (gas: 188431)
+[PASS] testPlaceTokenBidBatch_FullReplacementAccounting() (gas: 329920)
+[PASS] testPlaceTokenBidBatch_RejectsDuplicateTokenIds() (gas: 125830)
+[PASS] testPlaceTokenBid_ReplacesAndCreditsOldBid() (gas: 266309)
+[PASS] testPlaceTokenBid_Valid() (gas: 190964)
+[PASS] testWithdraw_BidRefund() (gas: 271831)
+Suite result: ok. 27 passed; 0 failed; 0 skipped; finished in 9.91ms (7.80ms CPU time)
+
+Ran 2 tests for test/AuditO2.t.sol:O2_ExpiredCleanupTest
+[PASS] testExpiredListingIsCleaned() (gas: 306995)
+[PASS] testLiveListingStillReverts() (gas: 251169)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 3.19ms (840.70µs CPU time)
+
+Ran 7 tests for test/AuditN02Fixed.t.sol:AuditN02FixedTest
+[PASS] testN02_BurnedTokenListingCanBeCleaned() (gas: 247326)
+[PASS] testN02_BuyRevertsForStaleListingWithoutCleanup() (gas: 286813)
+[PASS] testN02_CleanStaleListingRevertsForNonExistent() (gas: 16170)
+[PASS] testN02_CleanStaleListingRevertsForNonStale() (gas: 250857)
+[PASS] testN02_NewOwnerCanCreateListingOverStale() (gas: 307246)
+[PASS] testN02_StaleListingCanBeCleaned() (gas: 226924)
+[PASS] testN02_UpdateListingPriceRevertsForStaleListing() (gas: 268512)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 6.37ms (2.08ms CPU time)
+
+Ran 44 tests for test/MarketplaceCore.t.sol:MarketplaceCoreTest
+[PASS] testBuyBatch_Valid() (gas: 457552)
+[PASS] testBuy_ListingExpired() (gas: 274947)
+[PASS] testBuy_RequiresExactETH() (gas: 301163)
+[PASS] testBuy_SelfPurchase() (gas: 273914)
+[PASS] testBuy_Valid_CreditsPullPayments() (gas: 393497)
+[PASS] testBuy_WhenPaused() (gas: 324759)
+[PASS] testCancelListing_NotSeller() (gas: 254174)
+[PASS] testCancelListing_UnauthorizedDirectCore() (gas: 252910)
+[PASS] testCancelListing_Valid() (gas: 201912)
+[PASS] testCreateListing_Expired() (gas: 168182)
+[PASS] testCreateListing_NotApproved() (gas: 147528)
+[PASS] testCreateListing_NotOwner() (gas: 171823)
+[PASS] testCreateListing_PriceBelowMin() (gas: 168329)
+[PASS] testCreateListing_ReplacesExisting() (gas: 271265)
+[PASS] testCreateListing_Unregistered() (gas: 104036)
+[PASS] testCreateListing_Valid() (gas: 252674)
+[PASS] testEmergencyUpdateCollectionRoyalty_Admin() (gas: 98573)
+[PASS] testEmergencyUpdateCollectionRoyalty_NonOwner() (gas: 90154)
+[PASS] testExecuteSaleFromBid_NonAuthorized() (gas: 170176)
+[PASS] testMarketplaceOwnership_RequiresAcceptance() (gas: 37264)
+[PASS] testOwnershipArchitecture() (gas: 40585)
+[PASS] testPauseAndUnpause_Admin() (gas: 67186)
+[PASS] testPause_NonOwner() (gas: 15347)
+[PASS] testRegisterCollection_AlreadyRegistered() (gas: 89045)
+[PASS] testRegisterCollection_ExternalCreatorAutoFilled() (gas: 88843)
+[PASS] testRegisterCollection_NonAdminReverts() (gas: 19626)
+[PASS] testRegisterCollection_NonERC721() (gas: 30746)
+[PASS] testRegisterCollection_Valid() (gas: 86684)
+[PASS] testSetAuthorizedLaunchpad_AdminOnly() (gas: 50763)
+[PASS] testSweepExcessETH_CannotTouchPending() (gas: 396907)
+[PASS] testSweepExcessETH_RecoversAccidentalETH() (gas: 52020)
+[PASS] testUpdateCollectionRoyalty_NonOwner() (gas: 93032)
+[PASS] testUpdateCollectionRoyalty_Valid() (gas: 95664)
+[PASS] testUpdateFeeReceiver_AdminOnly() (gas: 32167)
+[PASS] testUpdateFeeReceiver_NonOwner() (gas: 17945)
+[PASS] testUpdateListingPrice_NotSeller() (gas: 257405)
+[PASS] testUpdateListingPrice_Valid() (gas: 258460)
+[PASS] testUpdateListingPrice_WhenPaused() (gas: 309654)
+[PASS] testUpdateMarketplaceFee_AdminOnly() (gas: 30607)
+[PASS] testUpdateMarketplaceFee_NonOwner() (gas: 14763)
+[PASS] testVerifyCollection_AdminOnly() (gas: 93131)
+[PASS] testVerifyCollection_NonOwner() (gas: 16763)
+[PASS] testWithdraw_NoWithdrawal() (gas: 20042)
+[PASS] testWithdraw_SellerProceeds() (gas: 392465)
+Suite result: ok. 44 passed; 0 failed; 0 skipped; finished in 5.79ms (9.79ms CPU time)
+
+Ran 5 tests for test/AuditN03.t.sol:N03_RoyaltySnapshotTest
+[PASS] testFuzzFeeAndRoyaltyNeverExceedPrice(uint128,uint16,uint16) (runs: 257, μ: 398597, ~: 406647)
+[PASS] testListingStorageLayout() (gas: 396365)
+[PASS] testRoyaltyDecreaseAfterListingIsHonored() (gas: 391485)
+[PASS] testRoyaltyIncreaseAfterListingUsesSnapshot() (gas: 392342)
+[PASS] testTinyPricesNeverExceedPrice() (gas: 492328)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 89.45ms (90.91ms CPU time)
+
+Ran 3 tests for test/AuditWashTrading.t.sol:AuditWashTradingTest
+[PASS] testM05_CannotBatchBidOnOwnToken() (gas: 165943)
+[PASS] testM05_CannotBidOnOwnToken() (gas: 162177)
+[PASS] testM05_CoreRejectsSelfSaleFromBid() (gas: 171892)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 92.97ms (655.60µs CPU time)
+
+Ran 4 tests for test/AuditRoyaltyHardening.t.sol:AuditRoyaltyHardeningTest
+[PASS] testM04_ExcessiveTokenRoyaltyFallsBackToCollectionRoyalty() (gas: 431930)
+[PASS] testM04_RevertingRoyaltyFallsBackToCollectionRoyalty() (gas: 384042)
+[PASS] testM04_UpdateRoyaltyRejectsZeroReceiverWithFee() (gas: 86823)
+[PASS] testM04_ZeroReceiverFallsBackToCollectionRoyalty() (gas: 413822)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 103.10ms (1.90ms CPU time)
+
+Ran 22 tests for test/LaunchPad.t.sol:LaunchPadTest
+[PASS] test_BatchMint_RespectsMaxSupply() (gas: 1912527)
+[PASS] test_CreateCollection_ChargesLaunchFee() (gas: 1961156)
+[PASS] test_CreateCollection_CreatorAutoFilledInEvent() (gas: 1930369)
+[PASS] test_CreateCollection_DefaultRoyaltyReceiverIsCreator() (gas: 1929930)
+[PASS] test_CreateCollection_DeploysAndRecordsCreator() (gas: 1933090)
+[PASS] test_CreateCollection_RegistersInCore() (gas: 1932629)
+[PASS] test_CreateCollection_RequiresAuthorizedLaunchpad() (gas: 1859925)
+[PASS] test_CreateCollection_RevertsOnExcessiveRoyalty() (gas: 23216)
+[PASS] test_CreateCollection_RevertsWhenLaunchFeeMismatch() (gas: 49235)
+[PASS] test_CreateCollection_SetsOwnerAndMetadata() (gas: 1940888)
+[PASS] test_Mint_ByCreator() (gas: 2053828)
+[PASS] test_Mint_IsPublic() (gas: 2054687)
+[PASS] test_Mint_RequiresConfiguredPrice() (gas: 2061978)
+[PASS] test_Mint_RevertsAfterDuration() (gas: 1931556)
+[PASS] test_Mint_RevertsWhenMaxSupplyReached() (gas: 2146209)
+[PASS] test_Mint_UnlimitedSupplyAndEternalDuration() (gas: 2243371)
+[PASS] test_Pause_BlocksCreation() (gas: 42816)
+[PASS] test_SetBaseURI_OnlyOwner() (gas: 1935432)
+[PASS] test_SetMintDuration_OnlyOwner() (gas: 1954811)
+[PASS] test_TokenURI_UsesBaseURI() (gas: 2056206)
+[PASS] test_WithdrawFees() (gas: 1950793)
+[PASS] test_WithdrawFees_RevertsWhenNoFees() (gas: 21214)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 99.33ms (9.26ms CPU time)
+
+Ran 1 test for test/AuditInvariants.t.sol:BidsSolvencyInvariantTest
+[PASS] invariant_solvency() (runs: 256, calls: 128000, reverts: 0)
+
+╭-------------+---------------------+-------+---------+----------╮
+| Contract    | Selector            | Calls | Reverts | Discards |
++================================================================+
+| BidsHandler | acceptCollectionBid | 14226 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | acceptTokenBid      | 14461 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | cancelCollectionBid | 14160 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | cancelTokenBid      | 14261 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeCollectionBid  | 14122 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeTokenBid       | 14270 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeTokenBidBatch  | 14102 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | sweep               | 14190 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | withdraw            | 14208 | 0       | 0        |
+╰-------------+---------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 11
+  Bound result 3
+  Bound result 2000000000000000000
+  Bound result 1000000000000000000
+  Bound result 1
+  Bound result 385174254952613053
+  Bound result 192587127476306526
+  Bound result 15
+  Bound result 319745337
+  Bound result 159872668
+  Bound result 8447
+  Bound result 1
+  Bound result 717
+  Bound result 20
+  Bound result 1016820178117688238
+  Bound result 12
+  Bound result 764385
+  Bound result 1
+  Bound result 20
+  Bound result 51
+  Bound result 3
+  Bound result 176
+  Bound result 2
+  Bound result 3
+  Bound result 6200
+  Bound result 3100
+  Bound result 799990909521
+  Bound result 3
+  Bound result 2805045911970439808
+  Bound result 9
+  Bound result 18
+  Bound result 1128586881496314388
+  Bound result 2
+  Bound result 1
+  Bound result 3
+  Bound result 20
+  Bound result 14
+  Bound result 10
+  Bound result 2499315941947204643
+  Bound result 8
+  Bound result 8
+  Bound result 3917095537
+  Bound result 3
+  Bound result 11
+  Bound result 1756157459396401426
+  Bound result 13
+  Bound result 14
+  Bound result 86400
+  Bound result 43200
+  Bound result 15
+  Bound result 1990
+  Bound result 3
+  Bound result 2
+  Bound result 13
+  Bound result 20
+  Bound result 3
+  Bound result 4522416309718020034
+  Bound result 7
+  Bound result 479
+  Bound result 2
+  Bound result 3
+  Bound result 86400
+  Bound result 43200
+  Bound result 4
+  Bound result 4
+  Bound result 13
+  Bound result 12
+  Bound result 1951106200842070849
+  Bound result 18
+  Bound result 19
+  Bound result 2012
+  Bound result 14
+  Bound result 5
+  Bound result 464138444796714395
+  Bound result 2732069222398357197
+  Bound result 291
+  Bound result 2
+  Bound result 1
+  Bound result 5695169201626
+  Bound result 2847584600813
+  Bound result 15
+  Bound result 5
+  Bound result 2842
+  Bound result 1421
+  Bound result 4
+  Bound result 8
+  Bound result 7652858525
+  Bound result 2
+  Bound result 3528515140093162725
+  Bound result 3
+  Bound result 1179574209047195021
+  Bound result 3
+  Bound result 11
+  Bound result 20
+  Bound result 10
+  Bound result 3
+  Bound result 4
+  Bound result 5
+  Bound result 757
+  Bound result 18
+  Bound result 11
+  Bound result 16
+  Bound result 9
+  Bound result 9894
+  Bound result 4947
+  Bound result 8
+  Bound result 3
+  Bound result 7
+  Bound result 4227
+  Bound result 2113
+  Bound result 1929
+  Bound result 10
+  Bound result 7
+  Bound result 14
+  Bound result 19
+  Bound result 41660208
+  Bound result 20830104
+  Bound result 10938
+  Bound result 3
+  Bound result 5
+  Bound result 14
+  Bound result 20
+  Bound result 10
+  Bound result 20
+  Bound result 16
+  Bound result 4
+  Bound result 1654947206713992533
+  Bound result 827473603356996266
+  Bound result 6
+  Bound result 533
+  Bound result 266
+  Bound result 2
+  Bound result 4571739800486921213
+  Bound result 4785869900243460606
+  Bound result 6
+  Bound result 2
+  Bound result 275376154169851
+  Bound result 137688077084925
+  Bound result 8105
+  Bound result 1
+  Bound result 14
+  Bound result 12
+  Bound result 4
+  Bound result 5
+  Bound result 20
+  Bound result 57663513644
+  Bound result 19
+  Bound result 332173399380267138
+  Bound result 3
+  Bound result 19
+  Bound result 20
+  Bound result 2
+  Bound result 7
+  Bound result 2
+  Bound result 11
+  Bound result 80753457431898217
+  Bound result 40376728715949108
+  Bound result 14
+  Bound result 3
+  Bound result 4
+  Bound result 11
+  Bound result 98178011
+  Bound result 49089005
+  Bound result 4
+  Bound result 20
+  Bound result 999
+  Bound result 499
+  Bound result 2
+  Bound result 3374607431768211455
+  Bound result 3
+  Bound result 18
+  Bound result 20
+  Bound result 20
+  Bound result 3000000000000000000
+  Bound result 1500000000000000000
+  Bound result 18
+  Bound result 19
+  Bound result 19
+  Bound result 2720
+  Bound result 3
+  Bound result 293
+  Bound result 15
+  Bound result 16
+  Bound result 10
+  Bound result 18
+  Bound result 3
+  Bound result 1695627812032478062
+  Bound result 847813906016239031
+  Bound result 963948976
+  Bound result 2
+  Bound result 20
+  Bound result 20
+  Bound result 11
+  Bound result 2511542027395318844
+  Bound result 3755771013697659422
+  Bound result 20
+  Bound result 1082
+  Bound result 3
+  Bound result 14
+  Bound result 18
+  Bound result 2080099107095
+  Bound result 3
+  Bound result 5
+  Bound result 9
+  Bound result 2
+  Bound result 15
+  Bound result 10
+  Bound result 1909679313484883458
+  Bound result 3454839656742441729
+  Bound result 19
+  Bound result 3374607431768211453
+  Bound result 2
+  Bound result 2044275519947120424
+  Bound result 1
+  Bound result 5
+  Bound result 10
+  Bound result 15
+  Bound result 20
+  Bound result 19
+  Bound result 1750000000000000000
+  Bound result 1
+  Bound result 5
+  Bound result 13
+  Bound result 17
+  Bound result 6
+  Bound result 17
+  Bound result 7
+  Bound result 19
+  Bound result 1
+  Bound result 11
+  Bound result 7991
+  Bound result 3995
+  Bound result 6057
+  Bound result 5
+  Bound result 4
+  Bound result 20
+  Bound result 3
+  Bound result 1
+  Bound result 240
+  Bound result 13
+  Bound result 3848429220346754052
+  Bound result 1
+  Bound result 2251649053287069974
+  Bound result 3
+  Bound result 1
+  Bound result 19
+  Bound result 8385
+  Bound result 12
+  Bound result 1000
+  Bound result 15
+  Bound result 2592000
+  Bound result 13
+  Bound result 13
+  Bound result 291
+  Bound result 20
+  Bound result 4
+  Bound result 20
+  Bound result 11
+  Bound result 8
+  Bound result 2907383786975326383
+  Bound result 1453691893487663191
+  Bound result 3
+  Bound result 4069357650432268178
+  Bound result 2034678825216134089
+  Bound result 2
+  Bound result 20
+  Bound result 8
+  Bound result 5000
+  Bound result 2500
+  Bound result 20
+  Bound result 1
+  Bound result 7
+  Bound result 7959
+  Bound result 3979
+  Bound result 16
+  Bound result 32
+  Bound result 16
+  Bound result 5
+  Bound result 3374607431768211454
+  Bound result 3
+  Bound result 8
+  Bound result 11
+  Bound result 2871348698573536965
+  Bound result 1435674349286768482
+  Bound result 33650604821382
+  Bound result 3
+  Bound result 15
+  Bound result 10
+  Bound result 2737503759867834971
+  Bound result 3
+  Bound result 4563
+  Bound result 3
+  Bound result 6
+  Bound result 20
+  Bound result 1136
+  Bound result 3
+  Bound result 98178011
+  Bound result 2
+  Bound result 9
+  Bound result 9
+  Bound result 3
+  Bound result 1
+  Bound result 20
+  Bound result 13
+  Bound result 5
+  Bound result 8
+  Bound result 2
+  Bound result 12
+  Bound result 17
+  Bound result 510573740279054771
+  Bound result 2
+  Bound result 4601229473057771332
+  Bound result 8
+  Bound result 11
+  Bound result 8
+  Bound result 10
+  Bound result 3000000000000000000
+  Bound result 10
+  Bound result 4
+  Bound result 3051704401606299287
+  Bound result 1525852200803149643
+  Bound result 19
+  Bound result 2574408039156912498
+  Bound result 1287204019578456249
+  Bound result 4893763931427425614
+  Bound result 1
+  Bound result 4
+  Bound result 17333389819452
+  Bound result 17
+  Bound result 20
+  Bound result 6655402830
+  Bound result 2
+  Bound result 2651535225633019290
+  Bound result 10
+  Bound result 20
+  Bound result 3765297853855621397
+  Bound result 1882648926927810698
+  Bound result 4
+  Bound result 1645412726760333771
+  Bound result 3322706363380166885
+  Bound result 8
+  Bound result 7733
+  Bound result 2
+  Bound result 2223802369052318
+  Bound result 1
+  Bound result 20
+  Bound result 137688077084925
+  Bound result 68844038542462
+  Bound result 2
+  Bound result 19
+  Bound result 3424046177346428876
+  Bound result 15
+  Bound result 6
+  Bound result 13
+  Bound result 999
+  Bound result 20
+  Bound result 5
+  Bound result 20
+  Bound result 9930699221
+  Bound result 1
+  Bound result 12
+  Bound result 1011189187925618727
+  Bound result 11
+  Bound result 28
+  Bound result 19
+  Bound result 4350
+  Bound result 6
+  Bound result 4174739057751885228
+  Bound result 2
+  Bound result 4261962383723320694
+  Bound result 14
+  Bound result 9
+  Bound result 19
+  Bound result 7
+  Bound result 11
+  Bound result 5000
+  Bound result 2500
+  Bound result 2
+  Bound result 6
+  Bound result 6
+  Bound result 1
+  Bound result 10000
+  Bound result 8
+  Bound result 14
+  Bound result 17
+  Bound result 8
+  Bound result 15
+  Bound result 1
+  Bound result 5
+  Bound result 864359873
+  Bound result 3
+  Bound result 1671157752664578
+  Bound result 6
+  Bound result 10
+  Bound result 2
+  Bound result 6
+  Bound result 1
+  Bound result 5
+  Bound result 12169
+  Bound result 3
+  Bound result 27
+  Bound result 19
+  Bound result 4
+  Bound result 5000000000000000000
+  Bound result 5000000000000000000
+  Bound result 15
+  Bound result 16
+  Bound result 2503
+  Bound result 1
+  Bound result 467958067493129244
+  Bound result 2
+  Bound result 106
+  Bound result 6
+  Bound result 5
+  Bound result 2
+  Bound result 19
+  Bound result 10
+  Bound result 9
+  Bound result 1900744044101161658
+  Bound result 2
+  Bound result 19
+  Bound result 20
+  Bound result 5000
+  Bound result 2500
+  Bound result 20
+  Bound result 9
+  Bound result 4
+  Bound result 74838705389704771
+  Bound result 13
+  Bound result 9
+  Bound result 10
+  Bound result 9
+  Bound result 2457
+  Bound result 8
+  Bound result 1615
+  Bound result 9
+  Bound result 10
+  Bound result 3295752241419355731
+  Bound result 4147876120709677865
+  Bound result 3
+  Bound result 827473603357043960
+  Bound result 413736801678521980
+  Bound result 18
+  Bound result 20
+  Bound result 5000000000000000000
+  Bound result 2
+  Bound result 5000000000000000000
+  Bound result 3
+  Bound result 2848049264899789120
+  Bound result 14
+  Bound result 1
+  Bound result 1000
+  Bound result 7
+  Bound result 16
+  Bound result 2061041451764727090
+  Bound result 1030520725882363545
+  Bound result 16
+  Bound result 2
+  Bound result 10
+  Bound result 9
+  Bound result 4
+  Bound result 1
+  Bound result 11
+  Bound result 10
+  Bound result 186731266120
+  Bound result 10
+  Bound result 3
+  Bound result 50000
+  Bound result 10
+  Bound result 14847
+  Bound result 2
+  Bound result 15
+  Bound result 1
+  Bound result 1
+  Bound result 4
+  Bound result 8667
+  Bound result 11
+  Bound result 11
+  Bound result 20
+  Bound result 2
+  Bound result 3
+  Bound result 5
+  Bound result 423198622951681033
+  Bound result 11
+  Bound result 13
+  Bound result 1
+  Bound result 8
+  Bound result 5
+  Bound result 7
+  Bound result 16
+  Bound result 12
+  Bound result 3374607431768211455
+  Bound result 5
+  Bound result 5
+  Bound result 12
+  Bound result 6
+  Bound result 1
+  Bound result 1
+  Bound result 445458916750097876
+  Bound result 13
+  Bound result 18
+  Bound result 1748466096869029
+  Bound result 3
+  Bound result 7
+  Bound result 3374607431768211453
+  Bound result 1687303715884105726
+  Bound result 9
+  Bound result 261909756901
+  Bound result 1
+  Bound result 6
+  Bound result 18
+  Bound result 5671
+  Bound result 2
+  Bound result 1267179275
+  Bound result 1
+  Bound result 4
+  Bound result 3491604826062828569
+  Bound result 9
+  Bound result 900000000000000000
+  Bound result 20
+  Bound result 1
+  Bound result 5763
+  Bound result 1
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 18.52s (18.51s CPU time)
+
+Ran 9 tests for test/AuditAuthorization.t.sol:AuditAuthorizationTest
+[PASS] testH02_LaunchpadCanOnlyRegisterOwnLaunch() (gas: 1932537)
+[PASS] testH02_LaunchpadCannotBuy() (gas: 266793)
+[PASS] testH02_LaunchpadCannotCreateListing() (gas: 167325)
+[PASS] testH02_LaunchpadCannotExecuteSaleFromBid() (gas: 169731)
+[PASS] testH02_LaunchpadCannotRegisterExistingCollection() (gas: 1934057)
+[PASS] testH02_LaunchpadCannotRegisterForeignCollection() (gas: 83523)
+[PASS] testH02_LaunchpadCannotUseRouterRegistration() (gas: 21076)
+[PASS] testH02_LaunchpadCannotWithdrawFor() (gas: 387966)
+[PASS] testL07_WithdrawForIsRouterOnly() (gas: 394743)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 18.54s (2.70ms CPU time)
+
+Ran 34 test suites in 18.57s (37.66s CPU time): 212 tests passed, 0 failed, 0 skipped (212 total tests)

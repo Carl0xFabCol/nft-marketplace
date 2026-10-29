@@ -97,6 +97,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     event CollectionUnverified(address indexed collection);
     event LaunchpadAuthorized(address indexed launchpad, bool authorized);
     event BidsContractUpdated(address indexed oldBids, address indexed newBids);
+    event RouterUpdated(address indexed oldRouter, address indexed newRouter);
     event CollectionRoyaltyUpdated(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee);
     event Withdrawal(address indexed account, uint256 amount);
     event ExcessETHSwept(address indexed recipient, uint256 amount);
@@ -602,7 +603,9 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     function setRouter(address newRouter) external onlyOwner {
         if (newRouter == address(0)) revert InvalidAddress();
         if (router != address(0)) revert AlreadySet();
+        address oldRouter = router;
         router = newRouter;
+        emit RouterUpdated(oldRouter, newRouter);
     }
 
     function setBidsContract(address newBids) external onlyOwner {

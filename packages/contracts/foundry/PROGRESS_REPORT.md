@@ -41,8 +41,13 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [ ] expired listing cleaned and `totalListings` exact (`O2_ExpiredCleanupTest::testExpiredListingIsCleaned`)
       - [ ] live non-stale listing still reverts `InvalidCall` (`O2_ExpiredCleanupTest::testLiveListingStillReverts`)
 
-- [ ] **O-3** - `RouterUpdated` event in `setRouter`
-      - [ ] event emitted with old and new router (`O3_RouterUpdatedTest::testSetRouterEmitsRouterUpdated`)
+- [x] **O-3** - `RouterUpdated` event in `setRouter`
+      - [x] event emitted with old and new router (`O3_RouterUpdatedTest::testSetRouterEmitsRouterUpdated`)
+
+## Session result
+
+- Final raw report: `reports/forge-test-session2.txt`
+- Result: 212 tests passed, 0 failed, 0 skipped.
 
 ## Out of scope this session
 
