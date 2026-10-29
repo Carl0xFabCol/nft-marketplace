@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 interface IERC173 {
     function owner() external view returns (address);
@@ -129,6 +130,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
     error DuplicateTokenId();
     error RoyaltyExceedsPrice();
     error AlreadySet();
+    error ExpiryTooLarge();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -173,6 +175,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (price < MIN_LISTING_PRICE) revert InvalidPrice();
         if (expiresAt != 0 && expiresAt <= block.timestamp) revert ListingExpired();
+        if (uint256(expiresAt) > type(uint48).max) revert ExpiryTooLarge();
 
         IERC721 nft = IERC721(collection);
         address currentOwner = nft.ownerOf(tokenId);
@@ -197,15 +200,16 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         uint16 royaltyBps = 0;
         if (royaltyAmount > 0) {
             // ceilDiv to round up, capped at MAX_ROYALTY_FEE
-            royaltyBps = uint16((royaltyAmount * BASIS_POINTS + price - 1) / price);
-            if (royaltyBps > MAX_ROYALTY_FEE) royaltyBps = uint16(MAX_ROYALTY_FEE);
+            uint256 computedBps = (royaltyAmount * BASIS_POINTS + price - 1) / price;
+            if (computedBps > MAX_ROYALTY_FEE) computedBps = MAX_ROYALTY_FEE;
+            royaltyBps = SafeCast.toUint16(computedBps);
         }
 
         listings[collection][tokenId] = Listing({
             seller: seller,
             price: price,
-            listedAt: uint48(block.timestamp),
-            expiresAt: uint48(expiresAt),
+            listedAt: SafeCast.toUint48(block.timestamp),
+            expiresAt: SafeCast.toUint48(uint256(expiresAt)),
             feeBps: marketplaceFee,
             royaltyBps: royaltyBps
         });
@@ -351,7 +355,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         // M-03: never charge more than the fee that was in force when the
         // listing was created; a fee reduction still benefits the seller.
         uint16 effectiveFee = listing.feeBps < marketplaceFee ? listing.feeBps : marketplaceFee;
-        uint128 marketplaceFeeAmount = uint128((uint256(listing.price) * effectiveFee) / BASIS_POINTS);
+        uint128 marketplaceFeeAmount = SafeCast.toUint128((uint256(listing.price) * effectiveFee) / BASIS_POINTS);
         (address royaltyReceiver, uint256 royaltyAmount) = _getRoyalty(collection, tokenId, uint256(listing.price));
         
         // N-03: cap royalty at the snapshot value
@@ -359,7 +363,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (royaltyAmount > snapshotRoyalty) royaltyAmount = snapshotRoyalty;
         
         if (uint256(marketplaceFeeAmount) + royaltyAmount > listing.price) revert RoyaltyExceedsPrice();
-        uint128 sellerProceeds = listing.price - marketplaceFeeAmount - uint128(royaltyAmount);
+        uint128 sellerProceeds = listing.price - marketplaceFeeAmount - SafeCast.toUint128(royaltyAmount);
 
         // Effects before interaction: clear the listing before ERC721 receiver code runs.
         delete listings[collection][tokenId];
@@ -382,7 +386,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             ++collections[collection].totalSales;
         }
 
-        emit Sale(collection, tokenId, listing.seller, buyer, listing.price, marketplaceFeeAmount, uint128(royaltyAmount));
+        emit Sale(collection, tokenId, listing.seller, buyer, listing.price, marketplaceFeeAmount, SafeCast.toUint128(royaltyAmount));
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -402,7 +406,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
         if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
         if (!_isApproved(collection, seller, tokenId)) revert NotApproved();
 
-        marketplaceFeeAmount = uint128((uint256(price) * marketplaceFee) / BASIS_POINTS);
+        marketplaceFeeAmount = SafeCast.toUint128((uint256(price) * marketplaceFee) / BASIS_POINTS);
         (royaltyReceiver, royaltyAmount) = _getRoyalty(collection, tokenId, uint256(price));
         if (uint256(marketplaceFeeAmount) + royaltyAmount > price) revert RoyaltyExceedsPrice();
 
@@ -425,7 +429,7 @@ contract MarketplaceCore is Ownable2Step, ReentrancyGuard, Pausable {
             ++collections[collection].totalSales;
         }
 
-        emit Sale(collection, tokenId, seller, buyer, price, marketplaceFeeAmount, uint128(royaltyAmount));
+        emit Sale(collection, tokenId, seller, buyer, price, marketplaceFeeAmount, SafeCast.toUint128(royaltyAmount));
 
         return (marketplaceFeeAmount, royaltyReceiver, royaltyAmount);
     }

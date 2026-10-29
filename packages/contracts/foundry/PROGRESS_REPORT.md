@@ -28,9 +28,9 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [ ] fuzz price/feeBps/royaltyBps (`N03_RoyaltySnapshotTest::testFuzzFeeAndRoyaltyNeverExceedPrice`)
       - [ ] storage layout: `Listing` is exactly 2 slots and `royaltyBps` is in slot 2 (`N03_RoyaltySnapshotTest::testListingStorageLayout`)
 
-- [ ] **L-N1** - SafeCast / bounds on every narrowing cast
-      - [ ] `expiresAt = 2**48` reverts (`LN1_CastSafetyTest::testExpiresAtAboveUint48Reverts`)
-      - [ ] every downcast documented in `AUDIT_FIXES.md`
+- [x] **L-N1** - SafeCast / bounds on every narrowing cast
+      - [x] `expiresAt = 2**48` reverts (`LN1_CastSafetyTest::testExpiresAtAboveUint48Reverts`)
+      - [x] every downcast documented in `AUDIT_FIXES.md` (section L-N1)
 
 - [ ] **L-N3** - `MAX_LISTING_DURATION = 30 days`
       - [ ] zero expiry reverts for listings (`LN3_ListingDurationTest::testListingZeroExpiryReverts`)

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 interface IMarketplaceCoreForBids {
     function isRegistered(address collection) external view returns (bool);
@@ -171,18 +172,18 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
 
         // G-03: ownership/approval are validated inside Core.executeSaleFromBid.
         uint128 pricePerItem = bid.pricePerItem;
-        uint128 totalPrice = pricePerItem * uint128(tokenIds.length);
+        uint128 totalPrice = SafeCast.toUint128(uint256(pricePerItem) * tokenIds.length);
         totalBidEscrow -= totalPrice;
 
         if (bid.quantity == tokenIds.length) {
             delete collectionBids[collection][bidder];
         } else {
-            bid.quantity -= uint32(tokenIds.length);
+            bid.quantity -= SafeCast.toUint32(tokenIds.length);
         }
 
         (uint128 totalMarketplaceFee, uint256 totalRoyalty) = _executeCollectionBidSales(collection, tokenIds, bidder, pricePerItem, seller);
 
-        uint128 sellerProceeds = totalPrice - totalMarketplaceFee - uint128(totalRoyalty);
+        uint128 sellerProceeds = totalPrice - totalMarketplaceFee - SafeCast.toUint128(totalRoyalty);
         // M-03: the seller can bound the net proceeds to protect against fee or
         // royalty changes between signing and execution.
         if (sellerProceeds < minSellerProceeds) revert SellerProceedsTooLow();
@@ -328,7 +329,7 @@ contract MarketplaceBids is Ownable2Step, ReentrancyGuard, Pausable {
 
         (uint128 marketplaceFeeAmount, address royaltyReceiver, uint256 royaltyAmount) = core.executeSaleFromBid(collection, tokenId, seller, bidder, price);
 
-        uint128 sellerProceeds = price - marketplaceFeeAmount - uint128(royaltyAmount);
+        uint128 sellerProceeds = price - marketplaceFeeAmount - SafeCast.toUint128(royaltyAmount);
         if (sellerProceeds < minSellerProceeds) revert SellerProceedsTooLow();
         _credit(seller, sellerProceeds);
         // G-07: read the fee receiver once.

@@ -80,5 +80,27 @@ All findings have corresponding Foundry tests in the `test/` directory. Invarian
 - Royalty attribution correctness
 - No wash trading or self-purchases
 
+## L-N1 - Narrowing Cast Audit
+
+All explicit downcasts in `MarketplaceCore.sol` and `MarketplaceBids.sol` were
+replaced with OpenZeppelin `SafeCast` helpers, or are preceded by a bound check
+that reverts with a custom error. `Marketplace.sol` contains no narrowing cast
+(it only mirrors the struct field types in its interfaces).
+
+| Contract | Location | Previous cast | Now | Why it is safe |
+|----------|----------|---------------|-----|----------------|
+| `MarketplaceCore` | `_createListing` royalty snapshot | `uint16((royaltyAmount * BASIS_POINTS + price - 1) / price)` | cap in `uint256`, then `SafeCast.toUint16` | `_getRoyalty` caps `royaltyAmount` at `price * MAX_ROYALTY_FEE / BASIS_POINTS`, so the computed bps is at most `MAX_ROYALTY_FEE` (2000). |
+| `MarketplaceCore` | `_createListing` royalty cap | `uint16(MAX_ROYALTY_FEE)` | removed (cap stays `uint256`) | Avoids a second downcast of a compile-time constant. |
+| `MarketplaceCore` | `_createListing` `listedAt` | `uint48(block.timestamp)` | `SafeCast.toUint48` | Reverts instead of truncating if the timestamp ever exceeds `2**48 - 1`. |
+| `MarketplaceCore` | `_createListing` `expiresAt` | `uint48(expiresAt)` | `ExpiryTooLarge` bound check, then `SafeCast.toUint48` | `expiresAt > type(uint48).max` now reverts with `ExpiryTooLarge`; test `LN1_CastSafetyTest::testExpiresAtAboveUint48Reverts`. |
+| `MarketplaceCore` | `_executeSale` marketplace fee | `uint128((price * effectiveFee) / BASIS_POINTS)` | `SafeCast.toUint128` | `effectiveFee <= 10_000`, so the result is `<= price`, which is already `uint128`. |
+| `MarketplaceCore` | `_executeSale` royalty (proceeds + event) | `uint128(royaltyAmount)` | `SafeCast.toUint128` | `marketplaceFeeAmount + royaltyAmount > price` reverts first, so royalty is `<= price` (`uint128`). |
+| `MarketplaceCore` | `executeSaleFromBid` marketplace fee | `uint128((price * marketplaceFee) / BASIS_POINTS)` | `SafeCast.toUint128` | `marketplaceFee <= 10_000`, so the result is `<= price` (`uint128`). |
+| `MarketplaceCore` | `executeSaleFromBid` royalty (event) | `uint128(royaltyAmount)` | `SafeCast.toUint128` | The `fee + royalty > price` check guarantees `royaltyAmount <= price` (`uint128`). |
+| `MarketplaceBids` | `acceptCollectionBid` total price | `pricePerItem * uint128(tokenIds.length)` | `SafeCast.toUint128(uint256(pricePerItem) * tokenIds.length)` | Multiplication is performed in `uint256`; a value above `uint128` reverts instead of wrapping. `tokenIds.length <= MAX_BATCH_SIZE` (50), but the value check is independent of the batch size. |
+| `MarketplaceBids` | `acceptCollectionBid` quantity remainder | `uint32(tokenIds.length)` | `SafeCast.toUint32` | `tokenIds.length <= MAX_BATCH_SIZE` (50) and `tokenIds.length <= bid.quantity` (a `uint32`). |
+| `MarketplaceBids` | `acceptCollectionBid` seller proceeds | `uint128(totalRoyalty)` | `SafeCast.toUint128` | Per token Core enforces `fee + royalty <= pricePerItem`, so `totalRoyalty <= totalPrice`, which is `uint128`. |
+| `MarketplaceBids` | `acceptTokenBid` seller proceeds | `uint128(royaltyAmount)` | `SafeCast.toUint128` | Core enforces `fee + royalty <= price`, so `royaltyAmount <= price` (`uint128`). |
+
 ## Status
 ✅ **All audit findings implemented and tested**
