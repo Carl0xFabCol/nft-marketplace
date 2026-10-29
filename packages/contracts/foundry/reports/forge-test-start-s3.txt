@@ -1,0 +1,3895 @@
+Compiling 4 files with Solc 0.8.24
+Solc 0.8.24 finished in 12.23s
+Compiler run successful with warnings:
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/Marketplace.sol:475:5:
+    |
+475 |     function renounceOwnership() public override {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditStaleListings.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\Marketplace.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\Marketplace.t.sol:5:8
+  |
+5 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\LaunchPad.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/access/Ownable2Step.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\LaunchPad.sol:5:8
+  |
+5 | import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\LaunchPad.sol:6:8
+  |
+6 | import "@openzeppelin/contracts/utils/Pausable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\LaunchPad.sol:7:8
+  |
+7 | import "./MERC721.sol";
+  |        ^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Marketplace.t.sol:15:48
+   |
+15 |         assertEq(marketplace.marketplaceFee(), uint16(MARKETPLACE_FEE));
+   |                                                ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Marketplace.t.sol:23:43
+   |
+23 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Marketplace.t.sol:36:54
+   |
+36 |         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                                      ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Marketplace.t.sol:40:43
+   |
+40 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Marketplace.t.sol:45:52
+   |
+45 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Marketplace.t.sol:51:43
+   |
+51 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Marketplace.t.sol:57:52
+   |
+57 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Marketplace.t.sol:96:43
+   |
+96 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+  --> src\LaunchPad.sol:21:47
+   |
+21 |     IMarketplaceCoreRegistry public immutable core;
+   |                                               ^^^^ help: consider using: `CORE`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-immutable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:16:54
+   |
+16 |         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                                      ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:21:71
+   |
+21 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+   |                                                                       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:25:68
+   |
+25 | ...   emit MarketplaceCore.Sale(address(nft), 1, seller, bidder, uint128(SALE_PRICE), uint128((SALE_PRICE * MARKETPLACE_FEE) / 10000...
+   |                                                                  ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditInvariants.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditInvariants.t.sol:5:8
+  |
+5 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+  --> test\AuditInvariants.t.sol:10:34
+   |
+10 |     TestSetup internal immutable setup;
+   |                                  ^^^^^ help: consider using: `SETUP`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+  --> test\AuditInvariants.t.sol:11:36
+   |
+11 |     Marketplace internal immutable marketplace;
+   |                                    ^^^^^^^^^^^ help: consider using: `MARKETPLACE`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+  --> test\AuditInvariants.t.sol:12:40
+   |
+12 |     MarketplaceBids internal immutable bids;
+   |                                        ^^^^ help: consider using: `BIDS`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+  --> test\AuditInvariants.t.sol:13:32
+   |
+13 |     MockNFT internal immutable nft;
+   |                                ^^^ help: consider using: `NFT`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-immutable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\Marketplace.t.sol:100:27
+    |
+100 |             address(nft), uint128(SALE_PRICE), 1, 0
+    |                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\Marketplace.t.sol:110:43
+    |
+110 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\Marketplace.t.sol:114:30
+    |
+114 |             address(nft), 1, uint128(SALE_PRICE), 0
+    |                              ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\Marketplace.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/access/Ownable2Step.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditAuthorization.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditRenounce.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:28:61
+   |
+28 |         marketplace.acceptTokenBid(address(nft), 1, bidder, uint128(SALE_PRICE), 0);
+   |                                                             ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\AuditInvariants.t.sol:131:43
+    |
+131 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-function]: function names should use mixedCase
+  --> src\Marketplace.sol:98:14
+   |
+98 |     function sweepExcessETH(address payable recipient) external;
+   |              ^^^^^^^^^^^^^^ help: consider using: `sweepExcessEth`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\Marketplace.t.sol:215:43
+    |
+215 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditRoyaltyAttribution.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditRouterAdmin.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceCore.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceCore.sol:5:8
+  |
+5 | import "@openzeppelin/contracts/access/Ownable2Step.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceCore.sol:6:8
+  |
+6 | import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceCore.sol:7:8
+  |
+7 | import "@openzeppelin/contracts/utils/Pausable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceCore.sol:8:8
+  |
+8 | import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAuthorization.t.sol:29:13
+   |
+29 |             uint16(ROYALTY_FEE),
+   |             ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAuthorization.t.sol:39:43
+   |
+39 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAuthorization.t.sol:45:65
+   |
+45 |         core.executeSaleFromBid(address(nft), 1, seller, buyer, uint128(SALE_PRICE));
+   |                                                                 ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAuthorization.t.sol:49:43
+   |
+49 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAuthorization.t.sol:55:45
+   |
+55 |         core.createListing(address(nft), 1, uint128(SALE_PRICE), 0, seller);
+   |                                             ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAuthorization.t.sol:81:57
+   |
+81 |         core.registerCollectionFromRouter(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr, creator);
+   |                                                         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAuthorization.t.sol:89:58
+   |
+89 |         core.registerCollectionFromLaunchpad(collection, uint16(ROYALTY_FEE), newOwner, creator);
+   |                                                          ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAuthorization.t.sol:99:60
+   |
+99 |         core.registerCollectionFromLaunchpad(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr, owner);
+   |                                                            ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MarketplaceBids.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MarketplaceBids.t.sol:5:8
+  |
+5 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src\Marketplace.sol:148:14
+    |
+148 |     function sweepExcessETH(address payable recipient) external;
+    |              ^^^^^^^^^^^^^^ help: consider using: `sweepExcessEth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   --> src\Marketplace.sol:168:39
+    |
+168 |     IMarketplaceCore public immutable core;
+    |                                       ^^^^ help: consider using: `CORE`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   --> src\Marketplace.sol:169:39
+    |
+169 |     IMarketplaceBids public immutable bids;
+    |                                       ^^^^ help: consider using: `BIDS`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-immutable
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceCore.sol:9:8
+  |
+9 | import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\MarketplaceBids.t.sol:9:43
+  |
+9 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                           ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:12:73
+   |
+12 |         marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, 0);
+   |                                                                         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:22:43
+   |
+22 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:26:77
+   |
+26 |         marketplace.placeCollectionBid{value: SALE_PRICE - 1}(address(nft), uint128(SALE_PRICE), 1, 0);
+   |                                                                             ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:30:43
+   |
+30 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditBatchCap.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditRoyaltyHardening.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditLN1.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:38:43
+   |
+38 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src\MarketplaceCore.sol:523:14
+    |
+523 |     function _supportsERC721(address collection) internal view returns (bool ok165, bool ok721) {
+    |              ^^^^^^^^^^^^^^^ help: consider using: `_supportsErc721`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditBatchCap.t.sol:20:43
+   |
+20 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src\MarketplaceCore.sol:688:14
+    |
+688 |     function sweepExcessETH(address payable recipient) external onlyOwner {
+    |              ^^^^^^^^^^^^^^ help: consider using: `sweepExcessEth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditLN1.t.sol:17:52
+   |
+17 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), expiresAt);
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:41:54
+   |
+41 |         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                                      ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:46:77
+   |
+46 |         marketplace.placeCollectionBid{value: SALE_PRICE * 2}(address(nft), uint128(SALE_PRICE), 2, 0);
+   |                                                                             ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:56:82
+   |
+56 | ...   emit MarketplaceCore.Sale(address(nft), tokenIds[i], seller, bidder, uint128(SALE_PRICE), uint128((SALE_PRICE * MARKETPLACE_FE...
+   |                                                                            ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:60:73
+   |
+60 |         marketplace.acceptCollectionBid(address(nft), bidder, tokenIds, uint128(SALE_PRICE), 0);
+   |                                                                         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:71:54
+   |
+71 |         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                                      ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:76:71
+   |
+76 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+   |                                                                       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:84:68
+   |
+84 |         emit MarketplaceCore.Sale(address(nft), 1, seller, bidder, uint128(SALE_PRICE), expectedMarketplaceFee, expectedRoyalty);
+   |                                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnifiedSaleEvent.t.sol:87:61
+   |
+87 |         marketplace.acceptTokenBid(address(nft), 1, bidder, uint128(SALE_PRICE), 0);
+   |                                                             ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\AuditRoyaltyHardening.t.sol:9:54
+  |
+9 |         _registerCollection(address(nftWithRoyalty), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                                      ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:42:73
+   |
+42 |         marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 0, 0);
+   |                                                                         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:48:73
+   |
+48 |         marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, 0);
+   |                                                                         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:52:43
+   |
+52 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:58:73
+   |
+58 |         marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, uint64(block.timestamp - 1));
+   |                                                                         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:74:43
+   |
+74 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceBids.t.sol:77:73
+   |
+77 |         marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, uint64(block.timestamp + 1));
+   |                                                                         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:108:43
+    |
+108 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:154:43
+    |
+154 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditRouterEth.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditBatchSafety.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditLN3.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+   --> src\MarketplaceCore.sol:142:5
+    |
+142 | /     modifier onlyRouter() {
+143 | |         if (msg.sender != router) revert Unauthorized();
+144 | |         _;
+145 | |     }
+    | |_____^
+    |
+help: wrap modifier logic to reduce code size
+    |
+142 ~     modifier onlyRouter() {
+143 +         _onlyRouter();
+144 +         _;
+145 +     }
+146 + 
+147 +     function _onlyRouter() internal {
+148 +         if (msg.sender != router) revert Unauthorized();
+149 +     }
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:157:71
+    |
+157 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+    |                                                                       ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:163:43
+    |
+163 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:166:71
+    |
+166 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+    |                                                                       ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:175:43
+    |
+175 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:192:43
+    |
+192 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:227:43
+    |
+227 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:232:71
+    |
+232 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), uint64(block.timestamp + 1));
+    |                                                                       ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:242:43
+    |
+242 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:246:71
+    |
+246 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+    |                                                                       ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:264:43
+    |
+264 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:306:43
+    |
+306 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:313:73
+    |
+313 |         marketplace.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, 0);
+    |                                                                         ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:329:43
+    |
+329 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\AuditLN3.t.sol:9:43
+  |
+9 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                           ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditLN3.t.sol:19:52
+   |
+19 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditLN3.t.sol:29:52
+   |
+29 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), tooLong);
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditLN3.t.sol:37:52
+   |
+37 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), expiry);
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditLN3.t.sol:55:52
+   |
+55 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 0);
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02.t.sol:5:8
+  |
+5 | import "../src/Marketplace.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02.t.sol:6:8
+  |
+6 | import "../src/MarketplaceCore.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02.t.sol:7:8
+  |
+7 | import "../src/MarketplaceBids.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02.t.sol:8:8
+  |
+8 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02.t.sol:9:8
+  |
+9 | import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditUnverify.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+   --> src\MarketplaceCore.sol:147:5
+    |
+147 | /     modifier onlyBids() {
+148 | |         if (msg.sender != bidsContract) revert Unauthorized();
+149 | |         _;
+150 | |     }
+    | |_____^
+    |
+help: wrap modifier logic to reduce code size
+    |
+147 ~     modifier onlyBids() {
+148 +         _onlyBids();
+149 +         _;
+150 +     }
+151 + 
+152 +     function _onlyBids() internal {
+153 +         if (msg.sender != bidsContract) revert Unauthorized();
+154 +     }
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditLN3.t.sol:59:43
+   |
+59 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditLN3.t.sol:65:30
+   |
+65 |             address(nft), 1, uint128(SALE_PRICE), 0
+   |                              ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN02.t.sol:47:57
+   |
+47 |         marketplace.updateListingPrice(address(nft), 1, uint128(SALE_PRICE * 2));
+   |                                                         ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditRoyaltyHardening.t.sol:14:63
+   |
+14 |         marketplace.createListing(address(nftWithRoyalty), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                               ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+   --> src\MarketplaceCore.sol:152:5
+    |
+152 | /     modifier onlyLaunchpad() {
+153 | |         if (!authorizedLaunchpads[msg.sender]) revert Unauthorized();
+154 | |         _;
+155 | |     }
+    | |_____^
+    |
+help: wrap modifier logic to reduce code size
+    |
+152 ~     modifier onlyLaunchpad() {
+153 +         _onlyLaunchpad();
+154 +         _;
+155 +     }
+156 + 
+157 +     function _onlyLaunchpad() internal {
+158 +         if (!authorizedLaunchpads[msg.sender]) revert Unauthorized();
+159 +     }
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src\Marketplace.sol:462:14
+    |
+462 |     function sweepExcessETH(address payable recipient) external onlyOwner {
+    |              ^^^^^^^^^^^^^^ help: consider using: `sweepExcessEth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\AuditUnverify.t.sol:9:43
+  |
+9 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                           ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditRoyaltyHardening.t.sol:41:59
+   |
+41 |         _registerCollection(address(revertingRoyaltyNFT), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditRoyaltyHardening.t.sol:46:68
+   |
+46 |         marketplace.createListing(address(revertingRoyaltyNFT), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02Fixed.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02Fixed.t.sol:5:8
+  |
+5 | import "../src/Marketplace.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02Fixed.t.sol:6:8
+  |
+6 | import "../src/MarketplaceCore.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02Fixed.t.sol:7:8
+  |
+7 | import "../src/MarketplaceBids.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditCustomErrors.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditMigration.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditUnverify.t.sol:26:43
+   |
+26 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[named-struct-fields]: prefer initializing structs with named fields
+   --> src\Marketplace.sol:266:16
+    |
+266 |         return CollectionInfo(royaltyReceiver, royaltyFee, totalVol, totalSale, verified, exists);
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using named fields: `CollectionInfo({ royaltyReceiver: royaltyReceiver, royaltyFee: royaltyFee, totalVolume: totalVol, totalSales: totalSale, isVerified: verified, exists: exists })`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#named-struct-fields
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MERC721.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MERC721.sol:5:8
+  |
+5 | import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01.t.sol:5:8
+  |
+5 | import "../src/Marketplace.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01.t.sol:6:8
+  |
+6 | import "../src/MarketplaceCore.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MERC721.sol:6:8
+  |
+6 | import "@openzeppelin/contracts/token/common/ERC2981.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MERC721.sol:7:8
+  |
+7 | import "@openzeppelin/contracts/access/Ownable2Step.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[named-struct-fields]: prefer initializing structs with named fields
+   --> src\Marketplace.sol:271:16
+    |
+271 |         return Listing(seller, price, listedAt, expiresAt, feeBps, royaltyBps);
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using named fields: `Listing({ seller: seller, price: price, listedAt: listedAt, expiresAt: expiresAt, feeBps: feeBps, royaltyBps: royaltyBps })`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#named-struct-fields
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01.t.sol:7:8
+  |
+7 | import "../src/MarketplaceBids.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01.t.sol:8:8
+  |
+8 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditCustomErrors.t.sol:16:18
+   |
+16 |         assertEq(bytes4(data), MarketplaceCore.InvalidCall.selector);
+   |                  ^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'bytes4' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditCustomErrors.t.sol:20:43
+   |
+20 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditCustomErrors.t.sol:27:71
+   |
+27 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+   |                                                                       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MERC721.sol:8:8
+  |
+8 | import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN01.t.sol:39:57
+   |
+39 |         MarketplaceCore freshCore = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+   |                                                         ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN01.t.sol:49:57
+   |
+49 |         MarketplaceCore freshCore = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+   |                                                         ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditExpiry.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+  --> src\MERC721.sol:26:20
+   |
+26 |     string private _baseTokenURI;
+   |                    ^^^^^^^^^^^^^ help: consider using: `_baseTokenUri`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditWashTrading.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:333:66
+    |
+333 |         bids.placeCollectionBid{value: SALE_PRICE}(address(nft), uint128(SALE_PRICE), 1, 0, bidder);
+    |                                                                  ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01Fixed.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01Fixed.t.sol:5:8
+  |
+5 | import "../src/Marketplace.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01Fixed.t.sol:6:8
+  |
+6 | import "../src/MarketplaceCore.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01Fixed.t.sol:7:8
+  |
+7 | import "../src/MarketplaceBids.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN01Fixed.t.sol:8:8
+  |
+8 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[named-struct-fields]: prefer initializing structs with named fields
+   --> src\Marketplace.sol:276:16
+    |
+276 |         return CollectionBid(bidderAddr, pricePerItem, quantity, expiresAt);
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using named fields: `CollectionBid({ bidder: bidderAddr, pricePerItem: pricePerItem, quantity: quantity, expiresAt: expiresAt })`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#named-struct-fields
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN02Fixed.t.sol:8:8
+  |
+8 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceBids.t.sol:346:43
+    |
+346 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\AuditExpiry.t.sol:9:43
+  |
+9 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                           ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+  --> src\MERC721.sol:48:23
+   |
+48 |         string memory baseURI_,
+   |                       ^^^^^^^^ help: consider using: `baseUri_`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MarketplaceCore.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MarketplaceCore.t.sol:5:8
+  |
+5 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditRoyaltyHardening.t.sol:56:43
+   |
+56 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN01Fixed.t.sol:43:55
+   |
+43 |         MarketplaceCore newCore = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+   |                                                       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN01Fixed.t.sol:58:55
+   |
+58 |         MarketplaceCore newCore = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+   |                                                       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN01Fixed.t.sol:73:55
+   |
+73 |         MarketplaceCore newCore = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+   |                                                       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditSlippage.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[named-struct-fields]: prefer initializing structs with named fields
+   --> src\Marketplace.sol:281:16
+    |
+281 |         return TokenBid(bidderAddr, price, expiresAt);
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using named fields: `TokenBid({ bidder: bidderAddr, price: price, expiresAt: expiresAt })`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#named-struct-fields
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\AuditWashTrading.t.sol:9:43
+  |
+9 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                           ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditWashTrading.t.sol:14:71
+   |
+14 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+   |                                                                       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditWashTrading.t.sol:18:43
+   |
+18 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceBids.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/access/Ownable2Step.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceBids.sol:5:8
+  |
+5 | import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceCore.t.sol:21:43
+   |
+21 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceCore.t.sol:27:52
+   |
+27 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), 1);
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceCore.t.sol:31:43
+   |
+31 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceCore.t.sol:46:52
+   |
+46 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceCore.t.sol:50:43
+   |
+50 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceCore.t.sol:56:52
+   |
+56 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceCore.t.sol:60:43
+   |
+60 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\MarketplaceCore.t.sol:65:52
+   |
+65 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditSlippage.t.sol:10:43
+   |
+10 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN01Fixed.t.sol:89:55
+   |
+89 |         MarketplaceCore newCore = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+   |                                                       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceBids.sol:6:8
+  |
+6 | import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceBids.sol:7:8
+  |
+7 | import "@openzeppelin/contracts/utils/Pausable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditExpiry.t.sol:15:52
+   |
+15 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), expiry);
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditExpiry.t.sol:25:43
+   |
+25 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditExpiry.t.sol:31:71
+   |
+31 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), expiry);
+   |                                                                       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+  --> test\AuditN02Fixed.t.sol:91:17
+   |
+91 |         address revertingNFT = address(revertingNFT);
+   |                 ^^^^^^^^^^^^ help: consider using: `revertingNft`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditSlippage.t.sol:25:43
+   |
+25 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditSlippage.t.sol:46:61
+   |
+46 |         marketplace.acceptTokenBid(address(nft), 1, bidder, uint128(SALE_PRICE), 0);
+   |                                                             ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:176:43
+    |
+176 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:182:30
+    |
+182 |             address(nft), 1, uint128(SALE_PRICE), uint64(block.timestamp + 1)
+    |                              ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:204:43
+    |
+204 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:210:52
+    |
+210 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+    |                                                    ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:229:43
+    |
+229 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:236:45
+    |
+236 |             address(nft), 1, seller, buyer, uint128(SALE_PRICE)
+    |                                             ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:241:43
+    |
+241 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:254:54
+    |
+254 |         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                                      ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:260:70
+    |
+260 |         emit MarketplaceCore.CollectionRegistered(address(0), owner, uint16(ROYALTY_FEE), false);
+    |                                                                      ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:261:54
+    |
+261 |         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                                      ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditO2.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> src\MarketplaceBids.sol:8:8
+  |
+8 | import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN02Fixed.t.sol:78:57
+   |
+78 |         marketplace.updateListingPrice(address(nft), 1, uint128(SALE_PRICE * 2));
+   |                                                         ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditWashTrading.t.sol:25:21
+   |
+25 |         prices[0] = uint128(SALE_PRICE);
+   |                     ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditWashTrading.t.sol:33:43
+   |
+33 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditWashTrading.t.sol:39:66
+   |
+39 |         core.executeSaleFromBid(address(nft), 1, bidder, bidder, uint128(SALE_PRICE));
+   |                                                                  ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+  --> src\MarketplaceBids.sol:59:46
+   |
+59 |     IMarketplaceCoreForBids public immutable core;
+   |                                              ^^^^ help: consider using: `CORE`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-immutable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\AuditN02Fixed.t.sol:109:52
+    |
+109 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE * 2), _listingExpiry());
+    |                                                    ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditN03.t.sol:5:8
+  |
+5 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src\MarketplaceBids.sol:448:14
+    |
+448 |     function sweepExcessETH(address payable recipient) external onlyOwner {
+    |              ^^^^^^^^^^^^^^ help: consider using: `sweepExcessEth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN03.t.sol:33:18
+   |
+33 |         _list(1, uint128(SALE_PRICE), _expiry());
+   |                  ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN03.t.sol:42:17
+   |
+42 |         _buy(1, uint128(SALE_PRICE));
+   |                 ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN03.t.sol:56:18
+   |
+56 |         _list(1, uint128(SALE_PRICE), _expiry());
+   |                  ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditN03.t.sol:65:17
+   |
+65 |         _buy(1, uint128(SALE_PRICE));
+   |                 ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:280:60
+    |
+280 |         marketplace.registerCollection(address(nonERC721), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                                            ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:284:43
+    |
+284 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\Integration.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\Integration.t.sol:5:8
+  |
+5 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditO3.t.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditO3.t.sol:5:8
+  |
+5 | import "../src/MarketplaceCore.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+   --> src\MarketplaceBids.sol:120:5
+    |
+120 | /     modifier whenCoreNotPaused() {
+121 | |         if (core.paused()) revert CorePaused();
+122 | |         _;
+123 | |     }
+    | |_____^
+    |
+help: wrap modifier logic to reduce code size
+    |
+120 ~     modifier whenCoreNotPaused() {
+121 +         _whenCoreNotPaused();
+122 +         _;
+123 +     }
+124 + 
+125 +     function _whenCoreNotPaused() internal {
+126 +         if (core.paused()) revert CorePaused();
+127 +     }
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\AuditN03.t.sol:128:25
+    |
+128 |         uint128 price = uint128(SALE_PRICE);
+    |                         ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\AuditO2.t.sol:9:43
+  |
+9 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                           ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditO2.t.sol:16:52
+   |
+16 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), shortExpiry);
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditO2.t.sol:17:52
+   |
+17 |         marketplace.createListing(address(nft), 2, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+   --> src\MarketplaceBids.sol:125:5
+    |
+125 | /     modifier onlyMarketplace() {
+126 | |         if (msg.sender != marketplace) revert OnlyMarketplace();
+127 | |         _;
+128 | |     }
+    | |_____^
+    |
+help: wrap modifier logic to reduce code size
+    |
+125 ~     modifier onlyMarketplace() {
+126 +         _onlyMarketplace();
+127 +         _;
+128 +     }
+129 + 
+130 +     function _onlyMarketplace() internal {
+131 +         if (msg.sender != marketplace) revert OnlyMarketplace();
+132 +     }
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\Integration.t.sol:9:43
+  |
+9 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                           ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:14:52
+   |
+14 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:32:43
+   |
+32 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src\MERC721.sol:101:41
+    |
+101 |     function setBaseURI(string calldata baseURI_) external onlyOwner {
+    |                                         ^^^^^^^^ help: consider using: `baseUri_`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[unused-import]: unused imports should be removed
+ --> test\AuditAccountingInvariants.t.sol:4:9
+  |
+4 | import {Test} from "forge-std/Test.sol";
+  |         ^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[unused-import]: unused imports should be removed
+ --> test\AuditAccountingInvariants.t.sol:6:9
+  |
+6 | import {MarketplaceBids} from "../src/MarketplaceBids.sol";
+  |         ^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[unused-import]: unused imports should be removed
+ --> test\AuditAccountingInvariants.t.sol:7:9
+  |
+7 | import {Marketplace} from "../src/Marketplace.sol";
+  |         ^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditFeeSnapshot.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\AuditPerTokenApproval.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MockRevertingNFT.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MockRevertingNFT.sol:5:8
+  |
+5 | import "@openzeppelin/contracts/access/Ownable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src\MERC721.sol:172:14
+    |
+172 |     function _baseURI() internal view override returns (string memory) {
+    |              ^^^^^^^^ help: consider using: `_baseUri`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MockNFT.t.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MockNFT.t.sol:5:8
+  |
+5 | import "@openzeppelin/contracts/access/Ownable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MockNFTWithRoyalty.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MockRevertingRoyaltyNFT.sol:4:8
+  |
+4 | import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MockRevertingRoyaltyNFT.sol:5:8
+  |
+5 | import "@openzeppelin/contracts/access/Ownable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:288:54
+    |
+288 |         marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                                      ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\TestSetup.sol:4:8
+  |
+4 | import "forge-std/Test.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\TestSetup.sol:5:8
+  |
+5 | import "../src/MarketplaceCore.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\TestSetup.sol:6:8
+  |
+6 | import "../src/MarketplaceBids.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\TestSetup.sol:8:8
+  |
+8 | import "./MockNFT.t.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+ --> test\AuditPerTokenApproval.t.sol:9:43
+  |
+9 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+  |                                           ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: consider disabling this lint if you're certain the cast is safe
+          
+          // casting to 'uint16' is safe because [explain why]
+          // forge-lint: disable-next-line(unsafe-typecast)
+          
+          
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAccountingInvariants.t.sol:38:71
+   |
+38 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+   |                                                                       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\LaunchPad.t.sol:4:8
+  |
+4 | import "./TestSetup.sol";
+  |        ^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\MockNFTWithRoyalty.sol:5:8
+  |
+5 | import "@openzeppelin/contracts/access/Ownable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:292:43
+    |
+292 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:303:43
+    |
+303 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:311:43
+    |
+311 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\TestSetup.sol:9:8
+  |
+9 | import "./MockNFTWithRoyalty.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+  --> test\TestSetup.sol:10:8
+   |
+10 | import "./MockNFTNonERC721.sol";
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+  --> test\TestSetup.sol:11:8
+   |
+11 | import "./MockRevertingNFT.sol";
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+  --> test\TestSetup.sol:12:8
+   |
+12 | import "./MockRevertingRoyaltyNFT.sol";
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+  --> test\TestSetup.sol:13:8
+   |
+13 | import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+  --> test\TestSetup.sol:14:8
+   |
+14 | import "@openzeppelin/contracts/access/Ownable.sol";
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+  --> test\TestSetup.sol:15:8
+   |
+15 | import "@openzeppelin/contracts/utils/Pausable.sol";
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:38:27
+   |
+38 |             address(nft), uint128(SALE_PRICE), 1, 0
+   |                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:54:43
+   |
+54 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+  --> test\TestSetup.sol:25:29
+   |
+25 |     MockRevertingNFT public revertingNFT;
+   |                             ^^^^^^^^^^^^ help: consider using: `revertingNft`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+  --> test\TestSetup.sol:26:36
+   |
+26 |     MockRevertingRoyaltyNFT public revertingRoyaltyNFT;
+   |                                    ^^^^^^^^^^^^^^^^^^^ help: consider using: `revertingRoyaltyNft`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAccountingInvariants.t.sol:84:52
+   |
+84 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:60:30
+   |
+60 |             address(nft), 1, uint128(SALE_PRICE), 0
+   |                              ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:72:43
+   |
+72 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:322:43
+    |
+322 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\LaunchPad.t.sol:8:8
+  |
+8 | import "@openzeppelin/contracts/access/Ownable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> test\LaunchPad.t.sol:9:8
+  |
+9 | import "@openzeppelin/contracts/utils/Pausable.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[mixed-case-function]: function names should use mixedCase
+  --> test\TestSetup.sol:94:14
+   |
+94 |     function _mintNFT(address to, uint256 tokenId) internal {
+   |              ^^^^^^^^ help: consider using: `_mintNft`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[mixed-case-function]: function names should use mixedCase
+  --> test\TestSetup.sol:98:14
+   |
+98 |     function _mintNFTWithRoyalty(address to, uint256 tokenId) internal {
+   |              ^^^^^^^^^^^^^^^^^^^ help: consider using: `_mintNftWithRoyalty`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[mixed-case-function]: function names should use mixedCase
+   --> test\TestSetup.sol:102:14
+    |
+102 |     function _mintRevertingNFT(address to, uint256 tokenId) internal {
+    |              ^^^^^^^^^^^^^^^^^ help: consider using: `_mintRevertingNft`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[mixed-case-function]: function names should use mixedCase
+   --> test\TestSetup.sol:106:14
+    |
+106 |     function _mintRevertingRoyaltyNFT(address to, uint256 tokenId) internal {
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using: `_mintRevertingRoyaltyNft`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:77:52
+   |
+77 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\LaunchPad.t.sol:34:63
+   |
+34 |         collection = launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, BASE_URI, 0, 0);
+   |                                                               ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> script\CreateHypurr.s.sol:4:8
+  |
+4 | import "forge-std/Script.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> script\CreateHypurr.s.sol:5:8
+  |
+5 | import "../src/MERC721.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+note[unaliased-plain-import]: use named imports '{A, B}' or alias 'import ".." as X'
+ --> script\CreateHypurr.s.sol:6:8
+  |
+6 | import "../src/Marketplace.sol";
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unaliased-plain-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:88:52
+   |
+88 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditAccountingInvariants.t.sol:85:52
+   |
+85 |         marketplace.createListing(address(nft), 2, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\MarketplaceCore.t.sol:330:43
+    |
+330 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\TestSetup.sol:59:36
+   |
+59 |         core = new MarketplaceCore(uint16(MARKETPLACE_FEE), feeReceiverAddr);
+   |                                    ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\TestSetup.sol:120:43
+    |
+120 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\TestSetup.sol:125:52
+    |
+125 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+    |                                                    ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\TestSetup.sol:129:43
+    |
+129 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\TestSetup.sol:135:30
+    |
+135 |             address(nft), 1, uint128(SALE_PRICE), 0
+    |                              ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\Integration.t.sol:94:13
+   |
+94 |             uint16(ROYALTY_FEE),
+   |             ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditPerTokenApproval.t.sol:16:52
+   |
+16 |         marketplace.createListing(address(nft), 1, uint128(SALE_PRICE), _listingExpiry());
+   |                                                    ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\Integration.t.sol:101:13
+    |
+101 |             uint96(ROYALTY_FEE)
+    |             ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint96' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\Integration.t.sol:109:41
+    |
+109 |             address(nftWithRoyalty), 1, uint128(SALE_PRICE), _listingExpiry()
+    |                                         ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditPerTokenApproval.t.sol:25:43
+   |
+25 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+   |                                           ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\LaunchPad.t.sol:65:30
+   |
+65 |         assertEq(royaltyFee, uint16(ROYALTY_FEE));
+   |                              ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\TestSetup.sol:140:43
+    |
+140 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\TestSetup.sol:144:27
+    |
+144 |             address(nft), uint128(SALE_PRICE), 1, 0
+    |                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\LaunchPad.t.sol:70:71
+   |
+70 |         address collection = launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), address(0), 10, BASE_URI, 0, 0);
+   |                                                                       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint16' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test\AuditPerTokenApproval.t.sol:29:71
+   |
+29 |         marketplace.placeTokenBid{value: SALE_PRICE}(address(nft), 1, uint128(SALE_PRICE), 0);
+   |                                                                       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint128' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\Integration.t.sol:125:43
+    |
+125 |         _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+    |                                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\Integration.t.sol:129:27
+    |
+129 |             address(nft), uint128(SALE_PRICE), 1, 0
+    |                           ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\LaunchPad.t.sol:269:72
+    |
+269 |         emit MarketplaceCore.CollectionRegistered(address(0), creator, uint16(ROYALTY_FEE), false);
+    |                                                                        ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test\LaunchPad.t.sol:270:50
+    |
+270 |         launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, BASE_URI, 0, 0);
+    |                                                  ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint16' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+No files changed, compilation skipped
+
+Ran 6 tests for test/Integration.t.sol:IntegrationTest
+[PASS] testEndToEnd_BidCancellationAndWithdrawal() (gas: 208760)
+[PASS] testEndToEnd_CollectionBidAndAccept() (gas: 405679)
+[PASS] testEndToEnd_ListAndBuy() (gas: 390955)
+[PASS] testEndToEnd_PauseBlocksMarketplaceOperations() (gas: 330160)
+[PASS] testEndToEnd_RoyaltyERC2981UsesPendingWithdrawal() (gas: 432031)
+[PASS] testEndToEnd_TokenBidAndAccept() (gas: 404736)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 283.95ms (215.99ms CPU time)
+
+Ran 6 tests for test/AuditN01Fixed.t.sol:AuditN01FixedTest
+[PASS] testN01_ConfigureBidsMarketplaceIsOneShot() (gas: 7300913)
+[PASS] testN01_NewOwnerCannotCallRouterFunctions() (gas: 79113)
+[PASS] testN01_OwnerCannotCallRouterFunctionsDirectly() (gas: 72739)
+[PASS] testN01_SetBidsContractRevertsOnSecondCall() (gas: 2679032)
+[PASS] testN01_SetMarketplaceAddressRevertsOnSecondCall() (gas: 4681341)
+[PASS] testN01_SetRouterRevertsOnSecondCall() (gas: 2679714)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 318.53ms (315.74ms CPU time)
+
+Ran 3 tests for test/AuditStaleListings.t.sol:AuditStaleListingsTest
+[PASS] testM01_BuyRejectsStaleListing() (gas: 281628)
+[PASS] testM01_CreateListingOverwritesStaleListing() (gas: 306308)
+[PASS] testM01_UpdateRejectsStaleListing() (gas: 263206)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 284.08ms (281.57ms CPU time)
+
+Ran 21 tests for test/Marketplace.t.sol:MarketplaceTest
+[PASS] testAcceptCollectionBid_UsesActualSeller() (gas: 401097)
+[PASS] testAcceptTokenBid_UsesActualSeller() (gas: 400319)
+[PASS] testAdminFunctions_OnlyMarketplaceOwner() (gas: 69610)
+[PASS] testBuy_CannotCauseReceiverIssueForEOA() (gas: 381240)
+[PASS] testBuy_UsesActualBuyer() (gas: 381624)
+[PASS] testCancelListing_CannotBeCalledByOtherUser() (gas: 254174)
+[PASS] testCancelListing_UsesActualSeller() (gas: 202301)
+[PASS] testCollectionBid_UsesActualBidder() (gas: 188163)
+[PASS] testComponentOwnersAreRouter() (gas: 18655)
+[PASS] testConstructor_DeploysCorrectly() (gas: 18769)
+[PASS] testCreateListing_CannotSpoofSeller() (gas: 171159)
+[PASS] testCreateListing_UsesActualSeller() (gas: 251444)
+[PASS] testEmergencyRoyaltyRecoveryThroughRouter() (gas: 97551)
+[PASS] testPendingWithdrawalsAggregatesBothComponents() (gas: 390040)
+[PASS] testRegisterCollection_RejectsNonAdmin() (gas: 19162)
+[PASS] testRegisterCollection_ThroughRouter() (gas: 86475)
+[PASS] testRouterOwnershipIsIndependent() (gas: 49520)
+[PASS] testSweepExcessETH_OnlyOwner() (gas: 18673)
+[PASS] testTokenBid_UsesActualBidder() (gas: 191347)
+[PASS] testViews() (gas: 30636)
+[PASS] testWithdrawThroughRouter() (gas: 389020)
+Suite result: ok. 21 passed; 0 failed; 0 skipped; finished in 285.66ms (217.84ms CPU time)
+
+Ran 5 tests for test/AuditAccountingInvariants.t.sol:AccountingInvariantsTest
+[PASS] testBidsCreditUpdatesTotalPendingWithdrawals() (gas: 175640)
+[PASS] testBidsInvariantBalanceGeTotalPendingPlusEscrow() (gas: 241370)
+[PASS] testCoreCreditUpdatesTotalPendingWithdrawals() (gas: 395205)
+[PASS] testInvariantTotalPendingEqualsSumOfIndividualPending() (gas: 426655)
+[PASS] testWithdrawFailureReaddsToTotalPendingWithdrawals() (gas: 465631)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 316.15ms (248.32ms CPU time)
+
+Ran 1 test for test/AuditLN1.t.sol:LN1_CastSafetyTest
+[PASS] testExpiresAtAboveUint48Reverts() (gas: 144989)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 278.69ms (276.20ms CPU time)
+
+Ran 1 test for test/AuditO3.t.sol:O3_RouterUpdatedTest
+[PASS] testSetRouterEmitsRouterUpdated() (gas: 2675700)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 457.90ms (457.25ms CPU time)
+
+Ran 2 tests for test/AuditUnverify.t.sol:AuditUnverifyTest
+[PASS] testL05_UnverifyCollection() (gas: 101434)
+[PASS] testL05_UnverifyOnlyOwner() (gas: 87364)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 457.41ms (453.40ms CPU time)
+
+Ran 2 tests for test/AuditPerTokenApproval.t.sol:AuditPerTokenApprovalTest
+[PASS] testL06_PerTokenApprovalAllowsBidAcceptance() (gas: 382318)
+[PASS] testL06_PerTokenApprovalAllowsListingAndBuy() (gas: 365978)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 4.56ms (649.00µs CPU time)
+
+Ran 3 tests for test/AuditWashTrading.t.sol:AuditWashTradingTest
+[PASS] testM05_CannotBatchBidOnOwnToken() (gas: 165943)
+[PASS] testM05_CannotBidOnOwnToken() (gas: 162177)
+[PASS] testM05_CoreRejectsSelfSaleFromBid() (gas: 171892)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.59ms (474.20µs CPU time)
+
+Ran 9 tests for test/AuditAuthorization.t.sol:AuditAuthorizationTest
+[PASS] testH02_LaunchpadCanOnlyRegisterOwnLaunch() (gas: 1932537)
+[PASS] testH02_LaunchpadCannotBuy() (gas: 266793)
+[PASS] testH02_LaunchpadCannotCreateListing() (gas: 167325)
+[PASS] testH02_LaunchpadCannotExecuteSaleFromBid() (gas: 169731)
+[PASS] testH02_LaunchpadCannotRegisterExistingCollection() (gas: 1934057)
+[PASS] testH02_LaunchpadCannotRegisterForeignCollection() (gas: 83523)
+[PASS] testH02_LaunchpadCannotUseRouterRegistration() (gas: 21076)
+[PASS] testH02_LaunchpadCannotWithdrawFor() (gas: 387966)
+[PASS] testL07_WithdrawForIsRouterOnly() (gas: 394743)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 5.68ms (1.55ms CPU time)
+
+Ran 1 test for test/AuditRenounce.t.sol:AuditRenounceTest
+[PASS] testL03_AllComponentsRejectRenounce() (gas: 23695)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.43ms (47.50µs CPU time)
+
+Ran 2 tests for test/AuditBatchCap.t.sol:AuditBatchCapTest
+[PASS] testG05_BuyBatchRejectsTooManyTokens() (gas: 41699)
+[PASS] testG05_TokenBidBatchRejectsTooManyTokens() (gas: 155595)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 1.70ms (284.80µs CPU time)
+
+Ran 7 tests for test/AuditN02Fixed.t.sol:AuditN02FixedTest
+[PASS] testN02_BurnedTokenListingCanBeCleaned() (gas: 247326)
+[PASS] testN02_BuyRevertsForStaleListingWithoutCleanup() (gas: 286813)
+[PASS] testN02_CleanStaleListingRevertsForNonExistent() (gas: 16170)
+[PASS] testN02_CleanStaleListingRevertsForNonStale() (gas: 250857)
+[PASS] testN02_NewOwnerCanCreateListingOverStale() (gas: 307246)
+[PASS] testN02_StaleListingCanBeCleaned() (gas: 226924)
+[PASS] testN02_UpdateListingPriceRevertsForStaleListing() (gas: 268512)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 2.72ms (1.03ms CPU time)
+
+Ran 4 tests for test/AuditRouterAdmin.t.sol:AuditRouterAdminTest
+[PASS] testM06_PauseAndUnpauseAreIdempotent() (gas: 71674)
+[PASS] testM06_SweepRevertsWhenNeitherHasExcess() (gas: 30955)
+[PASS] testM06_SweepSucceedsWhenOnlyBidsHasExcess() (gas: 42499)
+[PASS] testM06_SweepSucceedsWhenOnlyCoreHasExcess() (gas: 41852)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 1.58ms (220.50µs CPU time)
+
+Ran 1 test for test/AuditBatchSafety.t.sol:AuditBatchSafetyTest
+[PASS] testL01_BuyBatchRejectsDuplicateTokenIds() (gas: 276598)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.53ms (186.60µs CPU time)
+
+Ran 2 tests for test/AuditRouterEth.t.sol:AuditRouterEthTest
+[PASS] testL02_RouterRejectsPlainETH() (gas: 18212)
+[PASS] testL02_RouterRejectsUnknownCalldata() (gas: 19043)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 1.42ms (54.30µs CPU time)
+
+Ran 3 tests for test/AuditCustomErrors.t.sol:AuditCustomErrorsTest
+[PASS] testG08_BidsCorePausedUsesCustomError() (gas: 136840)
+[PASS] testG08_CoreFallbackUsesCustomError() (gas: 7185)
+[PASS] testG08_RouterConstructorUsesCustomError() (gas: 67547)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.48ms (187.30µs CPU time)
+
+Ran 4 tests for test/AuditLN3.t.sol:LN3_ListingDurationTest
+[PASS] testBidsStillAllowZeroExpiry() (gas: 265283)
+[PASS] testListingBeyondMaxDurationReverts() (gas: 167285)
+[PASS] testListingResurrectionAfterExpiryFails() (gas: 291473)
+[PASS] testListingZeroExpiryReverts() (gas: 167047)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 103.17ms (100.38ms CPU time)
+
+Ran 2 tests for test/AuditExpiry.t.sol:AuditExpiryTest
+[PASS] testL04_ListingExpiresAtExactTimestamp() (gas: 273523)
+[PASS] testL04_TokenBidExpiresAtExactTimestamp() (gas: 273337)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.20ms (508.20µs CPU time)
+
+Ran 1 test for test/AuditRoyaltyAttribution.t.sol:AuditRoyaltyAttributionTest
+[PASS] testM02_CollectionBidCreditsEachRoyaltyReceiver() (gas: 552718)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.54ms (574.70µs CPU time)
+
+Ran 4 tests for test/AuditN02.t.sol:AuditN02Test
+[PASS] testN02_BurnedTokenMakesListingStale() (gas: 275361)
+[PASS] testN02_CleanStaleListingNotImplemented() (gas: 5668)
+[PASS] testN02_StaleListingRemainsAfterFailedBuy() (gas: 288694)
+[PASS] testN02_StaleListingRemainsAfterFailedUpdateListingPrice() (gas: 269921)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 109.08ms (105.10ms CPU time)
+
+Ran 3 tests for test/AuditMigration.t.sol:AuditMigrationTest
+[PASS] testM07_OnlyRouterOwnerCanMigrate() (gas: 15494)
+[PASS] testM07_RejectsZeroAddress() (gas: 14483)
+[PASS] testM07_TransferComponentOwnershipStartsHandoff() (gas: 75736)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.41ms (251.90µs CPU time)
+
+Ran 27 tests for test/MarketplaceBids.t.sol:MarketplaceBidsTest
+[PASS] testAcceptCollectionBid_NotApproved() (gas: 263033)
+[PASS] testAcceptCollectionBid_NotOwner() (gas: 285924)
+[PASS] testAcceptCollectionBid_PartialKeepsRemainingQuantity() (gas: 463929)
+[PASS] testAcceptCollectionBid_Valid() (gas: 413726)
+[PASS] testAcceptTokenBid_Expired() (gas: 274164)
+[PASS] testAcceptTokenBid_NotApproved() (gas: 262956)
+[PASS] testAcceptTokenBid_Valid() (gas: 405807)
+[PASS] testBidsOwnershipArchitecture() (gas: 17541)
+[PASS] testC01_PlaceTokenBidBatchRequiresFullValueOnReplacement() (gas: 201156)
+[PASS] testCancelBidStillWorksWhilePaused() (gas: 311600)
+[PASS] testCancelCollectionBid_AllowsExpiredBid() (gas: 190143)
+[PASS] testCancelCollectionBid_Valid_CreatesWithdrawalCredit() (gas: 192137)
+[PASS] testCancelTokenBidBatch_Valid() (gas: 253168)
+[PASS] testCancelTokenBid_Valid_CreatesWithdrawalCredit() (gas: 263535)
+[PASS] testOnlyRouterCanCallBidsDirectly() (gas: 107565)
+[PASS] testPauseBlocksNewBids() (gas: 161760)
+[PASS] testPlaceCollectionBid_Expired() (gas: 114094)
+[PASS] testPlaceCollectionBid_InsufficientValue() (gas: 113739)
+[PASS] testPlaceCollectionBid_InvalidPrice() (gas: 100397)
+[PASS] testPlaceCollectionBid_InvalidQuantity() (gas: 112911)
+[PASS] testPlaceCollectionBid_Unregistered() (gas: 45182)
+[PASS] testPlaceCollectionBid_Valid() (gas: 188431)
+[PASS] testPlaceTokenBidBatch_FullReplacementAccounting() (gas: 329920)
+[PASS] testPlaceTokenBidBatch_RejectsDuplicateTokenIds() (gas: 125830)
+[PASS] testPlaceTokenBid_ReplacesAndCreditsOldBid() (gas: 266309)
+[PASS] testPlaceTokenBid_Valid() (gas: 190964)
+[PASS] testWithdraw_BidRefund() (gas: 271831)
+Suite result: ok. 27 passed; 0 failed; 0 skipped; finished in 110.90ms (106.52ms CPU time)
+
+Ran 4 tests for test/AuditRoyaltyHardening.t.sol:AuditRoyaltyHardeningTest
+[PASS] testM04_ExcessiveTokenRoyaltyFallsBackToCollectionRoyalty() (gas: 431930)
+[PASS] testM04_RevertingRoyaltyFallsBackToCollectionRoyalty() (gas: 384042)
+[PASS] testM04_UpdateRoyaltyRejectsZeroReceiverWithFee() (gas: 86823)
+[PASS] testM04_ZeroReceiverFallsBackToCollectionRoyalty() (gas: 413822)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.20ms (1.08ms CPU time)
+
+Ran 2 tests for test/AuditO2.t.sol:O2_ExpiredCleanupTest
+[PASS] testExpiredListingIsCleaned() (gas: 306995)
+[PASS] testLiveListingStillReverts() (gas: 251169)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.73ms (629.60µs CPU time)
+
+Ran 4 tests for test/AuditFeeSnapshot.t.sol:AuditFeeSnapshotTest
+[PASS] testM03_CollectionBidMinSellerProceedsProtectsSeller() (gas: 445922)
+[PASS] testM03_FeeIncreaseAfterListingDoesNotAffectSeller() (gas: 392473)
+[PASS] testM03_LowerCurrentFeeIsUsed() (gas: 392151)
+[PASS] testM03_TokenBidMinSellerProceedsProtectsSeller() (gas: 400994)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.56ms (1.32ms CPU time)
+
+Ran 4 tests for test/AuditN01.t.sol:AuditN01Test
+[PASS] testN01_OwnerCannotCreateListingForVictim() (gas: 142624)
+[PASS] testN01_OwnerCannotStealNFTViaDirectCoreCall() (gas: 263939)
+[PASS] testN01_SetBidsContractIsNotReassignable() (gas: 2679428)
+[PASS] testN01_SetMarketplaceAddressIsNotReassignable() (gas: 4681319)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.03ms (861.30µs CPU time)
+
+Ran 3 tests for test/AuditSlippage.t.sol:AuditSlippageTest
+[PASS] testH03_AcceptStillWorksAtMinimum() (gas: 399712)
+[PASS] testH03_CollectionBidCannotBeReplacedBelowSellerMinimum() (gas: 341278)
+[PASS] testH03_TokenBidCannotBeReplacedBelowSellerMinimum() (gas: 342514)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.19ms (870.00µs CPU time)
+
+Ran 3 tests for test/AuditUnifiedSaleEvent.t.sol:UnifiedSaleEventTest
+[PASS] testExecuteSaleFromBidEmitsSaleEventForCollectionBid() (gas: 458647)
+[PASS] testExecuteSaleFromBidEmitsSaleEventForTokenBid() (gas: 402841)
+[PASS] testSaleEventValuesMatchCalculatedValues() (gas: 402955)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 118.15ms (117.92ms CPU time)
+
+Ran 22 tests for test/LaunchPad.t.sol:LaunchPadTest
+[PASS] test_BatchMint_RespectsMaxSupply() (gas: 1912527)
+[PASS] test_CreateCollection_ChargesLaunchFee() (gas: 1961156)
+[PASS] test_CreateCollection_CreatorAutoFilledInEvent() (gas: 1930369)
+[PASS] test_CreateCollection_DefaultRoyaltyReceiverIsCreator() (gas: 1929930)
+[PASS] test_CreateCollection_DeploysAndRecordsCreator() (gas: 1933090)
+[PASS] test_CreateCollection_RegistersInCore() (gas: 1932629)
+[PASS] test_CreateCollection_RequiresAuthorizedLaunchpad() (gas: 1859925)
+[PASS] test_CreateCollection_RevertsOnExcessiveRoyalty() (gas: 23216)
+[PASS] test_CreateCollection_RevertsWhenLaunchFeeMismatch() (gas: 49235)
+[PASS] test_CreateCollection_SetsOwnerAndMetadata() (gas: 1940888)
+[PASS] test_Mint_ByCreator() (gas: 2053828)
+[PASS] test_Mint_IsPublic() (gas: 2054687)
+[PASS] test_Mint_RequiresConfiguredPrice() (gas: 2061978)
+[PASS] test_Mint_RevertsAfterDuration() (gas: 1931556)
+[PASS] test_Mint_RevertsWhenMaxSupplyReached() (gas: 2146209)
+[PASS] test_Mint_UnlimitedSupplyAndEternalDuration() (gas: 2243371)
+[PASS] test_Pause_BlocksCreation() (gas: 42816)
+[PASS] test_SetBaseURI_OnlyOwner() (gas: 1935432)
+[PASS] test_SetMintDuration_OnlyOwner() (gas: 1954811)
+[PASS] test_TokenURI_UsesBaseURI() (gas: 2056206)
+[PASS] test_WithdrawFees() (gas: 1950793)
+[PASS] test_WithdrawFees_RevertsWhenNoFees() (gas: 21214)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 118.92ms (116.23ms CPU time)
+
+Ran 44 tests for test/MarketplaceCore.t.sol:MarketplaceCoreTest
+[PASS] testBuyBatch_Valid() (gas: 457552)
+[PASS] testBuy_ListingExpired() (gas: 274947)
+[PASS] testBuy_RequiresExactETH() (gas: 301163)
+[PASS] testBuy_SelfPurchase() (gas: 273914)
+[PASS] testBuy_Valid_CreditsPullPayments() (gas: 393497)
+[PASS] testBuy_WhenPaused() (gas: 324759)
+[PASS] testCancelListing_NotSeller() (gas: 254174)
+[PASS] testCancelListing_UnauthorizedDirectCore() (gas: 252910)
+[PASS] testCancelListing_Valid() (gas: 201912)
+[PASS] testCreateListing_Expired() (gas: 168182)
+[PASS] testCreateListing_NotApproved() (gas: 147528)
+[PASS] testCreateListing_NotOwner() (gas: 171823)
+[PASS] testCreateListing_PriceBelowMin() (gas: 168329)
+[PASS] testCreateListing_ReplacesExisting() (gas: 271265)
+[PASS] testCreateListing_Unregistered() (gas: 104036)
+[PASS] testCreateListing_Valid() (gas: 252674)
+[PASS] testEmergencyUpdateCollectionRoyalty_Admin() (gas: 98573)
+[PASS] testEmergencyUpdateCollectionRoyalty_NonOwner() (gas: 90154)
+[PASS] testExecuteSaleFromBid_NonAuthorized() (gas: 170176)
+[PASS] testMarketplaceOwnership_RequiresAcceptance() (gas: 37264)
+[PASS] testOwnershipArchitecture() (gas: 40585)
+[PASS] testPauseAndUnpause_Admin() (gas: 67186)
+[PASS] testPause_NonOwner() (gas: 15347)
+[PASS] testRegisterCollection_AlreadyRegistered() (gas: 89045)
+[PASS] testRegisterCollection_ExternalCreatorAutoFilled() (gas: 88843)
+[PASS] testRegisterCollection_NonAdminReverts() (gas: 19626)
+[PASS] testRegisterCollection_NonERC721() (gas: 30746)
+[PASS] testRegisterCollection_Valid() (gas: 86684)
+[PASS] testSetAuthorizedLaunchpad_AdminOnly() (gas: 50763)
+[PASS] testSweepExcessETH_CannotTouchPending() (gas: 396907)
+[PASS] testSweepExcessETH_RecoversAccidentalETH() (gas: 52020)
+[PASS] testUpdateCollectionRoyalty_NonOwner() (gas: 93032)
+[PASS] testUpdateCollectionRoyalty_Valid() (gas: 95664)
+[PASS] testUpdateFeeReceiver_AdminOnly() (gas: 32167)
+[PASS] testUpdateFeeReceiver_NonOwner() (gas: 17945)
+[PASS] testUpdateListingPrice_NotSeller() (gas: 257405)
+[PASS] testUpdateListingPrice_Valid() (gas: 258460)
+[PASS] testUpdateListingPrice_WhenPaused() (gas: 309654)
+[PASS] testUpdateMarketplaceFee_AdminOnly() (gas: 30607)
+[PASS] testUpdateMarketplaceFee_NonOwner() (gas: 14763)
+[PASS] testVerifyCollection_AdminOnly() (gas: 93131)
+[PASS] testVerifyCollection_NonOwner() (gas: 16763)
+[PASS] testWithdraw_NoWithdrawal() (gas: 20042)
+[PASS] testWithdraw_SellerProceeds() (gas: 392465)
+Suite result: ok. 44 passed; 0 failed; 0 skipped; finished in 7.28ms (9.89ms CPU time)
+
+Ran 5 tests for test/AuditN03.t.sol:N03_RoyaltySnapshotTest
+[PASS] testFuzzFeeAndRoyaltyNeverExceedPrice(uint128,uint16,uint16) (runs: 257, μ: 398598, ~: 406647)
+[PASS] testListingStorageLayout() (gas: 396365)
+[PASS] testRoyaltyDecreaseAfterListingIsHonored() (gas: 391485)
+[PASS] testRoyaltyIncreaseAfterListingUsesSnapshot() (gas: 392342)
+[PASS] testTinyPricesNeverExceedPrice() (gas: 492328)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 193.48ms (199.60ms CPU time)
+
+Ran 1 test for test/AuditInvariants.t.sol:BidsSolvencyInvariantTest
+[PASS] invariant_solvency() (runs: 256, calls: 128000, reverts: 0)
+
+╭-------------+---------------------+-------+---------+----------╮
+| Contract    | Selector            | Calls | Reverts | Discards |
++================================================================+
+| BidsHandler | acceptCollectionBid | 14160 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | acceptTokenBid      | 14185 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | cancelCollectionBid | 14447 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | cancelTokenBid      | 14081 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeCollectionBid  | 14192 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeTokenBid       | 14249 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeTokenBidBatch  | 14270 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | sweep               | 14016 | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | withdraw            | 14400 | 0       | 0        |
+╰-------------+---------------------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 16.07s (16.07s CPU time)
+
+Ran 34 test suites in 16.68s (19.57s CPU time): 212 tests passed, 0 failed, 0 skipped (212 total tests)
