@@ -21,7 +21,7 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
 
 ## Scope
 
-- [ ] **N-03 tests** - royalty snapshot after listing
+- [x] **N-03 tests** - royalty snapshot after listing
       - [ ] increase after listing capped at snapshot (`N03_RoyaltySnapshotTest::testRoyaltyIncreaseAfterListingUsesSnapshot`)
       - [ ] decrease after listing honored (`N03_RoyaltySnapshotTest::testRoyaltyDecreaseAfterListingIsHonored`)
       - [ ] tiny prices never overflow fee + royalty (`N03_RoyaltySnapshotTest::testTinyPricesNeverExceedPrice`)
