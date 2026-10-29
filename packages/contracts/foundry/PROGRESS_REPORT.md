@@ -63,3 +63,23 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       212 tests passed, 0 failed, 0 skipped.
 - [x] Session 2 child checkboxes reconciled against the saved baseline; every
       named test is present as `[PASS]`.
+
+### Step 1 - Handler-based invariants
+
+- [x] `[invariant]` config: `runs = 256`, `depth = 50`, `fail_on_revert = false`.
+- [x] `test/InvariantsS3.t.sol` targets only `MarketplaceHandler` and exercises
+      listings, updates, cancels, direct and batch buys, token/collection bids,
+      accepts, withdrawals, router withdrawals, sweeps, forced ETH, stale
+      cleanup, external transfers, time warps and direct-call attacks.
+- [x] Invariant-only run saved to `reports/forge-test-session3-step1.txt`:
+      8 invariants passed, 0 failed.
+      - [x] `invariant_corePendingAccounting`
+      - [x] `invariant_bidsPendingAccounting`
+      - [x] `invariant_coreSolvency`
+      - [x] `invariant_bidsEscrowAccounting`
+      - [x] `invariant_bidsSolvency`
+      - [x] `invariant_saleConservation`
+      - [x] `invariant_nftOwnership`
+      - [x] `invariant_totalListings`
+- [x] Full suite with the new invariants: 220 tests passed, 0 failed,
+      0 skipped (same saved report).
