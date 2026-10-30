@@ -130,3 +130,17 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [x] `AuditR1Test::testR1_TotalPendingWithdrawalsUnderflowReverts`
 - [x] Full suite: 231 tests passed, 0 failed, 0 skipped.
 
+### Step 5 - R-4 place-bid reentrancy guards
+
+- [x] Added `nonReentrant` to `placeTokenBid`, `placeCollectionBid` and
+      `placeTokenBidBatch`.
+- [x] Added a malicious ERC721 receiver that calls back through the router from
+      `onERC721Received` while `acceptTokenBid` is executing.
+- [x] Tests saved to `reports/forge-test-session3-r4.txt`:
+      - [x] reentry into `placeTokenBid` reverts `ReentrancyGuardReentrantCall`
+            (`AuditR4Test::testR4_PlaceBidReentryBlocked`)
+      - [x] reentry into `cancelTokenBid` reverts `ReentrancyGuardReentrantCall`
+            (`AuditR4Test::testR4_CancelBidReentryBlocked`)
+      - [x] outer acceptance succeeds and escrow/pending/balance stay correct.
+- [x] Full suite: 233 tests passed, 0 failed, 0 skipped.
+

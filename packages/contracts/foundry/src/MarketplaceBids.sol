@@ -141,7 +141,7 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     // COLLECTION BID FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function placeCollectionBid(address collection, uint128 pricePerItem, uint32 quantity, uint64 expiresAt, address bidder) external payable whenNotPaused whenCoreNotPaused onlyMarketplace {
+    function placeCollectionBid(address collection, uint128 pricePerItem, uint32 quantity, uint64 expiresAt, address bidder) external payable whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         if (!core.isRegistered(collection)) revert CollectionNotRegistered();
         if (pricePerItem < MIN_LISTING_PRICE) revert InvalidPrice();
         if (quantity == 0) revert InvalidQuantity();
@@ -243,7 +243,7 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     // TOKEN BID FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function placeTokenBid(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address bidder) external payable whenNotPaused whenCoreNotPaused onlyMarketplace {
+    function placeTokenBid(address collection, uint256 tokenId, uint128 price, uint64 expiresAt, address bidder) external payable whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         if (!core.isRegistered(collection)) revert CollectionNotRegistered();
         if (price < MIN_LISTING_PRICE) revert InvalidPrice();
         if (expiresAt != 0 && expiresAt <= block.timestamp) revert BidExpired();
@@ -268,7 +268,7 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         uint128[] calldata prices,
         uint64[] calldata expiresAts,
         address bidder
-    ) external payable whenNotPaused whenCoreNotPaused onlyMarketplace {
+    ) external payable whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         uint256 length = tokenIds.length;
         if (length != prices.length || length != expiresAts.length) revert ArrayLengthMismatch();
         if (length > MAX_BATCH_SIZE) revert BatchTooLarge();
