@@ -67,6 +67,7 @@ user approves the Core contract:
 CORE=$MARKETPLACE_CORE \
 BIDS=$MARKETPLACE_BIDS \
 MARKETPLACE=$MARKETPLACE \
+LAUNCHPAD=$LAUNCHPAD \
 EXPECT_PAUSED=false \
 forge script script/VerifyDeployment.s.sol:VerifyDeployment \
   --rpc-url <RPC_URL>
@@ -82,6 +83,8 @@ hold:
 - `router.core() == core` and `router.bids() == bids`
 - `core.pendingOwner() == address(0)` and `bids.pendingOwner() == address(0)`
 - Core and Bids are not paused, unless `EXPECT_PAUSED=true`
+- If `LAUNCHPAD` is set: `core.authorizedLaunchpads(launchpad) == true` and
+  `launchpad.core() == core`
 
 Do not hand the deployment to users while any of these checks fail.
 

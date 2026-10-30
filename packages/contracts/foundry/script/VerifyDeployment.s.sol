@@ -9,6 +9,7 @@ interface IVerifyCore {
     function owner() external view returns (address);
     function pendingOwner() external view returns (address);
     function paused() external view returns (bool);
+    function authorizedLaunchpads(address launchpad) external view returns (bool);
 }
 
 interface IVerifyBids {
@@ -23,14 +24,19 @@ interface IVerifyRouter {
     function bids() external view returns (address);
 }
 
+interface IVerifyLaunchPad {
+    function core() external view returns (address);
+}
+
 contract VerifyDeployment is Script {
     function run() external view {
         address coreAddr = vm.envAddress("CORE");
         address bidsAddr = vm.envAddress("BIDS");
         address routerAddr = vm.envAddress("MARKETPLACE");
+        address launchpadAddr = vm.envOr("LAUNCHPAD", address(0));
         bool expectPaused = vm.envOr("EXPECT_PAUSED", false);
 
-        _verify(coreAddr, bidsAddr, routerAddr, expectPaused);
+        _verify(coreAddr, bidsAddr, routerAddr, launchpadAddr, expectPaused);
     }
 
     function run(
@@ -38,7 +44,7 @@ contract VerifyDeployment is Script {
         address bidsAddr,
         address routerAddr
     ) external view {
-        _verify(coreAddr, bidsAddr, routerAddr, false);
+        _verify(coreAddr, bidsAddr, routerAddr, address(0), false);
     }
 
     function run(
@@ -47,13 +53,33 @@ contract VerifyDeployment is Script {
         address routerAddr,
         bool expectPaused
     ) external view {
-        _verify(coreAddr, bidsAddr, routerAddr, expectPaused);
+        _verify(coreAddr, bidsAddr, routerAddr, address(0), expectPaused);
+    }
+
+    function run(
+        address coreAddr,
+        address bidsAddr,
+        address routerAddr,
+        address launchpadAddr
+    ) external view {
+        _verify(coreAddr, bidsAddr, routerAddr, launchpadAddr, false);
+    }
+
+    function run(
+        address coreAddr,
+        address bidsAddr,
+        address routerAddr,
+        address launchpadAddr,
+        bool expectPaused
+    ) external view {
+        _verify(coreAddr, bidsAddr, routerAddr, launchpadAddr, expectPaused);
     }
 
     function _verify(
         address coreAddr,
         address bidsAddr,
         address routerAddr,
+        address launchpadAddr,
         bool expectPaused
     ) internal view {
         IVerifyCore core = IVerifyCore(coreAddr);
@@ -69,6 +95,17 @@ contract VerifyDeployment is Script {
         require(router.bids() == bidsAddr, "R-5: router.bids mismatch");
         require(core.pendingOwner() == address(0), "R-5: core pending owner not cleared");
         require(bids.pendingOwner() == address(0), "R-5: bids pending owner not cleared");
+
+        if (launchpadAddr != address(0)) {
+            require(
+                core.authorizedLaunchpads(launchpadAddr),
+                "R-5: launchpad not authorized"
+            );
+            require(
+                IVerifyLaunchPad(launchpadAddr).core() == coreAddr,
+                "R-5: launchpad.core mismatch"
+            );
+        }
 
         if (expectPaused) {
             require(core.paused() && bids.paused(), "R-5: components not paused");

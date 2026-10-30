@@ -198,3 +198,18 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [x] `AuditNB1Test::testNB1_UpdateRejectsMalformedOwnerOfWithoutChange`
 - [x] Full suite: 242 tests passed, 0 failed, 0 skipped.
 
+### Step 2 - NB-2 LaunchPad integration
+
+- [x] Added a real-contract end-to-end test: authorize LaunchPad,
+      `createCollection`, verify Core registration, mint, list and buy.
+- [x] Added a clean owner-mismatch revert test using a real `MiColeccion`
+      deployed with an owner different from the registering creator.
+- [x] Extended `VerifyDeployment` with optional `LAUNCHPAD`: when set, it
+      requires `core.authorizedLaunchpads(launchpad)` and
+      `launchpad.core() == core`.
+- [x] Tests saved to `reports/forge-test-session4-nb2.txt`:
+      - [x] `AuditNB2Test::testNB2_LaunchPadEndToEnd`
+      - [x] `AuditNB2Test::testNB2_CollectionOwnerMismatchReverts`
+      - [x] `AuditNB2Test::testNB2_VerifierRejectsUnauthorizedLaunchpad`
+- [x] Full suite: 245 tests passed, 0 failed, 0 skipped.
+
