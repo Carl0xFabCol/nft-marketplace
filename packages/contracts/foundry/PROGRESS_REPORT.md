@@ -159,3 +159,14 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
 - [x] Documented the verifier as a mandatory step in `docs/DEPLOYMENT.md`.
 - [x] Full suite: 236 tests passed, 0 failed, 0 skipped.
 
+### Step 7 - R-2 / R-3 documentation
+
+- [x] Added `docs/SECURITY.md` section "Royalty snapshot semantics":
+      `min(current royalty, snapshot royalty)`, seller benefit on decreases,
+      increases not applied retroactively, late-configured royalties lost for
+      at most 30 days, relisting mitigation, and live royalty for bid sales.
+- [x] Added `docs/SECURITY.md` section "Bid replacement semantics": full new
+      value required, old escrow credited to `pendingWithdrawals`, manual
+      `withdraw()` recovery, why C-01 makes it safe, and the net-payment future
+      optimization with its invariant and audit requirement.
+
