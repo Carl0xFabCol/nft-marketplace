@@ -225,9 +225,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
             royaltyBps: royaltyBps
         });
 
-        unchecked {
-            ++totalListings;
-        }
+        ++totalListings;
 
         emit ListingCreated(collection, tokenId, seller, price, expiresAt);
     }
@@ -290,9 +288,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (listing.seller != seller) revert NotSeller();
 
         delete listings[collection][tokenId];
-        unchecked {
-            --totalListings;
-        }
+        --totalListings;
 
         emit ListingCancelled(collection, tokenId, seller);
     }
@@ -378,9 +374,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
 
         // Effects before interaction: clear the listing before ERC721 receiver code runs.
         delete listings[collection][tokenId];
-        unchecked {
-            --totalListings;
-        }
+        --totalListings;
 
         IERC721(collection).safeTransferFrom(listing.seller, buyer, tokenId);
 
@@ -390,12 +384,10 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
             _credit(royaltyReceiver, royaltyAmount);
         }
 
-        unchecked {
-            totalVolume += listing.price;
-            ++totalSales;
-            collections[collection].totalVolume += listing.price;
-            ++collections[collection].totalSales;
-        }
+        totalVolume += listing.price;
+        ++totalSales;
+        collections[collection].totalVolume += listing.price;
+        ++collections[collection].totalSales;
 
         emit Sale(collection, tokenId, listing.seller, buyer, listing.price, marketplaceFeeAmount, SafeCast.toUint128(royaltyAmount));
     }
@@ -425,20 +417,16 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (listings[collection][tokenId].price > 0) {
             address listedSeller = listings[collection][tokenId].seller;
             delete listings[collection][tokenId];
-            unchecked {
-                --totalListings;
-            }
+            --totalListings;
             emit ListingCancelled(collection, tokenId, listedSeller);
         }
 
         nft.safeTransferFrom(seller, buyer, tokenId);
 
-        unchecked {
-            totalVolume += price;
-            ++totalSales;
-            collections[collection].totalVolume += price;
-            ++collections[collection].totalSales;
-        }
+        totalVolume += price;
+        ++totalSales;
+        collections[collection].totalVolume += price;
+        ++collections[collection].totalSales;
 
         emit Sale(collection, tokenId, seller, buyer, price, marketplaceFeeAmount, SafeCast.toUint128(royaltyAmount));
 
@@ -654,9 +642,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (account == address(0)) revert InvalidAddress();
 
         pendingWithdrawals[account] += amount;
-        unchecked {
-            totalPendingWithdrawals += amount;
-        }
+        totalPendingWithdrawals += amount;
     }
 
     function withdrawFor(address account) external nonReentrant onlyRouter returns (bool withdrawn) {
@@ -674,9 +660,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (amount == 0) revert NoWithdrawal();
 
         pendingWithdrawals[account] = 0;
-        unchecked {
-            totalPendingWithdrawals -= amount;
-        }
+        totalPendingWithdrawals -= amount;
 
         (bool success, ) = payable(account).call{value: amount}("");
         if (!success) {

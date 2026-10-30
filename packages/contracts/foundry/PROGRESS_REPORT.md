@@ -117,3 +117,16 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
 - [x] Full suite saved to `reports/forge-test-session3-in3.txt`: 229 tests
       passed, 0 failed, 0 skipped.
 
+### Step 4 - R-1 checked accounting counters
+
+- [x] Removed `unchecked` from `totalPendingWithdrawals` updates in both
+      `_credit` functions and from the withdrawal decrements.
+- [x] Removed `unchecked` from every `--totalListings`, `++totalListings`,
+      `totalVolume`, `totalSales` and collection counter update.
+- [x] Remaining `unchecked` blocks contain only loop counters (`++i`, `++j`).
+- [x] Added a Core harness and underflow tests saved to
+      `reports/forge-test-session3-r1.txt`:
+      - [x] `AuditR1Test::testR1_TotalListingsUnderflowReverts`
+      - [x] `AuditR1Test::testR1_TotalPendingWithdrawalsUnderflowReverts`
+- [x] Full suite: 231 tests passed, 0 failed, 0 skipped.
+

@@ -413,9 +413,7 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (account == address(0)) revert InvalidAddress();
 
         pendingWithdrawals[account] += amount;
-        unchecked {
-            totalPendingWithdrawals += amount;
-        }
+        totalPendingWithdrawals += amount;
     }
 
     function withdrawFor(address account) external nonReentrant onlyMarketplace returns (bool withdrawn) {
@@ -433,9 +431,7 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (amount == 0) revert NoWithdrawal();
 
         pendingWithdrawals[account] = 0;
-        unchecked {
-            totalPendingWithdrawals -= amount;
-        }
+        totalPendingWithdrawals -= amount;
 
         (bool success, ) = payable(account).call{value: amount}("");
         if (!success) {
