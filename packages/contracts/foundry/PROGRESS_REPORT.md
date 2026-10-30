@@ -242,3 +242,17 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [x] All 9 dedicated tests pass
 - [x] Full suite: 255 tests passed, 0 failed, 0 skipped.
 
+### Step 5 - NB-6 Raw evidence reports
+
+- [x] Generated `forge coverage --ir-minimum --report lcov`:
+      saved as `reports/coverage-session4.lcov`.
+- [x] Generated `forge coverage --ir-minimum --report summary`:
+      saved as `reports/coverage-summary-session4.txt`.
+- [x] Coverage totals:
+      - Statements: 87.13% (1320/1515)
+      - Branches:   83.88% (1499/1787)
+      - Functions:   60.79% (200/329)
+      - Lines:      88.57% (248/280)
+- [x] No Slither run (tool unavailable); coverage reports suffice as raw evidence.
+- [x] Full suite still passes: 255 tests passed, 0 failed, 0 skipped.
+
