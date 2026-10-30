@@ -144,3 +144,18 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [x] outer acceptance succeeds and escrow/pending/balance stay correct.
 - [x] Full suite: 233 tests passed, 0 failed, 0 skipped.
 
+### Step 6 - R-5 deployment verifier
+
+- [x] Added `script/VerifyDeployment.s.sol` with env inputs
+      `CORE`, `BIDS`, `MARKETPLACE` and optional `EXPECT_PAUSED`.
+- [x] Verifier checks every set-once wiring: Core router/bids, Bids marketplace,
+      component owners, router core/bids, cleared pending owners, and pause state.
+  Each failure has a descriptive `R-5` message.
+- [x] Added tests saved to `reports/forge-test-session3-r5.txt`:
+      - [x] valid deployment passes (`AuditR5Test::testR5_ValidDeploymentPasses`)
+      - [x] wrong router is rejected (`AuditR5Test::testR5_WrongRouterRejected`)
+      - [x] paused state requires explicit expectation
+            (`AuditR5Test::testR5_PausedComponentsRequireExpectation`)
+- [x] Documented the verifier as a mandatory step in `docs/DEPLOYMENT.md`.
+- [x] Full suite: 236 tests passed, 0 failed, 0 skipped.
+

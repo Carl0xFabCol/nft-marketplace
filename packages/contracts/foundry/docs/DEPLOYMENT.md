@@ -58,6 +58,33 @@ cast call $MARKETPLACE "core()"                          # Should return $MARKET
 cast call $MARKETPLACE "bids()"                         # Should return $MARKETPLACE_BIDS
 ```
 
+### 5. Verify Deployment (Mandatory)
+
+Run the deployment verifier before announcing the deployment and before any
+user approves the Core contract:
+
+```bash
+CORE=$MARKETPLACE_CORE \
+BIDS=$MARKETPLACE_BIDS \
+MARKETPLACE=$MARKETPLACE \
+EXPECT_PAUSED=false \
+forge script script/VerifyDeployment.s.sol:VerifyDeployment \
+  --rpc-url <RPC_URL>
+```
+
+The script fails with a descriptive `R-5` message unless all of the following
+hold:
+
+- `core.router() == router`
+- `core.bidsContract() == bids`
+- `bids.marketplace() == router`
+- `core.owner() == router` and `bids.owner() == router`
+- `router.core() == core` and `router.bids() == bids`
+- `core.pendingOwner() == address(0)` and `bids.pendingOwner() == address(0)`
+- Core and Bids are not paused, unless `EXPECT_PAUSED=true`
+
+Do not hand the deployment to users while any of these checks fail.
+
 ## Post-Deployment Checks
 
 ### Functionality Tests
