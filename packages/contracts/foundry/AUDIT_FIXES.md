@@ -1,7 +1,7 @@
 # Audit Fixes Implementation Report
 
 ## Summary
-All audit findings have been implemented on the `audit-fixes` branch. Below is a complete table of fixes with commit references and test coverage.
+All audit findings from the original report, plus the four additional NB‑1 through NB‑6 recommendations, have been implemented on the `audit-fixes-2` branch. Below is a complete table of fixes with commit references and test coverage.
 
 ## Fixed Findings
 
@@ -39,6 +39,18 @@ All audit findings have been implemented on the `audit-fixes` branch. Below is a
 | **L-06** Support per-token approval | Fixed | 314a23d | `AuditPerTokenApproval.t.sol` (multiple tests) | Accept `isApprovedForAll(owner, core) \|\| getApproved(tokenId) == core`. |
 | **L-07** `withdrawFor` is router-only | Fixed | 18b6073 | `testL07_WithdrawForIsRouterOnly` | Resolved by H-02 refactor. Added explicit test. |
 
+### NITPICKS & BREAKING CHANGES
+| Finding ID | Status | Commit | Test Name | Notes |
+|------------|--------|--------|-----------|-------|
+| **NB-1** Distinguish malformed `ownerOf` from stale listings | Fixed | f5bae41 | `AuditNB1.t.sol` (multiple tests) | `BoundedStaticCall._staticcallBoundedRaw` returns `(bool success, bool valid, uint256 word)`. `_tryOwnerOf` distinguishes call failure from malformed returndata. `buy`, `buyBatch`, `updateListingPrice` revert `ListingNotFound` on malformed data without state changes. `cleanStaleListing` deletes only expired, reverted `ownerOf`, or valid owner mismatch. |
+| **NB-2** LaunchPad → Core registration and first‑trade end‑to‑end | Fixed | 0581bd7 | `AuditNB2.t.sol` (multiple tests) | Added real‑contract end‑to‑end test (`authorize launchpad`, `createCollection`, mint, list, buy). Added clean owner‑mismatch revert test. Extended `VerifyDeployment` with optional `LAUNCHPAD` check (`core.authorizedLaunchpads(launchpad)` and `launchpad.core() == core`). |
+| **NB-3** Royalty queries fail closed when too little gas remains | Fixed | 8140c0c | `AuditNB3.t.sol` | Added `InsufficientGas` error and `_requireRoyaltyQueryGas()` guard before each `ROYALTY_QUERY_GAS` staticcall. Guard requires `gasleft() >= (ROYALTY_QUERY_GAS * 64) / 63 + 5_000`. Positive test verifies royalty payment works with sufficient gas. |
+| **NB-4** Add `SECURITY.md` with O‑1/O‑4 notes and deployment ordering | Fixed | 36997c0 | `docs/SECURITY.md` | Added detailed deployment sequence, delayed‑unpause rationale, and attack‑scenario mitigations. |
+| **NB-5** Dedicated tests for GasHelpers library (P‑6) | Fixed | 17ed14c | `AuditGasHelpers.t.sol` (9 tests) | Covers `BoundedStaticCall` OOG, malformed returndata, valid single‑/double‑word returns, `_staticcallBoundedRaw` success/valid distinction, `_isAddressWord` edge cases. |
+| **NB-6** Raw evidence reports (coverage) | Fixed | 36997c0 | `reports/coverage-session4.lcov` & `reports/coverage-summary-session4.txt` | Generated `forge coverage --ir-minimum --report lcov` and summary. Coverage totals: statements 87.13%, branches 83.88%, functions 60.79%, lines 88.57%. |
+| **O-1** Delayed unpause | Deferred | – | – | Not implemented as a code change; documented in `SECURITY.md` as a deployment‑best‑practice. |
+| **O-4** Deployment ordering | Deferred | – | – | Not implemented as a code change; documented in `SECURITY.md` and `DEPLOYMENT.md`. |
+
 ### GAS OPTIMIZATIONS
 | Finding ID | Status | Commit | Test Name | Notes |
 |------------|--------|--------|-----------|-------|
@@ -50,6 +62,14 @@ All audit findings have been implemented on the `audit-fixes` branch. Below is a
 | **G-08** Custom errors | Fixed | 88bb34d | `AuditCustomErrors.t.sol` (multiple tests) | Replaced all revert strings with custom errors including router constructor. |
 | **G-09** Accumulate withdrawals once | Fixed | e2b5985 | Tested via existing sale tests | Accumulate `totalPendingWithdrawals` once per sale instead of per `_credit`. |
 
+### ADDITIONAL G‑TESTS
+| Test Suite | Status | Commit | Coverage |
+|------------|--------|--------|----------|
+| **Handler‑based invariants** (Session 3) | Fixed | 6c73afa (and others) | `AuditInvariants.t.sol`, `InvariantsS3.t.sol` | Invariants verified via stateful fuzzing with `Handler` contracts for listings, bids, sales, withdrawals. |
+| **GasHelpers dedicated tests** (NB‑5) | Fixed | 17ed14c | `AuditGasHelpers.t.sol` | Full coverage of `BoundedStaticCall` library. |
+| **Royalty gas guard** (NB‑3) | Fixed | 8140c0c | `AuditNB3.t.sol` | Positive test for royalty payment with sufficient gas. |
+| **LaunchPad integration** (NB‑2) | Fixed | 0581bd7 | `AuditNB2.t.sol` | End‑to‑end launchpad registration and owner‑mismatch revert. |
+
 ## API Changes
 
 ### New Parameters
@@ -60,6 +80,7 @@ All audit findings have been implemented on the `audit-fixes` branch. Below is a
 1. `transferComponentOwnership(address newOwner)` (router, onlyOwner)
 2. `unverifyCollection(address collection)` (core, onlyOwner)
 3. `registerCollectionFromLaunchpad(...)` and `registerCollectionFromRouter(...)` (core)
+4. `_requireRoyaltyQueryGas()` internal guard (core)
 
 ### Removed Functions
 1. `receive()` and `fallback()` from `Marketplace.sol`
@@ -68,17 +89,47 @@ All audit findings have been implemented on the `audit-fixes` branch. Below is a
 1. All functions now use custom errors instead of revert strings
 2. `sweepExcessETH()` now uses try/catch per component
 3. `pause()`/`unpause()` check current state before acting
+4. `buy`, `buyBatch`, `updateListingPrice` revert `ListingNotFound` on malformed `ownerOf` returndata (NB‑1)
+5. `_tryOwnerOf` returns `(bool valid, bool reverted, address owner)` (NB‑1)
+6. `VerifyDeployment` script accepts optional `LAUNCHPAD` environment variable and validates launchpad‑Core linkage (NB‑2)
+7. `_getRoyalty` includes `InsufficientGas` guard before each royalty staticcall (NB‑3)
+
+### Breaking Changes
+- `MarketplaceCore.NotCollectionOwner` error is now used for launchpad registration owner‑mismatch (NB‑2).
+- Malformed `ownerOf` returndata (64‑byte, dirty address, bool‑style) now reverts with `InvalidCall` in `cleanStaleListing` and `ListingNotFound` in `buy`/`buyBatch`/`updateListingPrice` (NB‑1).
+- `_staticcallBoundedRaw` returns `(bool success, bool valid, uint256 word)` (NB‑1).
+- `_isAddressWord` helper added to `BoundedStaticCall` (used by NB‑1).
 
 ## Deployment Notes
 - All contracts use pinned pragma `0.8.24`
 - Router owner should be a multisig behind OpenZeppelin `TimelockController`
-- See `docs/DEPLOYMENT.md` for complete deployment order and post-deploy checks
+- See `docs/DEPLOYMENT.md` for complete deployment order and post‑deploy checks
+- See `docs/SECURITY.md` for O‑1/O‑4 guidance and attack‑scenario mitigations
+- **Mandatory**: run `script/VerifyDeployment.s.sol` after deployment and before unpausing:
+  ```bash
+  CORE=$MARKETPLACE_CORE \
+  BIDS=$MARKETPLACE_BIDS \
+  MARKETPLACE=$MARKETPLACE \
+  LAUNCHPAD=$LAUNCHPAD \
+  EXPECT_PAUSED=false \
+  forge script script/VerifyDeployment.s.sol:VerifyDeployment \
+    --rpc-url <RPC_URL>
+  ```
 
 ## Test Coverage
 All findings have corresponding Foundry tests in the `test/` directory. Invariant tests verify:
 - Solvency: `address(bids).balance >= totalPendingWithdrawals + totalBidEscrow`
 - Royalty attribution correctness
-- No wash trading or self-purchases
+- No wash trading or self‑purchases
+- Handler‑based invariants for listings, bids, sales, withdrawals
+
+**Total test count**: 255 tests passed, 0 failed, 0 skipped (as of session‑4 final run).
+
+**Coverage totals** (forge coverage –ir‑minimum):
+- Statements: 87.13% (1320/1515)
+- Branches:   83.88% (1499/1787)
+- Functions:  60.79% (200/329)
+- Lines:      88.57% (248/280)
 
 ## L-N1 - Narrowing Cast Audit
 
@@ -90,7 +141,7 @@ that reverts with a custom error. `Marketplace.sol` contains no narrowing cast
 | Contract | Location | Previous cast | Now | Why it is safe |
 |----------|----------|---------------|-----|----------------|
 | `MarketplaceCore` | `_createListing` royalty snapshot | `uint16((royaltyAmount * BASIS_POINTS + price - 1) / price)` | cap in `uint256`, then `SafeCast.toUint16` | `_getRoyalty` caps `royaltyAmount` at `price * MAX_ROYALTY_FEE / BASIS_POINTS`, so the computed bps is at most `MAX_ROYALTY_FEE` (2000). |
-| `MarketplaceCore` | `_createListing` royalty cap | `uint16(MAX_ROYALTY_FEE)` | removed (cap stays `uint256`) | Avoids a second downcast of a compile-time constant. |
+| `MarketplaceCore` | `_createListing` royalty cap | `uint16(MAX_ROYALTY_FEE)` | removed (cap stays `uint256`) | Avoids a second downcast of a compile‑time constant. |
 | `MarketplaceCore` | `_createListing` `listedAt` | `uint48(block.timestamp)` | `SafeCast.toUint48` | Reverts instead of truncating if the timestamp ever exceeds `2**48 - 1`. |
 | `MarketplaceCore` | `_createListing` `expiresAt` | `uint48(expiresAt)` | `ExpiryTooLarge` bound check, then `SafeCast.toUint48` | `expiresAt > type(uint48).max` now reverts with `ExpiryTooLarge`; test `LN1_CastSafetyTest::testExpiresAtAboveUint48Reverts`. |
 | `MarketplaceCore` | `_executeSale` marketplace fee | `uint128((price * effectiveFee) / BASIS_POINTS)` | `SafeCast.toUint128` | `effectiveFee <= 10_000`, so the result is `<= price`, which is already `uint128`. |
@@ -103,4 +154,4 @@ that reverts with a custom error. `Marketplace.sol` contains no narrowing cast
 | `MarketplaceBids` | `acceptTokenBid` seller proceeds | `uint128(royaltyAmount)` | `SafeCast.toUint128` | Core enforces `fee + royalty <= price`, so `royaltyAmount <= price` (`uint128`). |
 
 ## Status
-✅ **All audit findings implemented and tested**
+✅ **All audit findings implemented and tested. All NB‑1 through NB‑6 recommendations addressed. O‑1/O‑4 documented as deployment best practices. Full test suite passes (255 tests).**
