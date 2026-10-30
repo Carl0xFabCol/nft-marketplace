@@ -27,6 +27,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     uint256 public constant MAX_ROYALTY_FEE = 2_000; // 20%
     uint128 public constant MIN_LISTING_PRICE = 1 wei;
     uint256 public constant ROYALTY_QUERY_GAS = 50_000;
+    
     uint256 public constant MAX_BATCH_SIZE = 50;
     uint256 public constant MAX_LISTING_DURATION = 30 days;
 
@@ -331,7 +332,6 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
             Listing memory listing = listings[collection][tokenIds[i]];
             if (listing.price == 0) revert ListingNotFound();
             if (listing.expiresAt != 0 && listing.expiresAt <= block.timestamp) revert ListingExpired();
-            if (buyer == listing.seller) revert SelfPurchase();
             
             // N-02: check if listing is stale
             (bool valid, , address currentOwner) = _tryOwnerOf(collection, tokenIds[i]);
