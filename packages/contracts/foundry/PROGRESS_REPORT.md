@@ -170,3 +170,12 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       `withdraw()` recovery, why C-01 makes it safe, and the net-payment future
       optimization with its invariant and audit requirement.
 
+## Session 4
+
+### Step 0 - Baseline and reconciliation
+
+- [x] Baseline `forge build && forge test` saved to
+      `reports/forge-test-start-s4.txt`: 236 tests passed, 0 failed, 0 skipped.
+- [x] Re-verified every Session 2 and Session 3 named test against the saved
+      baseline; no checkboxes were unsupported.
+
