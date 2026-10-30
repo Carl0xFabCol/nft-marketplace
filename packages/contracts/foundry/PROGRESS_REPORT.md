@@ -179,3 +179,22 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
 - [x] Re-verified every Session 2 and Session 3 named test against the saved
       baseline; no checkboxes were unsupported.
 
+### Step 1 - NB-1 tri-state ownerOf handling
+
+- [x] `_tryOwnerOf` now returns `(valid, reverted, owner)` so malformed data is
+      distinct from a reverted `ownerOf`.
+- [x] `cleanStaleListing` deletes only expired listings, reverted `ownerOf`
+      (burned token), or a valid owner different from the seller. Malformed data
+      reverts `InvalidCall` and leaves the listing intact.
+- [x] `buy`, `buyBatch` and `updateListingPrice` revert `ListingNotFound` on
+      malformed data without state changes.
+- [x] Added 64-byte, dirty-address and bool-style malformed `ownerOf` mocks.
+- [x] Tests saved to `reports/forge-test-session4-nb1.txt`:
+      - [x] `AuditNB1Test::testNB1_CleanRejects64ByteOwnerOf`
+      - [x] `AuditNB1Test::testNB1_CleanRejectsDirtyAddressOwnerOf`
+      - [x] `AuditNB1Test::testNB1_CleanRejectsBoolStyleOwnerOf`
+      - [x] `AuditNB1Test::testNB1_BuyRejectsMalformedOwnerOfWithoutCleanup`
+      - [x] `AuditNB1Test::testNB1_BuyBatchRejectsMalformedOwnerOfWithoutCleanup`
+      - [x] `AuditNB1Test::testNB1_UpdateRejectsMalformedOwnerOfWithoutChange`
+- [x] Full suite: 242 tests passed, 0 failed, 0 skipped.
+

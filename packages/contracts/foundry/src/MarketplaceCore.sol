@@ -254,8 +254,8 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (listing.price == 0) revert ListingNotFound();
 
         // N-02: check if listing is stale using safe ownerOf check
-        address currentOwner = _tryOwnerOf(collection, tokenId);
-        if (listing.seller != currentOwner) revert ListingNotFound();
+        (bool valid, , address currentOwner) = _tryOwnerOf(collection, tokenId);
+        if (!valid || listing.seller != currentOwner) revert ListingNotFound();
 
         if (currentOwner != seller) revert NotTokenOwner();
         if (listing.seller != seller) revert NotSeller();
@@ -303,8 +303,8 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (listing.expiresAt != 0 && listing.expiresAt <= block.timestamp) revert ListingExpired();
 
         // N-02: check if listing is stale using safe ownerOf check
-        address currentOwner = _tryOwnerOf(collection, tokenId);
-        if (currentOwner != listing.seller) revert ListingNotFound();
+        (bool valid, , address currentOwner) = _tryOwnerOf(collection, tokenId);
+        if (!valid || currentOwner != listing.seller) revert ListingNotFound();
 
         if (msg.value != listing.price) revert InsufficientValue();
 
@@ -333,8 +333,8 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
             if (buyer == listing.seller) revert SelfPurchase();
             
             // N-02: check if listing is stale
-            address currentOwner = _tryOwnerOf(collection, tokenIds[i]);
-            if (currentOwner != listing.seller) revert ListingNotFound();
+            (bool valid, , address currentOwner) = _tryOwnerOf(collection, tokenIds[i]);
+            if (!valid || currentOwner != listing.seller) revert ListingNotFound();
             
             cached[i] = listing;
             totalPrice += listing.price;
@@ -705,13 +705,17 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         return success && approvedWord == 1;
     }
 
-    function _tryOwnerOf(address collection, uint256 tokenId) internal view returns (address owner) {
-        (bool success, uint256 word) = _staticcallBounded(
+    function _tryOwnerOf(
+        address collection,
+        uint256 tokenId
+    ) internal view returns (bool valid, bool reverted, address owner) {
+        (bool success, bool wellFormed, uint256 word) = _staticcallBoundedRaw(
             collection,
             abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId)
         );
-        if (!success || !_isAddressWord(word)) return address(0);
-        owner = address(uint160(word));
+        if (!success) return (false, true, address(0));
+        if (!wellFormed || !_isAddressWord(word)) return (false, false, address(0));
+        return (true, false, address(uint160(word)));
     }
 
     function _tryCollectionOwner(address collection)
@@ -782,8 +786,11 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
 
         bool expired = listing.expiresAt != 0 && listing.expiresAt <= block.timestamp;
         if (!expired) {
-            address currentOwner = _tryOwnerOf(collection, tokenId);
-            if (currentOwner == listing.seller) revert InvalidCall();
+            (bool valid, bool reverted, address currentOwner) = _tryOwnerOf(collection, tokenId);
+            if (!reverted) {
+                if (!valid) revert InvalidCall();
+                if (currentOwner == listing.seller) revert InvalidCall();
+            }
         }
 
         // Listing is stale or expired, clean it up
