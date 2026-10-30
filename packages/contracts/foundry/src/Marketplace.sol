@@ -217,6 +217,7 @@ contract Marketplace is Ownable2Step {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     error SweepFailed();
+    error NoWithdrawal();
     error RenounceOwnershipDisabled();
     error InvalidAddress();
     error ComponentsNotOwned();
@@ -455,8 +456,9 @@ contract Marketplace is Ownable2Step {
     }
 
     function withdraw() external {
-        core.withdrawFor(msg.sender);
-        bids.withdrawFor(msg.sender);
+        bool a = core.withdrawFor(msg.sender);
+        bool b = bids.withdrawFor(msg.sender);
+        if (!a && !b) revert NoWithdrawal();
     }
 
     function sweepExcessETH(address payable recipient) external onlyOwner {
