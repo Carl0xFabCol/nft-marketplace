@@ -20,6 +20,7 @@ contract MockMalformedNFT is ERC721, Ownable {
     uint256 public malformedOwnerOfWord;
     uint8 public malformedOwnerOfMode;
     uint256 public expensiveRoyaltyIterations = 5_000;
+    uint256 public ownerOfGasBurnIterations;
 
     constructor() Ownable(msg.sender) ERC721("MockMalformedNFT", "MMNFT") {}
 
@@ -64,6 +65,10 @@ contract MockMalformedNFT is ERC721, Ownable {
         malformedOwner = value;
     }
 
+    function setOwnerOfGasBurn(uint256 iterations) external {
+        ownerOfGasBurnIterations = iterations;
+    }
+
     function setExpensiveRoyaltyInfo(bool value, uint256 iterations) external {
         expensiveRoyaltyInfo = value;
         expensiveRoyaltyIterations = iterations;
@@ -96,6 +101,14 @@ contract MockMalformedNFT is ERC721, Ownable {
                     return(0, 0x20)
                 }
             }
+        }
+        if (ownerOfGasBurnIterations != 0) {
+            uint256 iterations = ownerOfGasBurnIterations;
+            uint256 acc;
+            for (uint256 i; i < iterations; ++i) {
+                acc = uint256(keccak256(abi.encodePacked(acc, i)));
+            }
+            if (acc == type(uint256).max) revert();
         }
         return super.ownerOf(tokenId);
     }

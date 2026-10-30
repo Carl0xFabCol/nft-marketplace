@@ -135,6 +135,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     error AlreadySet();
     error ExpiryTooLarge();
     error InvalidExpiry();
+    error InsufficientGas();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -734,9 +735,16 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         }
     }
 
+    function _requireRoyaltyQueryGas() internal view {
+        if (gasleft() < (ROYALTY_QUERY_GAS * 64) / 63 + 5_000) {
+            revert InsufficientGas();
+        }
+    }
+
     function _getRoyalty(address collection, uint256 tokenId, uint256 salePrice) internal view returns (address receiver, uint256 amount) {
         // M-04: query ERC-2981 defensively. A malicious collection must not be
         // able to grief or drain a sale via unbounded gas/revert/receiver tricks.
+        _requireRoyaltyQueryGas();
         (bool success, uint256 word) = _staticcallBounded(
             collection,
             abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IMarketplaceRoyalty).interfaceId),
@@ -744,6 +752,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         );
 
         if (success && word == 1) {
+            _requireRoyaltyQueryGas();
             uint256 receiverWord;
             uint256 amountWord;
             (success, receiverWord, amountWord) = _staticcallBounded2(

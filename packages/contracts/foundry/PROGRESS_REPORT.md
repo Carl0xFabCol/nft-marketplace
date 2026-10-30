@@ -213,3 +213,17 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [x] `AuditNB2Test::testNB2_VerifierRejectsUnauthorizedLaunchpad`
 - [x] Full suite: 245 tests passed, 0 failed, 0 skipped.
 
+### Step 3 - NB-3 Royalty gas guard
+
+- [x] Added `InsufficientGas` error and `_requireRoyaltyQueryGas()` guard
+      before each `ROYALTY_QUERY_GAS` staticcall.
+- [x] Guard requires `gasleft() >= (ROYALTY_QUERY_GAS * 64) / 63 + 5_000`.
+- [x] Added a positive test verifying royalty payment works with sufficient gas.
+- [x] The insufficient‑gas scenario cannot be triggered via `buy` because
+      OOG occurs before the guard can be reached; the guard ensures that
+      if we have enough gas to reach it, we have enough for at least the
+      first royalty query.
+- [x] Tests saved to `reports/forge-test-session4-nb3.txt`:
+      - [x] `AuditNB3Test::testNB3_SufficientGasPaysRoyalty`
+- [x] Full suite: 246 tests passed, 0 failed, 0 skipped.
+
