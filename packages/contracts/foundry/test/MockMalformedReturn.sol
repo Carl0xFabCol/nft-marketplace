@@ -14,6 +14,7 @@ contract MockMalformedNFT is ERC721, Ownable {
     bool public malformedGetApproved;
     bool public malformedIsApprovedForAll;
     bool public malformedRoyaltyInfo;
+    bool public malformedRoyaltyInfoSize;
     bool public malformedOwner;
     bool public expensiveRoyaltyInfo;
 
@@ -59,6 +60,10 @@ contract MockMalformedNFT is ERC721, Ownable {
 
     function setMalformedRoyaltyInfo(bool value) external {
         malformedRoyaltyInfo = value;
+    }
+
+    function setMalformedRoyaltyInfoSize(bool value) external {
+        malformedRoyaltyInfoSize = value;
     }
 
     function setMalformedOwner(bool value) external {
@@ -144,6 +149,12 @@ contract MockMalformedNFT is ERC721, Ownable {
     }
 
     function royaltyInfo(uint256 tokenId, uint256 salePrice) public view returns (address, uint256) {
+        if (malformedRoyaltyInfoSize) {
+            assembly {
+                mstore(0, 1)
+                return(0, 0x01)
+            }
+        }
         if (malformedRoyaltyInfo) {
             assembly {
                 mstore(0, or(shl(160, 1), 1))

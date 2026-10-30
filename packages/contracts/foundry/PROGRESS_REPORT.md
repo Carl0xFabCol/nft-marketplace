@@ -227,3 +227,18 @@ A checkbox is marked `[x]` only when the named test exists and passes in the sav
       - [x] `AuditNB3Test::testNB3_SufficientGasPaysRoyalty`
 - [x] Full suite: 246 tests passed, 0 failed, 0 skipped.
 
+### Step 4 - NB-5 GasHelpers dedicated tests
+
+- [x] Created `test/AuditGasHelpers.t.sol` covering `BoundedStaticCall`
+      library:
+      - OOG reverts (returns `false`)
+      - Malformed returndata size (returns `false`)
+      - Valid single‑word and double‑word returns
+      - `_staticcallBoundedRaw` distinguishes success/valid
+      - `_isAddressWord` edge cases
+- [x] Updated `MockMalformedReturn.sol` with `malformedRoyaltyInfoSize` flag
+      for 1‑byte returns.
+- [x] Tests saved to `reports/forge-test-session4-nb5.txt`:
+      - [x] All 9 dedicated tests pass
+- [x] Full suite: 255 tests passed, 0 failed, 0 skipped.
+

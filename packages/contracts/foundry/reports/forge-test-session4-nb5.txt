@@ -1,0 +1,899 @@
+Compiling 4 files with Solc 0.8.24
+Solc 0.8.24 finished in 178.37s
+Compiler run successful with warnings:
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingNFT.sol:23:31:
+   |
+23 |     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public pure override(ERC721) {
+   |                               ^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingNFT.sol:23:45:
+   |
+23 |     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public pure override(ERC721) {
+   |                                             ^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingNFT.sol:23:57:
+   |
+23 |     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public pure override(ERC721) {
+   |                                                         ^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingNFT.sol:23:74:
+   |
+23 |     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public pure override(ERC721) {
+   |                                                                          ^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingRoyaltyNFT.sol:22:26:
+   |
+22 |     function royaltyInfo(uint256 tokenId, uint256 salePrice) public view returns (address, uint256) {
+   |                          ^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> test/MockRevertingRoyaltyNFT.sol:22:43:
+   |
+22 |     function royaltyInfo(uint256 tokenId, uint256 salePrice) public view returns (address, uint256) {
+   |                                           ^^^^^^^^^^^^^^^^^
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/Marketplace.sol:475:5:
+    |
+475 |     function renounceOwnership() public override {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/MarketplaceBids.sol:462:5:
+    |
+462 |     function renounceOwnership() public override {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/MarketplaceCore.sol:787:5:
+    |
+787 |     function renounceOwnership() public override {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+  --> test/MockRevertingRoyaltyNFT.sol:22:5:
+   |
+22 |     function royaltyInfo(uint256 tokenId, uint256 salePrice) public view returns (address, uint256) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 2 tests for test/AuditBatchCap.t.sol:AuditBatchCapTest
+[PASS] testG05_BuyBatchRejectsTooManyTokens() (gas: 41713)
+[PASS] testG05_TokenBidBatchRejectsTooManyTokens() (gas: 160537)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 18.84ms (2.30ms CPU time)
+
+Ran 2 tests for test/AuditO2.t.sol:O2_ExpiredCleanupTest
+[PASS] testExpiredListingIsCleaned() (gas: 308281)
+[PASS] testLiveListingStillReverts() (gas: 251471)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 18.70ms (2.54ms CPU time)
+
+Ran 3 tests for test/AuditMigration.t.sol:AuditMigrationTest
+[PASS] testM07_OnlyRouterOwnerCanMigrate() (gas: 15494)
+[PASS] testM07_RejectsZeroAddress() (gas: 14483)
+[PASS] testM07_TransferComponentOwnershipStartsHandoff() (gas: 75732)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 19.04ms (2.57ms CPU time)
+
+Ran 4 tests for test/AuditN02.t.sol:AuditN02Test
+[PASS] testN02_BurnedTokenMakesListingStale() (gas: 275810)
+[PASS] testN02_CleanStaleListingNotImplemented() (gas: 5668)
+[PASS] testN02_StaleListingRemainsAfterFailedBuy() (gas: 289290)
+[PASS] testN02_StaleListingRemainsAfterFailedUpdateListingPrice() (gas: 270302)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 19.69ms (3.67ms CPU time)
+
+Ran 8 tests for test/AuditLN2.t.sol:AuditLN2Test
+[PASS] testLN2_MalformedCollectionOwnerRejected() (gas: 110945)
+[PASS] testLN2_MalformedFactoryCheckRejected() (gas: 92319)
+[PASS] testLN2_MalformedGetApprovedTreatedAsNotApproved() (gas: 172834)
+[PASS] testLN2_MalformedIsApprovedForAllTreatedAsNotApproved() (gas: 172903)
+[PASS] testLN2_MalformedOwnerOfDoesNotBlockBid() (gas: 288972)
+[PASS] testLN2_MalformedOwnerOfTreatedAsStale() (gas: 333994)
+[PASS] testLN2_MalformedRoyaltyInfoFallsBackToCollectionRoyalty() (gas: 465316)
+[PASS] testLN2_MalformedSupportsInterfaceRejected() (gas: 54737)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 19.83ms (3.33ms CPU time)
+
+Ran 2 tests for test/AuditExpiry.t.sol:AuditExpiryTest
+[PASS] testL04_ListingExpiresAtExactTimestamp() (gas: 274175)
+[PASS] testL04_TokenBidExpiresAtExactTimestamp() (gas: 274085)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 20.17ms (3.33ms CPU time)
+
+Ran 4 tests for test/AuditLN3.t.sol:LN3_ListingDurationTest
+[PASS] testBidsStillAllowZeroExpiry() (gas: 268005)
+[PASS] testListingBeyondMaxDurationReverts() (gas: 167251)
+[PASS] testListingResurrectionAfterExpiryFails() (gas: 292203)
+[PASS] testListingZeroExpiryReverts() (gas: 166982)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 21.24ms (4.59ms CPU time)
+
+Ran 1 test for test/AuditO3.t.sol:O3_RouterUpdatedTest
+[PASS] testSetRouterEmitsRouterUpdated() (gas: 3015610)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.34ms (1.01ms CPU time)
+
+Ran 5 tests for test/AuditAccountingInvariants.t.sol:AccountingInvariantsTest
+[PASS] testBidsCreditUpdatesTotalPendingWithdrawals() (gas: 178802)
+[PASS] testBidsInvariantBalanceGeTotalPendingPlusEscrow() (gas: 244807)
+[PASS] testCoreCreditUpdatesTotalPendingWithdrawals() (gas: 397004)
+[PASS] testInvariantTotalPendingEqualsSumOfIndividualPending() (gas: 429644)
+[PASS] testWithdrawFailureReaddsToTotalPendingWithdrawals() (gas: 467611)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 22.34ms (6.21ms CPU time)
+
+Ran 1 test for test/AuditBatchSafety.t.sol:AuditBatchSafetyTest
+[PASS] testL01_BuyBatchRejectsDuplicateTokenIds() (gas: 277223)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.53ms (268.20µs CPU time)
+
+Ran 3 tests for test/AuditCustomErrors.t.sol:AuditCustomErrorsTest
+[PASS] testG08_BidsCorePausedUsesCustomError() (gas: 136745)
+[PASS] testG08_CoreFallbackUsesCustomError() (gas: 7168)
+[PASS] testG08_RouterConstructorUsesCustomError() (gas: 67547)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.41ms (265.80µs CPU time)
+
+Ran 4 tests for test/AuditN01.t.sol:AuditN01Test
+[PASS] testN01_OwnerCannotCreateListingForVictim() (gas: 142493)
+[PASS] testN01_OwnerCannotStealNFTViaDirectCoreCall() (gas: 264433)
+[PASS] testN01_SetBidsContractIsNotReassignable() (gas: 3019342)
+[PASS] testN01_SetMarketplaceAddressIsNotReassignable() (gas: 5189185)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.20ms (876.60µs CPU time)
+
+Ran 7 tests for test/AuditN02Fixed.t.sol:AuditN02FixedTest
+[PASS] testN02_BurnedTokenListingCanBeCleaned() (gas: 247766)
+[PASS] testN02_BuyRevertsForStaleListingWithoutCleanup() (gas: 287413)
+[PASS] testN02_CleanStaleListingRevertsForNonExistent() (gas: 16187)
+[PASS] testN02_CleanStaleListingRevertsForNonStale() (gas: 251159)
+[PASS] testN02_NewOwnerCanCreateListingOverStale() (gas: 308452)
+[PASS] testN02_StaleListingCanBeCleaned() (gas: 227327)
+[PASS] testN02_UpdateListingPriceRevertsForStaleListing() (gas: 268897)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 3.93ms (1.65ms CPU time)
+
+Ran 2 tests for test/AuditPerTokenApproval.t.sol:AuditPerTokenApprovalTest
+[PASS] testL06_PerTokenApprovalAllowsBidAcceptance() (gas: 386040)
+[PASS] testL06_PerTokenApprovalAllowsListingAndBuy() (gas: 367374)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.77ms (599.90µs CPU time)
+
+Ran 1 test for test/AuditIN3.t.sol:AuditIN3Test
+[PASS] testIN3_ExpensiveRoyaltyQueryFallsBack() (gas: 517299)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.15ms (681.10µs CPU time)
+
+Ran 2 tests for test/AuditR1.t.sol:AuditR1Test
+[PASS] testR1_TotalListingsUnderflowReverts() (gas: 43772)
+[PASS] testR1_TotalPendingWithdrawalsUnderflowReverts() (gas: 26038)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 580.90µs (135.70µs CPU time)
+
+Ran 4 tests for test/AuditFeeSnapshot.t.sol:AuditFeeSnapshotTest
+[PASS] testM03_CollectionBidMinSellerProceedsProtectsSeller() (gas: 447597)
+[PASS] testM03_FeeIncreaseAfterListingDoesNotAffectSeller() (gas: 394259)
+[PASS] testM03_LowerCurrentFeeIsUsed() (gas: 393937)
+[PASS] testM03_TokenBidMinSellerProceedsProtectsSeller() (gas: 402842)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 6.16ms (3.21ms CPU time)
+
+Ran 9 tests for test/AuditAuthorization.t.sol:AuditAuthorizationTest
+[PASS] testH02_LaunchpadCanOnlyRegisterOwnLaunch() (gas: 1932156)
+[PASS] testH02_LaunchpadCannotBuy() (gas: 267287)
+[PASS] testH02_LaunchpadCannotCreateListing() (gas: 167194)
+[PASS] testH02_LaunchpadCannotExecuteSaleFromBid() (gas: 169585)
+[PASS] testH02_LaunchpadCannotRegisterExistingCollection() (gas: 1933795)
+[PASS] testH02_LaunchpadCannotRegisterForeignCollection() (gas: 82579)
+[PASS] testH02_LaunchpadCannotUseRouterRegistration() (gas: 21163)
+[PASS] testH02_LaunchpadCannotWithdrawFor() (gas: 389765)
+[PASS] testL07_WithdrawForIsRouterOnly() (gas: 396242)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 4.67ms (2.01ms CPU time)
+
+Ran 3 tests for test/AuditNB2.t.sol:AuditNB2Test
+[PASS] testNB2_CollectionOwnerMismatchReverts() (gas: 3896798)
+[PASS] testNB2_LaunchPadEndToEnd() (gas: 2362525)
+[PASS] testNB2_VerifierRejectsUnauthorizedLaunchpad() (gas: 2699310)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 4.19ms (1.26ms CPU time)
+
+Ran 9 tests for test/AuditGasHelpers.t.sol:AuditGasHelpersTest
+[PASS] test_DoubleWord_MalformedReturnSize() (gas: 35529)
+[PASS] test_DoubleWord_OOG() (gas: 47123)
+[PASS] test_DoubleWord_ValidReturn() (gas: 60479)
+[PASS] test_IsAddressWord() (gas: 8090)
+[PASS] test_Raw_MalformedReturnSize() (gas: 36030)
+[PASS] test_Raw_ValidReturn() (gas: 18017)
+[PASS] test_SingleWord_MalformedReturnSize() (gas: 35673)
+[PASS] test_SingleWord_OOG() (gas: 46771)
+[PASS] test_SingleWord_ValidReturn() (gas: 18886)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 918.10µs (578.50µs CPU time)
+
+Ran 6 tests for test/AuditNB1.t.sol:AuditNB1Test
+[PASS] testNB1_BuyBatchRejectsMalformedOwnerOfWithoutCleanup() (gas: 358562)
+[PASS] testNB1_BuyRejectsMalformedOwnerOfWithoutCleanup() (gas: 357392)
+[PASS] testNB1_CleanRejects64ByteOwnerOf() (gas: 333236)
+[PASS] testNB1_CleanRejectsBoolStyleOwnerOf() (gas: 333263)
+[PASS] testNB1_CleanRejectsDirtyAddressOwnerOf() (gas: 313738)
+[PASS] testNB1_UpdateRejectsMalformedOwnerOfWithoutChange() (gas: 335332)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 5.09ms (1.83ms CPU time)
+
+Ran 2 tests for test/AuditR4.t.sol:AuditR4Test
+[PASS] testR4_CancelBidReentryBlocked() (gas: 300766)
+[PASS] testR4_PlaceBidReentryBlocked() (gas: 314860)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.98ms (597.50µs CPU time)
+
+Ran 1 test for test/AuditNB3.t.sol:AuditNB3Test
+[PASS] testNB3_SufficientGasPaysRoyalty() (gas: 383313)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.51ms (323.90µs CPU time)
+
+Ran 6 tests for test/AuditN01Fixed.t.sol:AuditN01FixedTest
+[PASS] testN01_ConfigureBidsMarketplaceIsOneShot() (gas: 7808735)
+[PASS] testN01_NewOwnerCannotCallRouterFunctions() (gas: 79104)
+[PASS] testN01_OwnerCannotCallRouterFunctionsDirectly() (gas: 72918)
+[PASS] testN01_SetBidsContractRevertsOnSecondCall() (gas: 3018946)
+[PASS] testN01_SetMarketplaceAddressRevertsOnSecondCall() (gas: 5189207)
+[PASS] testN01_SetRouterRevertsOnSecondCall() (gas: 3019620)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 7.31ms (1.75ms CPU time)
+
+Ran 1 test for test/AuditLN1.t.sol:LN1_CastSafetyTest
+[PASS] testExpiresAtAboveUint48Reverts() (gas: 144924)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.38ms (154.00µs CPU time)
+
+Ran 3 tests for test/AuditSlippage.t.sol:AuditSlippageTest
+[PASS] testH03_AcceptStillWorksAtMinimum() (gas: 401624)
+[PASS] testH03_CollectionBidCannotBeReplacedBelowSellerMinimum() (gas: 342552)
+[PASS] testH03_TokenBidCannotBeReplacedBelowSellerMinimum() (gas: 344129)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.08ms (853.80µs CPU time)
+
+Ran 3 tests for test/AuditR5.t.sol:AuditR5Test
+[PASS] testR5_PausedComponentsRequireExpectation() (gas: 124543)
+[PASS] testR5_ValidDeploymentPasses() (gas: 48696)
+[PASS] testR5_WrongRouterRejected() (gas: 19820)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.50ms (323.60µs CPU time)
+
+Ran 6 tests for test/Integration.t.sol:IntegrationTest
+[PASS] testEndToEnd_BidCancellationAndWithdrawal() (gas: 211778)
+[PASS] testEndToEnd_CollectionBidAndAccept() (gas: 407458)
+[PASS] testEndToEnd_ListAndBuy() (gas: 392724)
+[PASS] testEndToEnd_PauseBlocksMarketplaceOperations() (gas: 330688)
+[PASS] testEndToEnd_RoyaltyERC2981UsesPendingWithdrawal() (gas: 433383)
+[PASS] testEndToEnd_TokenBidAndAccept() (gas: 406656)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 4.10ms (1.86ms CPU time)
+
+Ran 1 test for test/AuditRenounce.t.sol:AuditRenounceTest
+[PASS] testL03_AllComponentsRejectRenounce() (gas: 23706)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.26ms (60.20µs CPU time)
+
+Ran 3 tests for test/AuditStaleListings.t.sol:AuditStaleListingsTest
+[PASS] testM01_BuyRejectsStaleListing() (gas: 282155)
+[PASS] testM01_CreateListingOverwritesStaleListing() (gas: 307514)
+[PASS] testM01_UpdateRejectsStaleListing() (gas: 263518)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.22ms (878.20µs CPU time)
+
+Ran 4 tests for test/AuditRouterAdmin.t.sol:AuditRouterAdminTest
+[PASS] testM06_PauseAndUnpauseAreIdempotent() (gas: 71744)
+[PASS] testM06_SweepRevertsWhenNeitherHasExcess() (gas: 31038)
+[PASS] testM06_SweepSucceedsWhenOnlyBidsHasExcess() (gas: 42585)
+[PASS] testM06_SweepSucceedsWhenOnlyCoreHasExcess() (gas: 41971)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 2.50ms (335.50µs CPU time)
+
+Ran 2 tests for test/AuditUnverify.t.sol:AuditUnverifyTest
+[PASS] testL05_UnverifyCollection() (gas: 101373)
+[PASS] testL05_UnverifyOnlyOwner() (gas: 87221)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 3.27ms (301.10µs CPU time)
+
+Ran 27 tests for test/MarketplaceBids.t.sol:MarketplaceBidsTest
+[PASS] testAcceptCollectionBid_NotApproved() (gas: 263962)
+[PASS] testAcceptCollectionBid_NotOwner() (gas: 286708)
+[PASS] testAcceptCollectionBid_PartialKeepsRemainingQuantity() (gas: 465825)
+[PASS] testAcceptCollectionBid_Valid() (gas: 415598)
+[PASS] testAcceptTokenBid_Expired() (gas: 274912)
+[PASS] testAcceptTokenBid_NotApproved() (gas: 264117)
+[PASS] testAcceptTokenBid_Valid() (gas: 407823)
+[PASS] testBidsOwnershipArchitecture() (gas: 17577)
+[PASS] testC01_PlaceTokenBidBatchRequiresFullValueOnReplacement() (gas: 206887)
+[PASS] testCancelBidStillWorksWhilePaused() (gas: 312689)
+[PASS] testCancelCollectionBid_AllowsExpiredBid() (gas: 193088)
+[PASS] testCancelCollectionBid_Valid_CreatesWithdrawalCredit() (gas: 195156)
+[PASS] testCancelTokenBidBatch_Valid() (gas: 257480)
+[PASS] testCancelTokenBid_Valid_CreatesWithdrawalCredit() (gas: 264707)
+[PASS] testOnlyRouterCanCallBidsDirectly() (gas: 112564)
+[PASS] testPauseBlocksNewBids() (gas: 161684)
+[PASS] testPlaceCollectionBid_Expired() (gas: 119094)
+[PASS] testPlaceCollectionBid_InsufficientValue() (gas: 118725)
+[PASS] testPlaceCollectionBid_InvalidPrice() (gas: 105411)
+[PASS] testPlaceCollectionBid_InvalidQuantity() (gas: 117919)
+[PASS] testPlaceCollectionBid_Unregistered() (gas: 50330)
+[PASS] testPlaceCollectionBid_Valid() (gas: 191065)
+[PASS] testPlaceTokenBidBatch_FullReplacementAccounting() (gas: 334450)
+[PASS] testPlaceTokenBidBatch_RejectsDuplicateTokenIds() (gas: 130653)
+[PASS] testPlaceTokenBid_ReplacesAndCreditsOldBid() (gas: 269997)
+[PASS] testPlaceTokenBid_Valid() (gas: 193756)
+[PASS] testWithdraw_BidRefund() (gas: 274984)
+Suite result: ok. 27 passed; 0 failed; 0 skipped; finished in 9.89ms (7.52ms CPU time)
+
+Ran 2 tests for test/AuditRouterEth.t.sol:AuditRouterEthTest
+[PASS] testL02_RouterRejectsPlainETH() (gas: 18212)
+[PASS] testL02_RouterRejectsUnknownCalldata() (gas: 19043)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.71ms (87.00µs CPU time)
+
+Ran 3 tests for test/AuditWashTrading.t.sol:AuditWashTradingTest
+[PASS] testM05_CannotBatchBidOnOwnToken() (gas: 170738)
+[PASS] testM05_CannotBidOnOwnToken() (gas: 166992)
+[PASS] testM05_CoreRejectsSelfSaleFromBid() (gas: 171758)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.81ms (1.07ms CPU time)
+
+Ran 1 test for test/AuditRoyaltyAttribution.t.sol:AuditRoyaltyAttributionTest
+[PASS] testM02_CollectionBidCreditsEachRoyaltyReceiver() (gas: 554960)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.27ms (592.00µs CPU time)
+
+Ran 22 tests for test/LaunchPad.t.sol:LaunchPadTest
+[PASS] test_BatchMint_RespectsMaxSupply() (gas: 1912118)
+[PASS] test_CreateCollection_ChargesLaunchFee() (gas: 1960747)
+[PASS] test_CreateCollection_CreatorAutoFilledInEvent() (gas: 1929960)
+[PASS] test_CreateCollection_DefaultRoyaltyReceiverIsCreator() (gas: 1929521)
+[PASS] test_CreateCollection_DeploysAndRecordsCreator() (gas: 1932681)
+[PASS] test_CreateCollection_RegistersInCore() (gas: 1932265)
+[PASS] test_CreateCollection_RequiresAuthorizedLaunchpad() (gas: 1860010)
+[PASS] test_CreateCollection_RevertsOnExcessiveRoyalty() (gas: 23216)
+[PASS] test_CreateCollection_RevertsWhenLaunchFeeMismatch() (gas: 49235)
+[PASS] test_CreateCollection_SetsOwnerAndMetadata() (gas: 1940479)
+[PASS] test_Mint_ByCreator() (gas: 2053419)
+[PASS] test_Mint_IsPublic() (gas: 2054278)
+[PASS] test_Mint_RequiresConfiguredPrice() (gas: 2061569)
+[PASS] test_Mint_RevertsAfterDuration() (gas: 1931147)
+[PASS] test_Mint_RevertsWhenMaxSupplyReached() (gas: 2145800)
+[PASS] test_Mint_UnlimitedSupplyAndEternalDuration() (gas: 2242962)
+[PASS] test_Pause_BlocksCreation() (gas: 42816)
+[PASS] test_SetBaseURI_OnlyOwner() (gas: 1935023)
+[PASS] test_SetMintDuration_OnlyOwner() (gas: 1954402)
+[PASS] test_TokenURI_UsesBaseURI() (gas: 2055797)
+[PASS] test_WithdrawFees() (gas: 1950384)
+[PASS] test_WithdrawFees_RevertsWhenNoFees() (gas: 21214)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 10.65ms (10.51ms CPU time)
+
+Ran 21 tests for test/Marketplace.t.sol:MarketplaceTest
+[PASS] testAcceptCollectionBid_UsesActualSeller() (gas: 402868)
+[PASS] testAcceptTokenBid_UsesActualSeller() (gas: 402231)
+[PASS] testAdminFunctions_OnlyMarketplaceOwner() (gas: 69644)
+[PASS] testBuy_CannotCauseReceiverIssueForEOA() (gas: 383043)
+[PASS] testBuy_UsesActualBuyer() (gas: 383427)
+[PASS] testCancelListing_CannotBeCalledByOtherUser() (gas: 254761)
+[PASS] testCancelListing_UsesActualSeller() (gas: 202893)
+[PASS] testCollectionBid_UsesActualBidder() (gas: 190797)
+[PASS] testComponentOwnersAreRouter() (gas: 18666)
+[PASS] testConstructor_DeploysCorrectly() (gas: 18769)
+[PASS] testCreateListing_CannotSpoofSeller() (gas: 171149)
+[PASS] testCreateListing_UsesActualSeller() (gas: 251957)
+[PASS] testEmergencyRoyaltyRecoveryThroughRouter() (gas: 97880)
+[PASS] testPendingWithdrawalsAggregatesBothComponents() (gas: 391841)
+[PASS] testRegisterCollection_RejectsNonAdmin() (gas: 19162)
+[PASS] testRegisterCollection_ThroughRouter() (gas: 86377)
+[PASS] testRouterOwnershipIsIndependent() (gas: 49528)
+[PASS] testSweepExcessETH_OnlyOwner() (gas: 18673)
+[PASS] testTokenBid_UsesActualBidder() (gas: 194139)
+[PASS] testViews() (gas: 30628)
+[PASS] testWithdrawThroughRouter() (gas: 390523)
+Suite result: ok. 21 passed; 0 failed; 0 skipped; finished in 16.05ms (4.44ms CPU time)
+
+Ran 4 tests for test/AuditRoyaltyHardening.t.sol:AuditRoyaltyHardeningTest
+[PASS] testM04_ExcessiveTokenRoyaltyFallsBackToCollectionRoyalty() (gas: 433585)
+[PASS] testM04_RevertingRoyaltyFallsBackToCollectionRoyalty() (gas: 385838)
+[PASS] testM04_UpdateRoyaltyRejectsZeroReceiverWithFee() (gas: 86733)
+[PASS] testM04_ZeroReceiverFallsBackToCollectionRoyalty() (gas: 415493)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.87ms (1.27ms CPU time)
+
+Ran 44 tests for test/MarketplaceCore.t.sol:MarketplaceCoreTest
+[PASS] testBuyBatch_Valid() (gas: 460647)
+[PASS] testBuy_ListingExpired() (gas: 275599)
+[PASS] testBuy_RequiresExactETH() (gas: 301903)
+[PASS] testBuy_SelfPurchase() (gas: 274550)
+[PASS] testBuy_Valid_CreditsPullPayments() (gas: 395261)
+[PASS] testBuy_WhenPaused() (gas: 325275)
+[PASS] testCancelListing_NotSeller() (gas: 254761)
+[PASS] testCancelListing_UnauthorizedDirectCore() (gas: 253406)
+[PASS] testCancelListing_Valid() (gas: 202501)
+[PASS] testCreateListing_Expired() (gas: 168117)
+[PASS] testCreateListing_NotApproved() (gas: 147657)
+[PASS] testCreateListing_NotOwner() (gas: 171813)
+[PASS] testCreateListing_PriceBelowMin() (gas: 168258)
+[PASS] testCreateListing_ReplacesExisting() (gas: 272582)
+[PASS] testCreateListing_Unregistered() (gas: 104096)
+[PASS] testCreateListing_Valid() (gas: 253183)
+[PASS] testEmergencyUpdateCollectionRoyalty_Admin() (gas: 98902)
+[PASS] testEmergencyUpdateCollectionRoyalty_NonOwner() (gas: 90011)
+[PASS] testExecuteSaleFromBid_NonAuthorized() (gas: 170030)
+[PASS] testMarketplaceOwnership_RequiresAcceptance() (gas: 37264)
+[PASS] testOwnershipArchitecture() (gas: 40601)
+[PASS] testPauseAndUnpause_Admin() (gas: 67239)
+[PASS] testPause_NonOwner() (gas: 15347)
+[PASS] testRegisterCollection_AlreadyRegistered() (gas: 89047)
+[PASS] testRegisterCollection_ExternalCreatorAutoFilled() (gas: 88745)
+[PASS] testRegisterCollection_NonAdminReverts() (gas: 19626)
+[PASS] testRegisterCollection_NonERC721() (gas: 30963)
+[PASS] testRegisterCollection_Valid() (gas: 86586)
+[PASS] testSetAuthorizedLaunchpad_AdminOnly() (gas: 50755)
+[PASS] testSweepExcessETH_CannotTouchPending() (gas: 398792)
+[PASS] testSweepExcessETH_RecoversAccidentalETH() (gas: 52142)
+[PASS] testUpdateCollectionRoyalty_NonOwner() (gas: 92697)
+[PASS] testUpdateCollectionRoyalty_Valid() (gas: 95742)
+[PASS] testUpdateFeeReceiver_AdminOnly() (gas: 32156)
+[PASS] testUpdateFeeReceiver_NonOwner() (gas: 17945)
+[PASS] testUpdateListingPrice_NotSeller() (gas: 257732)
+[PASS] testUpdateListingPrice_Valid() (gas: 259194)
+[PASS] testUpdateListingPrice_WhenPaused() (gas: 310106)
+[PASS] testUpdateMarketplaceFee_AdminOnly() (gas: 30600)
+[PASS] testUpdateMarketplaceFee_NonOwner() (gas: 14763)
+[PASS] testVerifyCollection_AdminOnly() (gas: 93029)
+[PASS] testVerifyCollection_NonOwner() (gas: 16763)
+[PASS] testWithdraw_NoWithdrawal() (gas: 20038)
+[PASS] testWithdraw_SellerProceeds() (gas: 393950)
+Suite result: ok. 44 passed; 0 failed; 0 skipped; finished in 14.99ms (12.65ms CPU time)
+
+Ran 5 tests for test/AuditN03.t.sol:N03_RoyaltySnapshotTest
+[PASS] testFuzzFeeAndRoyaltyNeverExceedPrice(uint128,uint16,uint16) (runs: 257, μ: 397995, ~: 408410)
+[PASS] testListingStorageLayout() (gas: 397170)
+[PASS] testRoyaltyDecreaseAfterListingIsHonored() (gas: 393526)
+[PASS] testRoyaltyIncreaseAfterListingUsesSnapshot() (gas: 394383)
+[PASS] testTinyPricesNeverExceedPrice() (gas: 495172)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 154.30ms (155.71ms CPU time)
+
+Ran 1 test for test/AuditInvariants.t.sol:BidsSolvencyInvariantTest
+[PASS] invariant_solvency() (runs: 256, calls: 12800, reverts: 0)
+
+╭-------------+---------------------+-------+---------+----------╮
+| Contract    | Selector            | Calls | Reverts | Discards |
++================================================================+
+| BidsHandler | acceptCollectionBid | 1488  | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | acceptTokenBid      | 1426  | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | cancelCollectionBid | 1426  | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | cancelTokenBid      | 1363  | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeCollectionBid  | 1424  | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeTokenBid       | 1388  | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | placeTokenBidBatch  | 1461  | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | sweep               | 1366  | 0       | 0        |
+|-------------+---------------------+-------+---------+----------|
+| BidsHandler | withdraw            | 1458  | 0       | 0        |
+╰-------------+---------------------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.33s (3.32s CPU time)
+
+Ran 3 tests for test/AuditUnifiedSaleEvent.t.sol:UnifiedSaleEventTest
+[PASS] testExecuteSaleFromBidEmitsSaleEventForCollectionBid() (gas: 461304)
+[PASS] testExecuteSaleFromBidEmitsSaleEventForTokenBid() (gas: 404753)
+[PASS] testSaleEventValuesMatchCalculatedValues() (gas: 404867)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 13.72s (13.43ms CPU time)
+
+Ran 8 tests for test/InvariantsS3.t.sol:MarketplaceInvariantS3Test
+[PASS] invariant_bidsEscrowAccounting() (runs: 256, calls: 12800, reverts: 0)
+
+╭--------------------+----------------------------------+-------+---------+----------╮
+| Contract           | Selector                         | Calls | Reverts | Discards |
++====================================================================================+
+| MarketplaceHandler | acceptCollectionBid              | 548   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | acceptTokenBid                   | 512   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackAttackerTransferFrom       | 480   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackLaunchpadDirectExecuteSale | 546   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerCreateListing         | 510   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerDirectBuy             | 551   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerWithdrawFor           | 549   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buy                              | 494   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buyBatch                         | 550   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancel                           | 463   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelCollectionBid              | 543   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelTokenBid                   | 528   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cleanStaleListing                | 549   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | forceEth                         | 556   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | list                             | 543   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeCollectionBid               | 510   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBid                    | 517   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBidBatch               | 564   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | sweep                            | 543   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | transferToken                    | 518   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | updatePrice                      | 545   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | warp                             | 587   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdraw                         | 569   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdrawForViaRouter             | 525   | 0       | 0        |
+╰--------------------+----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_bidsPendingAccounting() (runs: 256, calls: 12800, reverts: 0)
+
+╭--------------------+----------------------------------+-------+---------+----------╮
+| Contract           | Selector                         | Calls | Reverts | Discards |
++====================================================================================+
+| MarketplaceHandler | acceptCollectionBid              | 539   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | acceptTokenBid                   | 556   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackAttackerTransferFrom       | 511   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackLaunchpadDirectExecuteSale | 523   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerCreateListing         | 530   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerDirectBuy             | 503   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerWithdrawFor           | 588   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buy                              | 560   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buyBatch                         | 489   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancel                           | 513   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelCollectionBid              | 550   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelTokenBid                   | 541   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cleanStaleListing                | 563   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | forceEth                         | 533   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | list                             | 542   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeCollectionBid               | 546   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBid                    | 500   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBidBatch               | 519   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | sweep                            | 527   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | transferToken                    | 558   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | updatePrice                      | 568   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | warp                             | 499   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdraw                         | 529   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdrawForViaRouter             | 513   | 0       | 0        |
+╰--------------------+----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_bidsSolvency() (runs: 256, calls: 12800, reverts: 0)
+
+╭--------------------+----------------------------------+-------+---------+----------╮
+| Contract           | Selector                         | Calls | Reverts | Discards |
++====================================================================================+
+| MarketplaceHandler | acceptCollectionBid              | 510   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | acceptTokenBid                   | 535   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackAttackerTransferFrom       | 526   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackLaunchpadDirectExecuteSale | 525   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerCreateListing         | 507   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerDirectBuy             | 519   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerWithdrawFor           | 520   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buy                              | 544   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buyBatch                         | 525   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancel                           | 516   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelCollectionBid              | 549   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelTokenBid                   | 589   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cleanStaleListing                | 550   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | forceEth                         | 567   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | list                             | 499   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeCollectionBid               | 541   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBid                    | 533   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBidBatch               | 525   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | sweep                            | 525   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | transferToken                    | 571   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | updatePrice                      | 573   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | warp                             | 510   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdraw                         | 539   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdrawForViaRouter             | 502   | 0       | 0        |
+╰--------------------+----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_corePendingAccounting() (runs: 256, calls: 12800, reverts: 0)
+
+╭--------------------+----------------------------------+-------+---------+----------╮
+| Contract           | Selector                         | Calls | Reverts | Discards |
++====================================================================================+
+| MarketplaceHandler | acceptCollectionBid              | 529   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | acceptTokenBid                   | 545   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackAttackerTransferFrom       | 550   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackLaunchpadDirectExecuteSale | 518   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerCreateListing         | 526   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerDirectBuy             | 538   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerWithdrawFor           | 559   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buy                              | 531   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buyBatch                         | 528   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancel                           | 571   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelCollectionBid              | 539   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelTokenBid                   | 536   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cleanStaleListing                | 519   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | forceEth                         | 565   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | list                             | 494   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeCollectionBid               | 527   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBid                    | 533   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBidBatch               | 486   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | sweep                            | 542   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | transferToken                    | 527   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | updatePrice                      | 514   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | warp                             | 554   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdraw                         | 535   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdrawForViaRouter             | 534   | 0       | 0        |
+╰--------------------+----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_coreSolvency() (runs: 256, calls: 12800, reverts: 0)
+
+╭--------------------+----------------------------------+-------+---------+----------╮
+| Contract           | Selector                         | Calls | Reverts | Discards |
++====================================================================================+
+| MarketplaceHandler | acceptCollectionBid              | 516   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | acceptTokenBid                   | 526   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackAttackerTransferFrom       | 542   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackLaunchpadDirectExecuteSale | 551   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerCreateListing         | 530   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerDirectBuy             | 518   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerWithdrawFor           | 504   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buy                              | 539   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buyBatch                         | 555   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancel                           | 495   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelCollectionBid              | 544   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelTokenBid                   | 561   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cleanStaleListing                | 517   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | forceEth                         | 548   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | list                             | 535   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeCollectionBid               | 526   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBid                    | 582   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBidBatch               | 497   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | sweep                            | 535   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | transferToken                    | 538   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | updatePrice                      | 497   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | warp                             | 529   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdraw                         | 529   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdrawForViaRouter             | 586   | 0       | 0        |
+╰--------------------+----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_nftOwnership() (runs: 256, calls: 12800, reverts: 0)
+
+╭--------------------+----------------------------------+-------+---------+----------╮
+| Contract           | Selector                         | Calls | Reverts | Discards |
++====================================================================================+
+| MarketplaceHandler | acceptCollectionBid              | 557   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | acceptTokenBid                   | 525   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackAttackerTransferFrom       | 520   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackLaunchpadDirectExecuteSale | 528   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerCreateListing         | 529   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerDirectBuy             | 560   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerWithdrawFor           | 548   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buy                              | 538   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buyBatch                         | 507   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancel                           | 530   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelCollectionBid              | 505   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelTokenBid                   | 506   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cleanStaleListing                | 552   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | forceEth                         | 535   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | list                             | 541   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeCollectionBid               | 519   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBid                    | 562   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBidBatch               | 555   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | sweep                            | 530   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | transferToken                    | 504   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | updatePrice                      | 526   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | warp                             | 531   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdraw                         | 564   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdrawForViaRouter             | 528   | 0       | 0        |
+╰--------------------+----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_saleConservation() (runs: 256, calls: 12800, reverts: 0)
+
+╭--------------------+----------------------------------+-------+---------+----------╮
+| Contract           | Selector                         | Calls | Reverts | Discards |
++====================================================================================+
+| MarketplaceHandler | acceptCollectionBid              | 547   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | acceptTokenBid                   | 585   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackAttackerTransferFrom       | 528   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackLaunchpadDirectExecuteSale | 507   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerCreateListing         | 538   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerDirectBuy             | 517   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerWithdrawFor           | 533   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buy                              | 562   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buyBatch                         | 571   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancel                           | 537   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelCollectionBid              | 511   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelTokenBid                   | 565   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cleanStaleListing                | 532   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | forceEth                         | 546   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | list                             | 514   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeCollectionBid               | 521   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBid                    | 516   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBidBatch               | 546   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | sweep                            | 543   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | transferToken                    | 484   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | updatePrice                      | 519   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | warp                             | 510   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdraw                         | 561   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdrawForViaRouter             | 507   | 0       | 0        |
+╰--------------------+----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_totalListings() (runs: 256, calls: 12800, reverts: 0)
+
+╭--------------------+----------------------------------+-------+---------+----------╮
+| Contract           | Selector                         | Calls | Reverts | Discards |
++====================================================================================+
+| MarketplaceHandler | acceptCollectionBid              | 538   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | acceptTokenBid                   | 522   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackAttackerTransferFrom       | 535   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackLaunchpadDirectExecuteSale | 528   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerCreateListing         | 530   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerDirectBuy             | 513   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | attackOwnerWithdrawFor           | 498   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buy                              | 548   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | buyBatch                         | 548   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancel                           | 532   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelCollectionBid              | 548   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cancelTokenBid                   | 520   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | cleanStaleListing                | 560   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | forceEth                         | 519   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | list                             | 577   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeCollectionBid               | 542   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBid                    | 549   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | placeTokenBidBatch               | 487   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | sweep                            | 533   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | transferToken                    | 563   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | updatePrice                      | 522   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | warp                             | 522   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdraw                         | 528   | 0       | 0        |
+|--------------------+----------------------------------+-------+---------+----------|
+| MarketplaceHandler | withdrawForViaRouter             | 538   | 0       | 0        |
+╰--------------------+----------------------------------+-------+---------+----------╯
+
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 20.56s (91.98s CPU time)
+
+Ran 44 test suites in 20.61s (38.07s CPU time): 255 tests passed, 0 failed, 0 skipped (255 total tests)
