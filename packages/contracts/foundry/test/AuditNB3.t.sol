@@ -52,4 +52,23 @@ function _setupExpensiveSupportsInterfaceListing(uint256 iterations) internal re
 
         assertEq(core.pendingWithdrawals(royaltyReceiverAddr), expectedRoyalty);
     }
+
+    function testNB3_LowGasViaRouterRevertsInsufficientGas() public {
+        _setupListing();
+
+        vm.prank(buyer);
+        vm.expectRevert(MarketplaceCore.InsufficientGas.selector);
+        marketplace.buy{value: SALE_PRICE, gas: 60_000}(address(nft), 1);
+    }
+
+    function testNB3_SufficientGasViaRouterPaysRoyalty() public {
+        _setupListing();
+
+        uint256 expectedRoyalty = (SALE_PRICE * ROYALTY_FEE) / 10_000;
+
+        vm.prank(buyer);
+        marketplace.buy{value: SALE_PRICE, gas: 500_000}(address(nft), 1);
+
+        assertEq(core.pendingWithdrawals(royaltyReceiverAddr), expectedRoyalty);
+    }
 }
