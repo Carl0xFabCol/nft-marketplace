@@ -17,6 +17,7 @@ interface IMarketplaceCoreRegistry {
  */
 contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
     uint16 public constant MAX_ROYALTY_FEE = 2_000;
+    uint256 public constant MAX_PAGE_SIZE = 100;
 
     IMarketplaceCoreRegistry public immutable core;
 
@@ -36,6 +37,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
     error InvalidAddress();
     error TransferFailed();
     error NoFees();
+    error PageTooLarge();
 
     constructor(address _core) Ownable(msg.sender) {
         if (_core == address(0)) revert InvalidAddress();
@@ -101,6 +103,27 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
 
     function getCollectionsCreatedBy(address creator) external view returns (address[] memory) {
         return _collectionsByCreator[creator];
+    }
+
+    /// @notice Paginated view over a creator's collections.
+    /// @dev Reverts if `limit` exceeds MAX_PAGE_SIZE. Offsets past the end and
+    ///      a zero limit return an empty page; the final page is clamped.
+    function getCollectionsCreatedBy(
+        address creator,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (address[] memory page) {
+        if (limit > MAX_PAGE_SIZE) revert PageTooLarge();
+
+        address[] storage all = _collectionsByCreator[creator];
+        uint256 length = all.length;
+        if (offset >= length || limit == 0) return new address[](0);
+
+        uint256 end = length - offset < limit ? length : offset + limit;
+        page = new address[](end - offset);
+        for (uint256 i = offset; i < end; ++i) {
+            page[i - offset] = all[i];
+        }
     }
 
     function getCollectionsCreatedCount(address creator) external view returns (uint256) {

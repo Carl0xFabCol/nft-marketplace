@@ -13,6 +13,19 @@ export const LaunchPadABI = [
   },
   {
     "type": "function",
+    "name": "MAX_PAGE_SIZE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_ROYALTY_FEE",
     "inputs": [],
     "outputs": [
@@ -124,6 +137,35 @@ export const LaunchPadABI = [
     "outputs": [
       {
         "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getCollectionsCreatedBy",
+    "inputs": [
+      {
+        "name": "creator",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "offset",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "page",
         "type": "address[]",
         "internalType": "address[]"
       }
@@ -466,6 +508,11 @@ export const LaunchPadABI = [
   {
     "type": "error",
     "name": "NoFees",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PageTooLarge",
     "inputs": []
   },
   {
