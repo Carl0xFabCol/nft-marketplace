@@ -721,13 +721,13 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
             revert InsufficientGas();
         }
 
-        (bool success, bool wellFormed, uint256 word, bool didRevert) = _staticcallBoundedRaw(
+        (uint256 status, uint256 word) = _staticcallBoundedRaw(
             collection,
             abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId),
             OWNER_QUERY_GAS
         );
-        if (!success) return (false, didRevert, address(0));
-        if (!wellFormed || !_isAddressWord(word)) return (false, false, address(0));
+        if ((status & 1) == 0) return (false, (status & 4) != 0, address(0));
+        if ((status & 2) == 0 || !_isAddressWord(word)) return (false, false, address(0));
         return (true, false, address(uint160(word)));
     }
 
