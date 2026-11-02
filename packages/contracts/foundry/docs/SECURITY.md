@@ -100,6 +100,53 @@ configuration errors and gives operators time to verify the system.
   registering creator can be registered via a launchpad (NB‑2); otherwise the
   transaction reverts cleanly.
 
+## Bounded external calls (F-2, F-3, F-4, F-5, NB-3, NB-7)
+
+All external collection calls are made through `BoundedStaticCall` with an
+explicit gas budget. A malicious or gas-burning token contract therefore cannot
+consume the whole transaction before the marketplace can fail closed.
+
+| Query | Budget | Behaviour |
+|-------|--------|-----------|
+| `ownerOf` (listing/sale/cleanup) | `OWNER_QUERY_GAS` = 30,000 | `_tryOwnerOf` requires `gasleft() >= (30_000 * 64) / 63 + 5_000` before calling. It forwards exactly 30,000 gas and treats a failed call with non-empty returndata as a revert. Empty returndata is treated as malformed, not as a clean "not owner" result. |
+| `royaltyInfo` / `supportsInterface` | `ROYALTY_QUERY_GAS` = 50,000 | `_requireRoyaltyQueryGas` applies the same EIP-150-aware guard before each staticcall. Insufficient gas reverts with `InsufficientGas` instead of silently paying zero royalty. |
+| Approval, collection owner, factory and other untrusted views | `EXTERNAL_QUERY_GAS` = 100,000 | Used by the no-budget `_staticcallBounded` overload so callers cannot pass `gasleft()` as an unbounded budget. |
+
+F-3 routes the listing and bid-sale ownership reads through `_tryOwnerOf`
+instead of calling `ownerOf` directly. A malformed or reverting `ownerOf` makes
+listing creation or bid acceptance revert cleanly (`NotTokenOwner`), it does not
+bypass the ownership check.
+
+F-5 documents why the assembly helpers only use the free-memory pointer as
+immediate scratch space. `_staticcallBounded` is annotated `("memory-safe")`.
+`_staticcallBounded2` uses the identical scratch pattern but is intentionally
+left unannotated: annotating both blocks makes the via-IR optimizer fail with a
+stack-too-deep error in `MarketplaceCore`. The return words are copied to the
+stack before the block ends and no other memory is read afterwards, so the
+unannotated block still has the same memory-safety properties.
+
+## Component ownership migration (O-1)
+
+`Marketplace.transferComponentOwnership(newOwner)` starts a two-step ownership
+transfer on both Core and Bids. The new owner must call `acceptOwnership()` on
+each component. The router owner does not change.
+
+After the migration:
+
+- `core.owner() == newOwner` and `bids.owner() == newOwner`;
+- `newOwner` can call component admin functions directly;
+- router-only entrypoints (`createListing`, `buy`, `withdrawFor`,
+  `executeSaleFromBid`) still revert with `Unauthorized` when called directly
+  on Core or Bids by anyone other than the router/Bids contract;
+- router admin wrappers (`pause`, `updateMarketplaceFee`, `verifyCollection`,
+  `sweepExcessETH`, `transferComponentOwnership`) still require
+  `router.owner()`, so the component owner cannot use them unless it also owns
+  the router.
+
+Operators should verify both `acceptOwnership()` transactions before announcing
+the new admin. `test/AuditO1.t.sol` exercises this flow on the real deployment
+fixture.
+
 ### Verification
 
 After deployment, run:
