@@ -27,7 +27,7 @@ contract BoundedStaticCallHarness is BoundedStaticCall {
         address target,
         bytes memory callData
     ) public view returns (bool success, bool valid, uint256 word) {
-        return _staticcallBoundedRaw(target, callData);
+        (success, valid, word, ) = _staticcallBoundedRaw(target, callData, 50_000);
     }
 
     function exposedIsAddressWord(uint256 word) public pure returns (bool) {

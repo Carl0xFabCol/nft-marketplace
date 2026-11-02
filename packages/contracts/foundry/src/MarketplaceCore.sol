@@ -27,6 +27,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     uint256 public constant MAX_ROYALTY_FEE = 2_000; // 20%
     uint128 public constant MIN_LISTING_PRICE = 1 wei;
     uint256 public constant ROYALTY_QUERY_GAS = 50_000;
+    uint256 public constant OWNER_QUERY_GAS = 30_000;
     
     uint256 public constant MAX_BATCH_SIZE = 50;
     uint256 public constant MAX_LISTING_DURATION = 30 days;
@@ -710,11 +711,18 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         address collection,
         uint256 tokenId
     ) internal view returns (bool valid, bool reverted, address owner) {
-        (bool success, bool wellFormed, uint256 word) = _staticcallBoundedRaw(
+        // F-2/NB-7: ownerOf is an untrusted external view. Require enough gas
+        // to make the query under EIP-150 and fail closed otherwise.
+        if (gasleft() < (OWNER_QUERY_GAS * 64) / 63 + 5_000) {
+            revert InsufficientGas();
+        }
+
+        (bool success, bool wellFormed, uint256 word, bool didRevert) = _staticcallBoundedRaw(
             collection,
-            abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId)
+            abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId),
+            OWNER_QUERY_GAS
         );
-        if (!success) return (false, true, address(0));
+        if (!success) return (false, didRevert, address(0));
         if (!wellFormed || !_isAddressWord(word)) return (false, false, address(0));
         return (true, false, address(uint160(word)));
     }

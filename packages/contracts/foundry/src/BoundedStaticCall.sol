@@ -63,19 +63,22 @@ abstract contract BoundedStaticCall {
 
     function _staticcallBoundedRaw(
         address target,
-        bytes memory callData
-    ) internal view returns (bool success, bool valid, uint256 word) {
+        bytes memory callData,
+        uint256 gasLimit
+    ) internal view returns (bool success, bool valid, uint256 word, bool reverted) {
         assembly {
             let out := mload(0x40)
             success := staticcall(
-                gas(),
+                gasLimit,
                 target,
                 add(callData, 0x20),
                 mload(callData),
                 out,
                 0x20
             )
-            if and(success, eq(returndatasize(), 0x20)) {
+            let size := returndatasize()
+            reverted := and(iszero(success), gt(size, 0))
+            if and(success, eq(size, 0x20)) {
                 valid := 1
                 word := mload(out)
             }
