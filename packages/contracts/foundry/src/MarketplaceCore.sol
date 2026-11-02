@@ -191,9 +191,10 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
             expiresAt > block.timestamp + MAX_LISTING_DURATION
         ) revert InvalidExpiry();
 
-        IERC721 nft = IERC721(collection);
-        address currentOwner = nft.ownerOf(tokenId);
-        if (currentOwner != seller) revert NotTokenOwner();
+        // F-3: ownership is read through the bounded helper; malformed or
+        // reverting ownerOf implementations are rejected as not-the-owner.
+        (bool valid, , address currentOwner) = _tryOwnerOf(collection, tokenId);
+        if (!valid || currentOwner != seller) revert NotTokenOwner();
         if (!_isApproved(collection, seller, tokenId)) revert NotApproved();
 
         Listing memory existing = listings[collection][tokenId];
@@ -408,7 +409,10 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (seller == buyer) revert SelfPurchase();
 
         IERC721 nft = IERC721(collection);
-        if (nft.ownerOf(tokenId) != seller) revert NotTokenOwner();
+        // F-3: never trust a direct ownerOf call; fail closed on malformed or
+        // reverting implementations.
+        (bool valid, , address currentOwner) = _tryOwnerOf(collection, tokenId);
+        if (!valid || currentOwner != seller) revert NotTokenOwner();
         if (!_isApproved(collection, seller, tokenId)) revert NotApproved();
 
         marketplaceFeeAmount = SafeCast.toUint128((uint256(price) * marketplaceFee) / BASIS_POINTS);
