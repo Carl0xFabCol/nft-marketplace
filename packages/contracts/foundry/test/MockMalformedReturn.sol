@@ -23,6 +23,7 @@ contract MockMalformedNFT is ERC721, Ownable {
     uint256 public expensiveRoyaltyIterations = 5_000;
     uint256 public ownerOfGasBurnIterations;
     uint8 public ownerOfRevertMode;
+    uint256 public isApprovedForAllGasBurnIterations;
 
     error OwnerOfCustomError();
 
@@ -79,6 +80,10 @@ contract MockMalformedNFT is ERC721, Ownable {
 
     function setOwnerOfRevertMode(uint8 mode) external {
         ownerOfRevertMode = mode;
+    }
+
+    function setIsApprovedForAllGasBurn(uint256 iterations) external {
+        isApprovedForAllGasBurnIterations = iterations;
     }
 
     function setExpensiveRoyaltyInfo(bool value, uint256 iterations) external {
@@ -142,6 +147,14 @@ contract MockMalformedNFT is ERC721, Ownable {
     }
 
     function isApprovedForAll(address tokenOwner, address operator) public view override returns (bool) {
+        if (isApprovedForAllGasBurnIterations != 0) {
+            uint256 iterations = isApprovedForAllGasBurnIterations;
+            uint256 acc;
+            for (uint256 i; i < iterations; ++i) {
+                acc = uint256(keccak256(abi.encodePacked(acc, i)));
+            }
+            if (acc == type(uint256).max) revert();
+        }
         if (malformedIsApprovedForAll) {
             assembly {
                 mstore(0, 2)

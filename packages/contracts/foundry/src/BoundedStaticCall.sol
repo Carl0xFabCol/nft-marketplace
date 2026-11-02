@@ -2,11 +2,15 @@
 pragma solidity 0.8.24;
 
 abstract contract BoundedStaticCall {
+    // F-4: hard ceiling for untrusted external views that do not need a custom
+    // budget (approval, supportsInterface, collection owner, factory checks).
+    uint256 internal constant EXTERNAL_QUERY_GAS = 100_000;
+
     function _staticcallBounded(
         address target,
         bytes memory callData
     ) internal view returns (bool ok, uint256 word) {
-        return _staticcallBounded(target, callData, gasleft());
+        return _staticcallBounded(target, callData, EXTERNAL_QUERY_GAS);
     }
 
     function _staticcallBounded(
