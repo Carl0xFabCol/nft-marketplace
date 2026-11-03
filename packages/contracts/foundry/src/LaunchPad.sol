@@ -42,6 +42,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
     constructor(address _core) Ownable(msg.sender) {
         if (_core == address(0)) revert InvalidAddress();
         core = IMarketplaceCoreRegistry(_core);
+        launchFee = 10 ether; // Default launch fee
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -62,9 +63,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
         if (royaltyReceiver == address(0)) royaltyReceiver = msg.sender;
 
-        collection = deployCollection(
-            name, symbol, msg.sender, royaltyFee, royaltyReceiver, maxSupply, baseURI, mintPrice, mintDuration
-        );
+        collection = deployCollection(name, symbol, msg.sender, royaltyFee, royaltyReceiver, maxSupply, baseURI, mintPrice, mintDuration);
 
         _collectionsByCreator[msg.sender].push(collection);
         isLaunchpadCollection[collection] = true;
@@ -90,11 +89,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         uint256 mintPrice,
         uint256 mintDuration
     ) internal returns (address collection) {
-        collection = address(
-            new MiColeccion(
-                name, symbol, creator, royaltyFee, royaltyReceiver, maxSupply, baseURI, mintPrice, mintDuration
-            )
-        );
+        collection = address(new Hyperc(name, symbol, creator, royaltyFee, royaltyReceiver, maxSupply, baseURI, mintPrice, mintDuration));
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -108,11 +103,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
     /// @notice Paginated view over a creator's collections.
     /// @dev Reverts if `limit` exceeds MAX_PAGE_SIZE. Offsets past the end and
     ///      a zero limit return an empty page; the final page is clamped.
-    function getCollectionsCreatedBy(
-        address creator,
-        uint256 offset,
-        uint256 limit
-    ) external view returns (address[] memory page) {
+    function getCollectionsCreatedByPage(address creator, uint256 offset, uint256 limit) external view returns (address[] memory page) {
         if (limit > MAX_PAGE_SIZE) revert PageTooLarge();
 
         address[] storage all = _collectionsByCreator[creator];

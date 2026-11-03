@@ -27,8 +27,9 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     uint256 public constant MAX_ROYALTY_FEE = 2_000; // 20%
     uint128 public constant MIN_LISTING_PRICE = 1 wei;
     uint256 public constant ROYALTY_QUERY_GAS = 50_000;
-    uint256 public constant OWNER_QUERY_GAS = 30_000;
-    
+    uint256 public constant OWNER_QUERY_GAS = 150_000;
+    uint256 public constant CLEANUP_OWNER_QUERY_GAS = 30_000;
+
     uint256 public constant MAX_BATCH_SIZE = 50;
     uint256 public constant MAX_LISTING_DURATION = 30 days;
 
@@ -185,11 +186,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         // L-N3: listings must expire and can live for at most 30 days. A zero
         // expiry stays valid only for bids, so an expired listing can never be
         // resurrected as an unlimited-duration listing.
-        if (
-            expiresAt == 0 ||
-            expiresAt <= block.timestamp ||
-            expiresAt > block.timestamp + MAX_LISTING_DURATION
-        ) revert InvalidExpiry();
+        if (expiresAt == 0 || expiresAt <= block.timestamp || expiresAt > block.timestamp + MAX_LISTING_DURATION) revert InvalidExpiry();
 
         // F-3: ownership is read through the bounded helper; malformed or
         // reverting ownerOf implementations are rejected as not-the-owner.
@@ -334,11 +331,11 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
             Listing memory listing = listings[collection][tokenIds[i]];
             if (listing.price == 0) revert ListingNotFound();
             if (listing.expiresAt != 0 && listing.expiresAt <= block.timestamp) revert ListingExpired();
-            
+
             // N-02: check if listing is stale
             (bool valid, , address currentOwner) = _tryOwnerOf(collection, tokenIds[i]);
             if (!valid || currentOwner != listing.seller) revert ListingNotFound();
-            
+
             cached[i] = listing;
             totalPrice += listing.price;
             unchecked {
@@ -367,11 +364,11 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         uint16 effectiveFee = listing.feeBps < marketplaceFee ? listing.feeBps : marketplaceFee;
         uint128 marketplaceFeeAmount = SafeCast.toUint128((uint256(listing.price) * effectiveFee) / BASIS_POINTS);
         (address royaltyReceiver, uint256 royaltyAmount) = _getRoyalty(collection, tokenId, uint256(listing.price));
-        
+
         // N-03: cap royalty at the snapshot value
         uint256 snapshotRoyalty = (uint256(listing.price) * listing.royaltyBps) / BASIS_POINTS;
         if (royaltyAmount > snapshotRoyalty) royaltyAmount = snapshotRoyalty;
-        
+
         if (uint256(marketplaceFeeAmount) + royaltyAmount > listing.price) revert RoyaltyExceedsPrice();
         uint128 sellerProceeds = listing.price - marketplaceFeeAmount - SafeCast.toUint128(royaltyAmount);
 
@@ -449,12 +446,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
      *      collection they actually deployed and whose on-chain owner matches
      *      the factory-supplied creator.
      */
-    function registerCollectionFromLaunchpad(
-        address collection,
-        uint16 royaltyFee,
-        address royaltyReceiver,
-        address creator
-    ) external onlyLaunchpad {
+    function registerCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyLaunchpad {
         _validateNewCollection(collection, royaltyFee, royaltyReceiver);
 
         if (creator == address(0)) revert InvalidAddress();
@@ -474,12 +466,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
      * @dev H-02: the router is the only path for arbitrary collections. The
      *      creator is derived from the collection owner when available.
      */
-    function registerCollectionFromRouter(
-        address collection,
-        uint16 royaltyFee,
-        address royaltyReceiver,
-        address creator
-    ) external onlyRouter {
+    function registerCollectionFromRouter(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyRouter {
         _validateNewCollection(collection, royaltyFee, royaltyReceiver);
 
         (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
@@ -503,38 +490,22 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     }
 
     function _storeCollection(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) internal {
-        collections[collection] = CollectionInfo({
-            royaltyReceiver: royaltyReceiver,
-            royaltyFee: royaltyFee,
-            totalVolume: 0,
-            totalSales: 0,
-            isVerified: false,
-            exists: true
-        });
+        collections[collection] = CollectionInfo({royaltyReceiver: royaltyReceiver, royaltyFee: royaltyFee, totalVolume: 0, totalSales: 0, isVerified: false, exists: true});
 
         emit CollectionRegistered(collection, creator, royaltyFee, false);
     }
 
     function _supportsERC721(address collection) internal view returns (bool ok165, bool ok721) {
-        (bool success, uint256 word) = _staticcallBounded(
-            collection,
-            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IERC165).interfaceId)
-        );
+        (bool success, uint256 word) = _staticcallBounded(collection, abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IERC165).interfaceId));
         if (!success || word != 1) return (false, false);
         ok165 = true;
 
-        (success, word) = _staticcallBounded(
-            collection,
-            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IERC721).interfaceId)
-        );
+        (success, word) = _staticcallBounded(collection, abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IERC721).interfaceId));
         ok721 = success && word == 1;
     }
 
     function _isFactoryCollection(address factory, address collection) internal view returns (bool) {
-        (bool success, uint256 word) = _staticcallBounded(
-            factory,
-            abi.encodeWithSelector(IFactory.isCollection.selector, collection)
-        );
+        (bool success, uint256 word) = _staticcallBounded(factory, abi.encodeWithSelector(IFactory.isCollection.selector, collection));
         return success && word == 1;
     }
 
@@ -551,18 +522,12 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         emit CollectionRoyaltyUpdated(collection, royaltyReceiver, royaltyFee);
     }
 
-
-
     // ═══════════════════════════════════════════════════════════════════════════════
     // ADMIN FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════════════
 
     // Admin recovery path for a bad/non-ownable registration.
-    function emergencyUpdateCollectionRoyalty(
-        address collection,
-        address royaltyReceiver,
-        uint16 royaltyFee
-    ) external onlyOwner {
+    function emergencyUpdateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external onlyOwner {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
         if (royaltyReceiver == address(0) && royaltyFee != 0) revert InvalidAddress();
@@ -692,54 +657,40 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     }
 
     function _isApproved(address collection, address tokenOwner, uint256 tokenId) internal view returns (bool) {
-        (bool success, uint256 approvedWord) = _staticcallBounded(
-            collection,
-            abi.encodeWithSelector(IERC721.getApproved.selector, tokenId)
-        );
-        if (
-            success &&
-            _isAddressWord(approvedWord) &&
-            address(uint160(approvedWord)) == address(this)
-        ) {
+        (bool success, uint256 approvedWord) = _staticcallBounded(collection, abi.encodeWithSelector(IERC721.getApproved.selector, tokenId));
+        if (success && _isAddressWord(approvedWord) && address(uint160(approvedWord)) == address(this)) {
             return true;
         }
 
-        (success, approvedWord) = _staticcallBounded(
-            collection,
-            abi.encodeWithSelector(IERC721.isApprovedForAll.selector, tokenOwner, address(this))
-        );
+        (success, approvedWord) = _staticcallBounded(collection, abi.encodeWithSelector(IERC721.isApprovedForAll.selector, tokenOwner, address(this)));
         return success && approvedWord == 1;
     }
 
-    function _tryOwnerOf(
-        address collection,
-        uint256 tokenId
-    ) internal view returns (bool valid, bool reverted, address owner) {
-        // F-2/NB-7: ownerOf is an untrusted external view. Require enough gas
-        // to make the query under EIP-150 and fail closed otherwise.
-        if (gasleft() < (OWNER_QUERY_GAS * 64) / 63 + 5_000) {
+    function _tryOwnerOf(address collection, uint256 tokenId) internal view returns (bool valid, bool reverted, address owner) {
+        return _tryOwnerOfWithGas(collection, tokenId, OWNER_QUERY_GAS);
+    }
+
+    function _tryOwnerOfWithGas(address collection, uint256 tokenId, uint256 queryGas) internal view returns (bool valid, bool reverted, address owner) {
+        // Account for EIP-150 and leave a small execution buffer.
+        if (gasleft() < (queryGas * 64) / 63 + 5_000) {
             revert InsufficientGas();
         }
 
-        (uint256 status, uint256 word) = _staticcallBoundedRaw(
-            collection,
-            abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId),
-            OWNER_QUERY_GAS
-        );
-        if ((status & 1) == 0) return (false, (status & 4) != 0, address(0));
-        if ((status & 2) == 0 || !_isAddressWord(word)) return (false, false, address(0));
+        (uint256 status, uint256 word) = _staticcallBoundedRaw(collection, abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId), queryGas);
+
+        if ((status & 1) == 0) {
+            return (false, (status & 4) != 0, address(0));
+        }
+
+        if ((status & 2) == 0 || !_isAddressWord(word)) {
+            return (false, false, address(0));
+        }
+
         return (true, false, address(uint160(word)));
     }
 
-    function _tryCollectionOwner(address collection)
-        internal
-        view
-        returns (bool hasOwner, address collectionOwner)
-    {
-        (bool success, uint256 word) = _staticcallBounded(
-            collection,
-            abi.encodeWithSelector(IERC173.owner.selector)
-        );
+    function _tryCollectionOwner(address collection) internal view returns (bool hasOwner, address collectionOwner) {
+        (bool success, uint256 word) = _staticcallBounded(collection, abi.encodeWithSelector(IERC173.owner.selector));
 
         if (success && _isAddressWord(word)) {
             collectionOwner = address(uint160(word));
@@ -757,21 +708,13 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         // M-04: query ERC-2981 defensively. A malicious collection must not be
         // able to grief or drain a sale via unbounded gas/revert/receiver tricks.
         _requireRoyaltyQueryGas();
-        (bool success, uint256 word) = _staticcallBounded(
-            collection,
-            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IMarketplaceRoyalty).interfaceId),
-            ROYALTY_QUERY_GAS
-        );
+        (bool success, uint256 word) = _staticcallBounded(collection, abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IMarketplaceRoyalty).interfaceId), ROYALTY_QUERY_GAS);
 
         if (success && word == 1) {
             _requireRoyaltyQueryGas();
             uint256 receiverWord;
             uint256 amountWord;
-            (success, receiverWord, amountWord) = _staticcallBounded2(
-                collection,
-                abi.encodeWithSelector(IMarketplaceRoyalty.royaltyInfo.selector, tokenId, salePrice),
-                ROYALTY_QUERY_GAS
-            );
+            (success, receiverWord, amountWord) = _staticcallBounded2(collection, abi.encodeWithSelector(IMarketplaceRoyalty.royaltyInfo.selector, tokenId, salePrice), ROYALTY_QUERY_GAS);
 
             if (success && _isAddressWord(receiverWord)) {
                 address r = address(uint160(receiverWord));
@@ -807,7 +750,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
 
         bool expired = listing.expiresAt != 0 && listing.expiresAt <= block.timestamp;
         if (!expired) {
-            (bool valid, bool reverted, address currentOwner) = _tryOwnerOf(collection, tokenId);
+            (bool valid, bool reverted, address currentOwner) = _tryOwnerOfWithGas(collection, tokenId, CLEANUP_OWNER_QUERY_GAS);
             if (!reverted) {
                 if (!valid) revert InvalidCall();
                 if (currentOwner == listing.seller) revert InvalidCall();

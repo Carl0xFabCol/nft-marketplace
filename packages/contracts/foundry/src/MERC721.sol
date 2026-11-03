@@ -8,12 +8,12 @@ import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
- * @title MiColeccion
+ * @title Hyperc
  * @notice Mintable ERC721 collection with configurable supply, royalties and metadata.
  * @dev Deployed by the LaunchPad factory. The creator becomes the owner and can mint,
  *      manage the base URI and update royalties. Royalties are exposed via ERC-2981.
  */
-contract MiColeccion is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, ReentrancyGuard {
+contract Hyperc is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, ReentrancyGuard {
     /// @notice Maximum number of tokens that can ever be minted (0 = unlimited).
     uint256 public maxSupply;
 
