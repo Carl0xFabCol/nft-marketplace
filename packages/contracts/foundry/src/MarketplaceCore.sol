@@ -208,14 +208,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         }
 
         // N-03: snapshot royalty at listing time
-        (, uint256 royaltyAmount) = _getRoyalty(collection, tokenId, uint256(price));
-        uint16 royaltyBps = 0;
-        if (royaltyAmount > 0) {
-            // ceilDiv to round up, capped at MAX_ROYALTY_FEE
-            uint256 computedBps = (royaltyAmount * BASIS_POINTS + price - 1) / price;
-            if (computedBps > MAX_ROYALTY_FEE) computedBps = MAX_ROYALTY_FEE;
-            royaltyBps = SafeCast.toUint16(computedBps);
-        }
+        uint16 royaltyBps = _royaltyBpsFor(collection, tokenId, uint256(price));
 
         listings[collection][tokenId] = Listing({
             seller: seller,
@@ -263,6 +256,9 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (newPrice < MIN_LISTING_PRICE) revert InvalidPrice();
 
         listing.price = newPrice;
+        // H-01: the royalty snapshot must track the new price, otherwise a
+        // 1-wei listing followed by a price update evades royalties entirely.
+        listing.royaltyBps = _royaltyBpsFor(collection, tokenId, uint256(newPrice));
         emit ListingUpdated(collection, tokenId, newPrice);
     }
 
@@ -702,6 +698,13 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (gasleft() < (ROYALTY_QUERY_GAS * 64) / 63 + 5_000) {
             revert InsufficientGas();
         }
+    }
+
+    function _royaltyBpsFor(address collection, uint256 tokenId, uint256 price) internal view returns (uint16) {
+        (, uint256 amt) = _getRoyalty(collection, tokenId, price);
+        if (amt == 0) return 0;
+        uint256 bps = (amt * BASIS_POINTS + price - 1) / price;
+        return SafeCast.toUint16(bps > MAX_ROYALTY_FEE ? MAX_ROYALTY_FEE : bps);
     }
 
     function _getRoyalty(address collection, uint256 tokenId, uint256 salePrice) internal view returns (address receiver, uint256 amount) {
