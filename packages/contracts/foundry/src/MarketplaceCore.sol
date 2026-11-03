@@ -57,6 +57,11 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         bool exists;
     }
 
+    enum RoyaltySource {
+        ERC2981,
+        Override
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════════
     // STATE VARIABLES
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -70,6 +75,10 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
 
     mapping(address => CollectionInfo) public collections;
     mapping(address => mapping(uint256 => Listing)) public listings;
+
+    // M-04: once governance/creator explicitly updates a collection's royalty,
+    // Core values take precedence over the collection's ERC-2981 response.
+    mapping(address => bool) public royaltyOverridden;
 
     // N-01: immutable router address, set once.
     address public router;
@@ -103,6 +112,8 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     event BidsContractUpdated(address indexed oldBids, address indexed newBids);
     event RouterUpdated(address indexed oldRouter, address indexed newRouter);
     event CollectionRoyaltyUpdated(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee);
+    event RoyaltySourceUsed(address indexed collection, uint256 indexed tokenId, uint256 price, RoyaltySource source);
+    event RoyaltyOverrideCleared(address indexed collection);
     event Withdrawal(address indexed account, uint256 amount);
     event ExcessETHSwept(address indexed recipient, uint256 amount);
 
@@ -515,6 +526,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
 
         collections[collection].royaltyReceiver = royaltyReceiver;
         collections[collection].royaltyFee = royaltyFee;
+        royaltyOverridden[collection] = true;
         emit CollectionRoyaltyUpdated(collection, royaltyReceiver, royaltyFee);
     }
 
@@ -530,7 +542,15 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
 
         collections[collection].royaltyReceiver = royaltyReceiver;
         collections[collection].royaltyFee = royaltyFee;
+        royaltyOverridden[collection] = true;
         emit CollectionRoyaltyUpdated(collection, royaltyReceiver, royaltyFee);
+    }
+
+    /// @notice M-04: undo a Core royalty override so ERC-2981 is used again.
+    function clearRoyaltyOverride(address collection) external onlyOwner {
+        if (!collections[collection].exists) revert CollectionNotRegistered();
+        royaltyOverridden[collection] = false;
+        emit RoyaltyOverrideCleared(collection);
     }
 
     function verifyCollection(address collection) external onlyOwner {
@@ -700,14 +720,26 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         }
     }
 
-    function _royaltyBpsFor(address collection, uint256 tokenId, uint256 price) internal view returns (uint16) {
+    function _royaltyBpsFor(address collection, uint256 tokenId, uint256 price) internal returns (uint16) {
         (, uint256 amt) = _getRoyalty(collection, tokenId, price);
         if (amt == 0) return 0;
         uint256 bps = (amt * BASIS_POINTS + price - 1) / price;
         return SafeCast.toUint16(bps > MAX_ROYALTY_FEE ? MAX_ROYALTY_FEE : bps);
     }
 
-    function _getRoyalty(address collection, uint256 tokenId, uint256 salePrice) internal view returns (address receiver, uint256 amount) {
+    function _getRoyalty(address collection, uint256 tokenId, uint256 salePrice) internal returns (address receiver, uint256 amount) {
+        // M-04: if Core values were explicitly set, they win over ERC-2981.
+        if (royaltyOverridden[collection]) {
+            CollectionInfo memory overrideInfo = collections[collection];
+            receiver = overrideInfo.royaltyReceiver;
+            amount = (salePrice * overrideInfo.royaltyFee) / BASIS_POINTS;
+            if (receiver == address(0)) {
+                amount = 0;
+            }
+            emit RoyaltySourceUsed(collection, tokenId, salePrice, RoyaltySource.Override);
+            return (receiver, amount);
+        }
+
         // M-04: query ERC-2981 defensively. A malicious collection must not be
         // able to grief or drain a sale via unbounded gas/revert/receiver tricks.
         _requireRoyaltyQueryGas();
@@ -723,6 +755,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
                 address r = address(uint160(receiverWord));
                 uint256 maxRoyalty = (salePrice * MAX_ROYALTY_FEE) / BASIS_POINTS;
                 if (r != address(0) && amountWord <= maxRoyalty) {
+                    emit RoyaltySourceUsed(collection, tokenId, salePrice, RoyaltySource.ERC2981);
                     return (r, amountWord);
                 }
             }
@@ -734,6 +767,7 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         if (receiver == address(0)) {
             amount = 0;
         }
+        emit RoyaltySourceUsed(collection, tokenId, salePrice, RoyaltySource.ERC2981);
     }
 
     receive() external payable {}

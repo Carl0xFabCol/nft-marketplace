@@ -63,6 +63,9 @@ interface IMarketplaceCore {
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external;
 
+    function clearRoyaltyOverride(address collection) external;
+    function royaltyOverridden(address collection) external view returns (bool);
+
     function verifyCollection(address collection) external;
     function unverifyCollection(address collection) external;
 
@@ -382,6 +385,15 @@ contract Marketplace is Ownable2Step {
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external {
         core.updateCollectionRoyalty(collection, royaltyReceiver, royaltyFee, msg.sender);
+    }
+
+    /// @notice M-04: clear a Core royalty override so ERC-2981 is used again.
+    function clearRoyaltyOverride(address collection) external onlyOwner {
+        core.clearRoyaltyOverride(collection);
+    }
+
+    function royaltyOverridden(address collection) external view returns (bool) {
+        return core.royaltyOverridden(collection);
     }
 
     function verifyCollection(address collection) external onlyOwner {
