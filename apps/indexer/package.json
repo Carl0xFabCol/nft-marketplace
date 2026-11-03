@@ -19,7 +19,6 @@
     "@marketplace/database": "workspace:*",
     "@marketplace/shared": "workspace:*",
     "@supabase/supabase-js": "^2.90.1",
-    "alchemy-sdk": "^3.6.5",
     "dotenv": "^17.2.3",
     "p-map": "^7.0.5",
     "pino": "^10.3.1",
@@ -28,7 +27,6 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.7",
-    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
