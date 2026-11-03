@@ -365,32 +365,39 @@ contract MarketplaceHandler is Test {
         if (!_ensureListing(collection, tokenA, priceA, 0)) return;
         if (!_ensureListing(collection, tokenB, priceB, 0)) return;
 
+        (uint256 feeBefore, uint256 royaltyBefore, uint256 sellerBefore) = _snapshot();
+
+        (bool ok, uint256 totalPrice, address buyer) = _tryBuyBatch(collection, tokenA, tokenB, actorSeed);
+        if (!ok) return;
+        expectedOwner[collection][tokenA] = buyer;
+        expectedOwner[collection][tokenB] = buyer;
+        _recordSale(totalPrice, feeBefore, royaltyBefore, sellerBefore);
+    }
+
+    function _tryBuyBatch(
+        address collection,
+        uint256 tokenA,
+        uint256 tokenB,
+        uint256 actorSeed
+    ) internal returns (bool ok, uint256 totalPrice, address buyer) {
         (address sellerA, uint128 liveA, , , , ) = core.listings(collection, tokenA);
         (address sellerB, uint128 liveB, , , , ) = core.listings(collection, tokenB);
         if (liveA == 0 || liveB == 0 || sellerA != setup.seller() || sellerB != setup.seller()) {
-            return;
+            return (false, 0, address(0));
         }
 
-        address buyer = actorSeed % 2 == 0 ? setup.buyer() : setup.unauthorized();
-        uint256 totalPrice = uint256(liveA) + liveB;
+        buyer = actorSeed % 2 == 0 ? setup.buyer() : setup.unauthorized();
+        totalPrice = uint256(liveA) + liveB;
         vm.deal(buyer, totalPrice);
 
         uint256[] memory ids = new uint256[](2);
         ids[0] = tokenA;
         ids[1] = tokenB;
 
-        (uint256 feeBefore, uint256 royaltyBefore, uint256 sellerBefore) = _snapshot();
-
-        bool ok;
         vm.prank(buyer);
         try marketplace.buyBatch{value: totalPrice}(collection, ids) {
             ok = true;
         } catch {}
-
-        if (!ok) return;
-        expectedOwner[collection][tokenA] = buyer;
-        expectedOwner[collection][tokenB] = buyer;
-        _recordSale(totalPrice, feeBefore, royaltyBefore, sellerBefore);
     }
 
 
@@ -530,36 +537,70 @@ contract MarketplaceHandler is Test {
         (, , uint32 liveQuantity, ) = bids.collectionBids(collection, bidder);
         if (liveQuantity == 0) return;
 
+        _acceptCollectionBid(collection, bidder, bidPrice, liveQuantity, partialSeed);
+    }
+
+    function _acceptCollectionBid(
+        address collection,
+        address bidder,
+        uint128 bidPrice,
+        uint32 liveQuantity,
+        uint256 partialSeed
+    ) internal {
         address seller = _sellerWithTokens(collection, bidder);
         if (seller == address(0)) return;
 
+        uint256[] memory ids = _prepareCollectionBidIds(collection, seller, liveQuantity, partialSeed);
+        if (ids.length == 0) return;
+
+        _executeAndRecordCollectionBid(collection, bidder, seller, ids, uint256(bidPrice) * ids.length);
+    }
+
+    function _prepareCollectionBidIds(
+        address collection,
+        address seller,
+        uint32 liveQuantity,
+        uint256 partialSeed
+    ) internal returns (uint256[] memory ids) {
         uint256[] memory owned = _tokensOwnedBy(collection, seller, liveQuantity);
-        if (owned.length == 0) return;
+        if (owned.length == 0) return ids;
 
         uint256 requested = partialSeed % 2 == 0 ? 1 : owned.length;
-        if (requested == 0) return;
         if (requested > owned.length) requested = owned.length;
 
-        uint256[] memory ids = new uint256[](requested);
+        ids = new uint256[](requested);
         for (uint256 i; i < requested; ++i) {
             ids[i] = owned[i];
-            if (!_prepareToken(collection, ids[i], seller)) return;
+            if (!_prepareToken(collection, ids[i], seller)) return new uint256[](0);
         }
+    }
 
-        uint256 totalPrice = uint256(bidPrice) * requested;
+    function _executeAndRecordCollectionBid(
+        address collection,
+        address bidder,
+        address seller,
+        uint256[] memory ids,
+        uint256 totalPrice
+    ) internal {
         (uint256 feeBefore, uint256 royaltyBefore, uint256 sellerBefore) = _snapshot();
 
-        bool ok;
-        vm.prank(seller);
-        try marketplace.acceptCollectionBid(collection, bidder, ids, 0, 0) {
-            ok = true;
-        } catch {}
-
-        if (!ok) return;
+        if (!_executeAcceptCollectionBid(collection, bidder, seller, ids)) return;
         for (uint256 i; i < ids.length; ++i) {
             expectedOwner[collection][ids[i]] = bidder;
         }
         _recordSale(totalPrice, feeBefore, royaltyBefore, sellerBefore);
+    }
+
+    function _executeAcceptCollectionBid(
+        address collection,
+        address bidder,
+        address seller,
+        uint256[] memory ids
+    ) internal returns (bool ok) {
+        vm.prank(seller);
+        try marketplace.acceptCollectionBid(collection, bidder, ids, 0, 0) {
+            ok = true;
+        } catch {}
     }
 
 

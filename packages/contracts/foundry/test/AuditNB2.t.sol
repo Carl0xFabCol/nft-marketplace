@@ -3,7 +3,7 @@ pragma solidity 0.8.24;
 
 import "./TestSetup.sol";
 import {LaunchPad, IMarketplaceCoreRegistry} from "../src/LaunchPad.sol";
-import {MiColeccion} from "../src/MERC721.sol";
+import {Hyperc as MiColeccion} from "../src/MERC721.sol";
 import {VerifyDeployment} from "../script/VerifyDeployment.s.sol";
 
 contract MismatchedLaunchpad {
@@ -54,6 +54,9 @@ contract AuditNB2Test is TestSetup {
 
         vm.prank(owner);
         launchPad = new LaunchPad(address(core));
+
+        vm.prank(owner);
+        launchPad.setLaunchFee(0);
 
         vm.prank(owner);
         marketplace.setAuthorizedLaunchpad(address(launchPad), true);

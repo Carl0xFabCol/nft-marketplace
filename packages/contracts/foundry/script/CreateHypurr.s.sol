@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../src/MERC721.sol";
+import {Hyperc as MiColeccion} from "../src/MERC721.sol";
 import "../src/Marketplace.sol";
 
 contract CreateHypurr is Script {

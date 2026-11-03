@@ -13,11 +13,12 @@ fs_permissions = [
 optimizer = true
 optimizer_runs = 200
 
-# Enable via-ir to solve "Stack too deep" errors
-via_ir = true
+# I-02: via-IR causes a solc 0.8.24 Yul stack limit in MarketplaceCore.
+# LaunchPad/InvariantsS3 stack pressure is resolved by small refactors instead.
+via_ir = false
 
-# Optional: Additional settings
-# evm_version = "paris"
+# OZ Contracts 5.5.0 uses MCOPY in utils/Bytes.sol, so Cancun is required.
+evm_version = "cancun"
 
 [profile.production]
 optimizer = true

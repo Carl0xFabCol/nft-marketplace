@@ -15,6 +15,9 @@ contract AuditPaginationTest is TestSetup {
         launchPad = new LaunchPad(address(core));
 
         vm.prank(owner);
+        launchPad.setLaunchFee(0);
+
+        vm.prank(owner);
         marketplace.setAuthorizedLaunchpad(address(launchPad), true);
 
         for (uint256 i; i < 5; ++i) {

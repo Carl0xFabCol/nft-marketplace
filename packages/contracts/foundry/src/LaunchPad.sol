@@ -39,6 +39,18 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
     error NoFees();
     error PageTooLarge();
 
+    struct DeployParams {
+        string name;
+        string symbol;
+        address creator;
+        uint16 royaltyFee;
+        address royaltyReceiver;
+        uint256 maxSupply;
+        string baseURI;
+        uint256 mintPrice;
+        uint256 mintDuration;
+    }
+
     constructor(address _core) Ownable(msg.sender) {
         if (_core == address(0)) revert InvalidAddress();
         core = IMarketplaceCoreRegistry(_core);
@@ -63,7 +75,19 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
         if (royaltyReceiver == address(0)) royaltyReceiver = msg.sender;
 
-        collection = deployCollection(name, symbol, msg.sender, royaltyFee, royaltyReceiver, maxSupply, baseURI, mintPrice, mintDuration);
+        collection = deployCollection(
+            DeployParams({
+                name: name,
+                symbol: symbol,
+                creator: msg.sender,
+                royaltyFee: royaltyFee,
+                royaltyReceiver: royaltyReceiver,
+                maxSupply: maxSupply,
+                baseURI: baseURI,
+                mintPrice: mintPrice,
+                mintDuration: mintDuration
+            })
+        );
 
         _collectionsByCreator[msg.sender].push(collection);
         isLaunchpadCollection[collection] = true;
@@ -78,18 +102,20 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         emit CollectionRegisteredOnMarketplace(collection, royaltyFee, royaltyReceiver);
     }
 
-    function deployCollection(
-        string calldata name,
-        string calldata symbol,
-        address creator,
-        uint16 royaltyFee,
-        address royaltyReceiver,
-        uint256 maxSupply,
-        string calldata baseURI,
-        uint256 mintPrice,
-        uint256 mintDuration
-    ) internal returns (address collection) {
-        collection = address(new Hyperc(name, symbol, creator, royaltyFee, royaltyReceiver, maxSupply, baseURI, mintPrice, mintDuration));
+    function deployCollection(DeployParams memory p) internal returns (address collection) {
+        collection = address(
+            new Hyperc(
+                p.name,
+                p.symbol,
+                p.creator,
+                p.royaltyFee,
+                p.royaltyReceiver,
+                p.maxSupply,
+                p.baseURI,
+                p.mintPrice,
+                p.mintDuration
+            )
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -98,6 +124,20 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
 
     function getCollectionsCreatedBy(address creator) external view returns (address[] memory) {
         return _collectionsByCreator[creator];
+    }
+
+    function getCollectionsCreatedBy(address creator, uint256 offset, uint256 limit) external view returns (address[] memory page) {
+        if (limit > MAX_PAGE_SIZE) revert PageTooLarge();
+
+        address[] storage all = _collectionsByCreator[creator];
+        uint256 length = all.length;
+        if (offset >= length || limit == 0) return new address[](0);
+
+        uint256 end = length - offset < limit ? length : offset + limit;
+        page = new address[](end - offset);
+        for (uint256 i = offset; i < end; ++i) {
+            page[i - offset] = all[i];
+        }
     }
 
     /// @notice Paginated view over a creator's collections.

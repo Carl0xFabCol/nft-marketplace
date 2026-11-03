@@ -6,11 +6,16 @@ abstract contract BoundedStaticCall {
     // budget (approval, supportsInterface, collection owner, factory checks).
     uint256 internal constant EXTERNAL_QUERY_GAS = 100_000;
 
+    // L-01: bounded helpers must never be called when the EIP-150 63/64 rule
+    // would leave the callee with less gas than requested. Fail closed.
+    error BoundedStaticCallInsufficientGas();
+
     function _staticcallBounded(address target, bytes memory callData) internal view returns (bool ok, uint256 word) {
         return _staticcallBounded(target, callData, EXTERNAL_QUERY_GAS);
     }
 
     function _staticcallBounded(address target, bytes memory callData, uint256 gasLimit) internal view returns (bool ok, uint256 word) {
+        _requireBoundedGas(gasLimit);
         assembly ("memory-safe") {
             // Memory-safe: out is the free memory pointer at 0x40. Only that
             // scratch area receives the callee's 32-byte return data, and the
@@ -22,6 +27,28 @@ abstract contract BoundedStaticCall {
             if ok {
                 word := mload(out)
             }
+        }
+    }
+
+    function _staticcallBounded2(address target, bytes memory callData, uint256 gasLimit) internal view returns (bool ok, uint256 word0, uint256 word1) {
+        _requireBoundedGas(gasLimit);
+        (bool success, bytes memory returnData) = target.staticcall{gas: gasLimit}(callData);
+        // Exact size check: address (32 bytes) + uint256 (32 bytes).
+        if (!success || returnData.length != 0x40) {
+            return (false, 0, 0);
+        }
+        assembly ("memory-safe") {
+            word0 := mload(add(returnData, 0x20))
+            word1 := mload(add(returnData, 0x40))
+        }
+        ok = true;
+    }
+
+    function _requireBoundedGas(uint256 gasLimit) internal view {
+        // EIP-150: account for the 63/64 gas forwarding rule plus a small
+        // execution buffer. This mirrors _tryOwnerOfWithGas / _getRoyalty.
+        if (gasleft() < (gasLimit * 64) / 63 + 5_000) {
+            revert BoundedStaticCallInsufficientGas();
         }
     }
 

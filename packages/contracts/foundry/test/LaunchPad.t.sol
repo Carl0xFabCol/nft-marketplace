@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "./TestSetup.sol";
 import {LaunchPad} from "../src/LaunchPad.sol";
-import {MiColeccion} from "../src/MERC721.sol";
+import {Hyperc as MiColeccion} from "../src/MERC721.sol";
 import {MarketplaceCore} from "../src/MarketplaceCore.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
@@ -24,6 +24,9 @@ contract LaunchPadTest is TestSetup {
 
         vm.prank(owner);
         launchPad = new LaunchPad(address(core));
+
+        vm.prank(owner);
+        launchPad.setLaunchFee(0);
 
         vm.prank(owner);
         marketplace.setAuthorizedLaunchpad(address(launchPad), true);
