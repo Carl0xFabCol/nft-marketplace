@@ -33,6 +33,10 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     uint256 public constant MAX_BATCH_SIZE = 50;
     uint256 public constant MAX_LISTING_DURATION = 30 days;
 
+    // M-03: delay for owner-initiated registrations and emergency royalty
+    // changes. Users can observe the pending action before it takes effect.
+    uint256 public constant REGISTRATION_DELAY = 48 hours;
+
     // ═══════════════════════════════════════════════════════════════════════════════
     // STRUCTS
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -62,6 +66,21 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         Override
     }
 
+    struct PendingRegistration {
+        uint16 royaltyFee;
+        address royaltyReceiver;
+        address creator;
+        uint64 executableAt;
+        bool exists;
+    }
+
+    struct PendingRoyaltyUpdate {
+        address royaltyReceiver;
+        uint16 royaltyFee;
+        uint64 executableAt;
+        bool exists;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════════
     // STATE VARIABLES
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -79,6 +98,10 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     // M-04: once governance/creator explicitly updates a collection's royalty,
     // Core values take precedence over the collection's ERC-2981 response.
     mapping(address => bool) public royaltyOverridden;
+
+    // M-03: queued owner actions that only become effective after a delay.
+    mapping(address => PendingRegistration) public pendingRegistrations;
+    mapping(address => PendingRoyaltyUpdate) public pendingEmergencyRoyaltyUpdates;
 
     // N-01: immutable router address, set once.
     address public router;
@@ -114,6 +137,10 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     event CollectionRoyaltyUpdated(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee);
     event RoyaltySourceUsed(address indexed collection, uint256 indexed tokenId, uint256 price, RoyaltySource source);
     event RoyaltyOverrideCleared(address indexed collection);
+    event CollectionRegistrationProposed(address indexed collection, address indexed creator, uint16 royaltyFee, uint64 executableAt);
+    event CollectionRegistrationExecuted(address indexed collection, address indexed creator);
+    event EmergencyRoyaltyUpdateProposed(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee, uint64 executableAt);
+    event EmergencyRoyaltyUpdateExecuted(address indexed collection, address indexed royaltyReceiver, uint16 royaltyFee);
     event Withdrawal(address indexed account, uint256 amount);
     event ExcessETHSwept(address indexed recipient, uint256 amount);
 
@@ -150,6 +177,10 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     error ExpiryTooLarge();
     error InvalidExpiry();
     error InsufficientGas();
+    error NoPendingRegistration();
+    error RegistrationNotReady();
+    error NoPendingRoyaltyUpdate();
+    error RoyaltyUpdateNotReady();
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // MODIFIERS
@@ -448,12 +479,19 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     // ═══════════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Registers a collection deployed by an authorized launchpad.
-     * @dev H-02: launchpads get their own entrypoint. They can only register a
-     *      collection they actually deployed and whose on-chain owner matches
-     *      the factory-supplied creator.
+     * @notice Proposes a collection deployed by an authorized launchpad.
+     * @dev M-03: registration is delayed so users can observe it. The legacy
+     *      name remains as an alias that schedules the same proposal.
      */
     function registerCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyLaunchpad {
+        _proposeRegisterCollectionFromLaunchpad(collection, royaltyFee, royaltyReceiver, creator);
+    }
+
+    function proposeRegisterCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyLaunchpad {
+        _proposeRegisterCollectionFromLaunchpad(collection, royaltyFee, royaltyReceiver, creator);
+    }
+
+    function _proposeRegisterCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) internal {
         _validateNewCollection(collection, royaltyFee, royaltyReceiver);
 
         if (creator == address(0)) revert InvalidAddress();
@@ -465,15 +503,23 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         // explicit factory allow-list if a launchpad has a different surface).
         if (!_isFactoryCollection(msg.sender, collection)) revert InvalidCollection();
 
-        _storeCollection(collection, royaltyFee, royaltyReceiver, creator);
+        _proposeRegistration(collection, royaltyFee, royaltyReceiver, creator);
     }
 
     /**
-     * @notice Registers an externally-deployed collection via the router.
-     * @dev H-02: the router is the only path for arbitrary collections. The
-     *      creator is derived from the collection owner when available.
+     * @notice Proposes an externally-deployed collection via the router.
+     * @dev M-03: the legacy name remains as an alias that schedules the same
+     *      delayed registration.
      */
     function registerCollectionFromRouter(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyRouter {
+        _proposeRegisterCollectionFromRouter(collection, royaltyFee, royaltyReceiver, creator);
+    }
+
+    function proposeRegisterCollectionFromRouter(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyRouter {
+        _proposeRegisterCollectionFromRouter(collection, royaltyFee, royaltyReceiver, creator);
+    }
+
+    function _proposeRegisterCollectionFromRouter(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) internal {
         _validateNewCollection(collection, royaltyFee, royaltyReceiver);
 
         (bool hasOwner, address collectionOwner) = _tryCollectionOwner(collection);
@@ -483,7 +529,32 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
             creator = owner();
         }
 
-        _storeCollection(collection, royaltyFee, royaltyReceiver, creator);
+        _proposeRegistration(collection, royaltyFee, royaltyReceiver, creator);
+    }
+
+    function _proposeRegistration(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) internal {
+        uint64 executableAt = SafeCast.toUint64(block.timestamp + REGISTRATION_DELAY);
+        pendingRegistrations[collection] = PendingRegistration({
+            royaltyFee: royaltyFee,
+            royaltyReceiver: royaltyReceiver,
+            creator: creator,
+            executableAt: executableAt,
+            exists: true
+        });
+        emit CollectionRegistrationProposed(collection, creator, royaltyFee, executableAt);
+    }
+
+    /// @notice Executes a queued registration after REGISTRATION_DELAY.
+    function executeRegisterCollection(address collection) external {
+        PendingRegistration memory pending = pendingRegistrations[collection];
+        if (!pending.exists) revert NoPendingRegistration();
+        if (block.timestamp < pending.executableAt) revert RegistrationNotReady();
+
+        _validateNewCollection(collection, pending.royaltyFee, pending.royaltyReceiver);
+
+        delete pendingRegistrations[collection];
+        _storeCollection(collection, pending.royaltyFee, pending.royaltyReceiver, pending.creator);
+        emit CollectionRegistrationExecuted(collection, pending.creator);
     }
 
     function _validateNewCollection(address collection, uint16 royaltyFee, address royaltyReceiver) internal view {
@@ -535,15 +606,49 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     // ═══════════════════════════════════════════════════════════════════════════════
 
     // Admin recovery path for a bad/non-ownable registration.
+    // M-03: the legacy name remains as an alias that schedules the delayed
+    // update. It can no longer take effect immediately.
     function emergencyUpdateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external onlyOwner {
+        _proposeEmergencyUpdateCollectionRoyalty(collection, royaltyReceiver, royaltyFee);
+    }
+
+    function proposeEmergencyUpdateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external onlyOwner {
+        _proposeEmergencyUpdateCollectionRoyalty(collection, royaltyReceiver, royaltyFee);
+    }
+
+    function _proposeEmergencyUpdateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) internal {
+        _validateRoyaltyUpdate(collection, royaltyReceiver, royaltyFee);
+
+        uint64 executableAt = SafeCast.toUint64(block.timestamp + REGISTRATION_DELAY);
+        pendingEmergencyRoyaltyUpdates[collection] = PendingRoyaltyUpdate({
+            royaltyReceiver: royaltyReceiver,
+            royaltyFee: royaltyFee,
+            executableAt: executableAt,
+            exists: true
+        });
+        emit EmergencyRoyaltyUpdateProposed(collection, royaltyReceiver, royaltyFee, executableAt);
+    }
+
+    /// @notice Executes a queued emergency royalty update after REGISTRATION_DELAY.
+    function executeEmergencyUpdateCollectionRoyalty(address collection) external onlyOwner {
+        PendingRoyaltyUpdate memory pending = pendingEmergencyRoyaltyUpdates[collection];
+        if (!pending.exists) revert NoPendingRoyaltyUpdate();
+        if (block.timestamp < pending.executableAt) revert RoyaltyUpdateNotReady();
+
+        _validateRoyaltyUpdate(collection, pending.royaltyReceiver, pending.royaltyFee);
+
+        delete pendingEmergencyRoyaltyUpdates[collection];
+        collections[collection].royaltyReceiver = pending.royaltyReceiver;
+        collections[collection].royaltyFee = pending.royaltyFee;
+        royaltyOverridden[collection] = true;
+        emit CollectionRoyaltyUpdated(collection, pending.royaltyReceiver, pending.royaltyFee);
+        emit EmergencyRoyaltyUpdateExecuted(collection, pending.royaltyReceiver, pending.royaltyFee);
+    }
+
+    function _validateRoyaltyUpdate(address collection, address royaltyReceiver, uint16 royaltyFee) internal view {
         if (!collections[collection].exists) revert CollectionNotRegistered();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
         if (royaltyReceiver == address(0) && royaltyFee != 0) revert InvalidAddress();
-
-        collections[collection].royaltyReceiver = royaltyReceiver;
-        collections[collection].royaltyFee = royaltyFee;
-        royaltyOverridden[collection] = true;
-        emit CollectionRoyaltyUpdated(collection, royaltyReceiver, royaltyFee);
     }
 
     /// @notice M-04: undo a Core royalty override so ERC-2981 is used again.

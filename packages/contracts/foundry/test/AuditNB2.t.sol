@@ -29,7 +29,7 @@ contract MismatchedLaunchpad {
             )
         );
         isLaunchpadCollection[collection] = true;
-        core.registerCollectionFromLaunchpad(
+        core.proposeRegisterCollectionFromLaunchpad(
             collection,
             0,
             address(0),
@@ -81,6 +81,7 @@ contract AuditNB2Test is TestSetup {
 
     function testNB2_LaunchPadEndToEnd() public {
         MiColeccion collection = _createCollection();
+        _executePendingRegistration(address(collection));
 
         assertTrue(core.isRegistered(address(collection)));
         assertTrue(core.authorizedLaunchpads(address(launchPad)));

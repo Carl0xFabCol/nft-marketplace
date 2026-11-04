@@ -86,6 +86,7 @@ contract AuditAuthorizationTest is TestSetup {
 
     function testH02_LaunchpadCannotRegisterExistingCollection() public {
         address collection = _launchCollection();
+        _executePendingRegistration(collection);
 
         vm.prank(address(launchPad));
         _expectRevert(MarketplaceCore.CollectionAlreadyRegistered.selector);
@@ -120,6 +121,7 @@ contract AuditAuthorizationTest is TestSetup {
 
     function testH02_LaunchpadCanOnlyRegisterOwnLaunch() public {
         address collection = _launchCollection();
+        _executePendingRegistration(collection);
         (, , , , , bool exists) = core.collections(collection);
         assertTrue(exists);
         assertTrue(core.isRegistered(collection));

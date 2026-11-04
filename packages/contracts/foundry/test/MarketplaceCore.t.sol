@@ -256,9 +256,22 @@ contract MarketplaceCoreTest is TestSetup {
 
     function testRegisterCollection_ExternalCreatorAutoFilled() public {
         vm.prank(owner);
+        marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+
+        (uint16 fee, address receiver, address creator, uint64 executableAt, bool pending) =
+            core.pendingRegistrations(address(nft));
+        assertTrue(pending);
+        assertEq(fee, ROYALTY_FEE);
+        assertEq(receiver, royaltyReceiverAddr);
+        assertEq(creator, owner);
+        assertEq(executableAt, uint64(block.timestamp + core.REGISTRATION_DELAY()));
+
+        uint256 timestamp = block.timestamp;
+        vm.warp(timestamp + core.REGISTRATION_DELAY());
         vm.expectEmit(false, true, false, false);
         emit MarketplaceCore.CollectionRegistered(address(0), owner, uint16(ROYALTY_FEE), false);
-        marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+        marketplace.executeRegisterCollection(address(nft));
+        vm.warp(timestamp);
 
         (, , , , , bool exists) = core.collections(address(nft));
         assertTrue(exists);
@@ -312,6 +325,12 @@ contract MarketplaceCoreTest is TestSetup {
 
         vm.prank(owner);
         marketplace.emergencyUpdateCollectionRoyalty(address(nft), newOwner, 1000);
+
+        uint256 timestamp = block.timestamp;
+        vm.warp(timestamp + core.REGISTRATION_DELAY());
+        vm.prank(owner);
+        marketplace.executeEmergencyUpdateCollectionRoyalty(address(nft));
+        vm.warp(timestamp);
 
         (address receiver, uint16 fee, , , , ) = core.collections(address(nft));
         assertEq(receiver, newOwner);

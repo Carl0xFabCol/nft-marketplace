@@ -61,6 +61,7 @@ contract LaunchPadTest is TestSetup {
 
     function test_CreateCollection_RegistersInCore() public {
         address collection = _createCollection();
+        _executePendingRegistration(collection);
 
         (address receiver, uint16 royaltyFee, , , , bool exists) = core.collections(collection);
         assertTrue(exists);
@@ -268,8 +269,13 @@ contract LaunchPadTest is TestSetup {
 
     function test_CreateCollection_CreatorAutoFilledInEvent() public {
         vm.prank(creator);
+        address collection = launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, BASE_URI, 0, 0);
+
+        uint256 timestamp = block.timestamp;
+        vm.warp(timestamp + core.REGISTRATION_DELAY());
         vm.expectEmit(false, true, false, false);
         emit MarketplaceCore.CollectionRegistered(address(0), creator, uint16(ROYALTY_FEE), false);
-        launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, BASE_URI, 0, 0);
+        marketplace.executeRegisterCollection(collection);
+        vm.warp(timestamp);
     }
 }

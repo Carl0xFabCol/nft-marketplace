@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./MERC721.sol";
 
 interface IMarketplaceCoreRegistry {
-    function registerCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
+    function proposeRegisterCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
 }
 
 /**
@@ -92,7 +92,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         _collectionsByCreator[msg.sender].push(collection);
         isLaunchpadCollection[collection] = true;
 
-        core.registerCollectionFromLaunchpad(collection, royaltyFee, royaltyReceiver, msg.sender);
+        core.proposeRegisterCollectionFromLaunchpad(collection, royaltyFee, royaltyReceiver, msg.sender);
 
         if (msg.value != 0) {
             accruedFees += msg.value;

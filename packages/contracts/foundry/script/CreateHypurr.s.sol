@@ -36,7 +36,7 @@ contract CreateHypurr is Script {
             0
         );
 
-        Marketplace(marketplaceAddress).registerCollection(address(collection), ROYALTY_FEE, owner);
+        Marketplace(marketplaceAddress).proposeRegisterCollection(address(collection), ROYALTY_FEE, owner);
 
         if (mintOne) {
             collection.mint{value: MINT_PRICE}(owner);
@@ -50,5 +50,6 @@ contract CreateHypurr is Script {
         console.log("Mint price:", collection.mintPrice());
         console.log("Mint ends at:", collection.mintEndsAt());
         console.log("Next token id:", collection.getNextTokenId());
+        console.log("Registration is pending. Execute after REGISTRATION_DELAY via executeRegisterCollection.");
     }
 }

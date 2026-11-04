@@ -12,8 +12,7 @@ contract UnifiedSaleEventTest is TestSetup {
         vm.prank(seller);
         nft.setApprovalForAll(address(core), true);
         
-        vm.prank(owner);
-        marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
         
         // Place token bid
         vm.deal(bidder, SALE_PRICE);
@@ -37,8 +36,7 @@ contract UnifiedSaleEventTest is TestSetup {
         vm.prank(seller);
         nft.setApprovalForAll(address(core), true);
         
-        vm.prank(owner);
-        marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
         
         // Place collection bid
         vm.deal(bidder, SALE_PRICE * 2);
@@ -67,8 +65,7 @@ contract UnifiedSaleEventTest is TestSetup {
         vm.prank(seller);
         nft.setApprovalForAll(address(core), true);
         
-        vm.prank(owner);
-        marketplace.registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
+        _registerCollection(address(nft), uint16(ROYALTY_FEE), royaltyReceiverAddr);
         
         // Place and accept bid
         vm.deal(bidder, SALE_PRICE);

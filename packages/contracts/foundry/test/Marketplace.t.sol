@@ -217,6 +217,12 @@ contract MarketplaceTest is TestSetup {
         vm.prank(owner);
         marketplace.emergencyUpdateCollectionRoyalty(address(nft), newOwner, 1000);
 
+        uint256 timestamp = block.timestamp;
+        vm.warp(timestamp + core.REGISTRATION_DELAY());
+        vm.prank(owner);
+        marketplace.executeEmergencyUpdateCollectionRoyalty(address(nft));
+        vm.warp(timestamp);
+
         Marketplace.CollectionInfo memory info =
             marketplace.collections(address(nft));
 
