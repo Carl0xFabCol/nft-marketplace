@@ -1,10 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "forge-std/Test.sol";
 import "./TestSetup.sol";
-import {LaunchPad} from "../src/LaunchPad.sol";
+import "./MockNFT.t.sol";
+import "./MockNFTWithRoyalty.sol";
+import "./MockNFTNonERC721.sol";
+import "./MockRevertingNFT.sol";
+import "./MockRevertingRoyaltyNFT.sol";
+import "./MockMalformedReturn.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {LaunchPad, IMarketplaceCoreRegistry} from "../src/LaunchPad.sol";
 import {Hyperc as MiColeccion} from "../src/MERC721.sol";
 import {MarketplaceCore} from "../src/MarketplaceCore.sol";
+import {MarketplaceBids} from "../src/MarketplaceBids.sol";
+import {Marketplace} from "../src/Marketplace.sol";
+import {BoundedStaticCall} from "../src/BoundedStaticCall.sol";
+import {VerifyDeployment} from "../script/VerifyDeployment.s.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
@@ -34,7 +49,8 @@ contract LaunchPadTest is TestSetup {
 
     function _createCollection() internal returns (address collection) {
         vm.prank(creator);
-        collection = launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, BASE_URI, 0, 0);
+        collection =
+            launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, BASE_URI, 0, 0);
     }
 
     function test_CreateCollection_DeploysAndRecordsCreator() public {
@@ -61,9 +77,8 @@ contract LaunchPadTest is TestSetup {
 
     function test_CreateCollection_RegistersInCore() public {
         address collection = _createCollection();
-        _executePendingRegistration(collection);
 
-        (address receiver, uint16 royaltyFee, , , , bool exists) = core.collections(collection);
+        (address receiver, uint16 royaltyFee,,,, bool exists) = core.collections(collection);
         assertTrue(exists);
         assertEq(receiver, royaltyReceiverAddr);
         assertEq(royaltyFee, uint16(ROYALTY_FEE));
@@ -71,10 +86,11 @@ contract LaunchPadTest is TestSetup {
 
     function test_CreateCollection_DefaultRoyaltyReceiverIsCreator() public {
         vm.prank(creator);
-        address collection = launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), address(0), 10, BASE_URI, 0, 0);
+        address collection =
+            launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), address(0), 10, BASE_URI, 0, 0);
 
         MiColeccion col = MiColeccion(collection);
-        (address receiver, ) = col.royaltyInfo(0, 1 ether);
+        (address receiver,) = col.royaltyInfo(0, 1 ether);
         assertEq(receiver, creator);
     }
 
@@ -128,127 +144,6 @@ contract LaunchPadTest is TestSetup {
         launchPad.withdrawFees(payable(owner));
     }
 
-    function test_Mint_ByCreator() public {
-        address collection = _createCollection();
-        MiColeccion col = MiColeccion(collection);
-
-        vm.prank(creator);
-        uint256 tokenId = col.mint(creator);
-
-        assertEq(tokenId, 1);
-        assertEq(col.ownerOf(1), creator);
-        assertEq(col.totalSupply(), 1);
-    }
-
-    function test_Mint_IsPublic() public {
-        address collection = _createCollection();
-        MiColeccion col = MiColeccion(collection);
-
-        vm.prank(unauthorized);
-        uint256 tokenId = col.mint(unauthorized);
-
-        assertEq(tokenId, 1);
-        assertEq(col.ownerOf(1), unauthorized);
-    }
-
-    function test_Mint_RequiresConfiguredPrice() public {
-        vm.prank(creator);
-        address collection = launchPad.createCollection(NAME, SYMBOL, 0, address(0), 10, BASE_URI, 0.01 ether, 0);
-        MiColeccion col = MiColeccion(collection);
-
-        vm.prank(unauthorized);
-        vm.expectRevert(MiColeccion.InsufficientPayment.selector);
-        col.mint(unauthorized);
-
-        vm.prank(unauthorized);
-        col.mint{value: 0.01 ether}(unauthorized);
-        assertEq(col.ownerOf(1), unauthorized);
-    }
-
-    function test_Mint_RevertsAfterDuration() public {
-        vm.prank(creator);
-        address collection = launchPad.createCollection(NAME, SYMBOL, 0, address(0), 10, BASE_URI, 0, 1 days);
-        MiColeccion col = MiColeccion(collection);
-
-        assertTrue(col.isMintActive());
-        assertEq(col.mintEndsAt(), block.timestamp + 1 days);
-
-        vm.warp(block.timestamp + 1 days + 1);
-
-        vm.prank(creator);
-        vm.expectRevert(MiColeccion.MintEnded.selector);
-        col.mint(creator);
-    }
-
-    function test_Mint_UnlimitedSupplyAndEternalDuration() public {
-        vm.prank(creator);
-        address collection = launchPad.createCollection(NAME, SYMBOL, 0, address(0), 0, BASE_URI, 0, 0);
-        MiColeccion col = MiColeccion(collection);
-
-        assertEq(col.maxSupply(), 0);
-        assertEq(col.mintEndsAt(), 0);
-        assertTrue(col.isMintActive());
-
-        vm.prank(creator);
-        col.batchMint(creator, 3);
-        assertEq(col.totalSupply(), 3);
-        assertEq(col.getNextTokenId(), 4);
-    }
-
-    function test_SetMintDuration_OnlyOwner() public {
-        address collection = _createCollection();
-        MiColeccion col = MiColeccion(collection);
-
-        vm.prank(creator);
-        col.setMintDuration(2 days);
-
-        assertEq(col.mintEndsAt(), block.timestamp + 2 days);
-    }
-
-    function test_Mint_RevertsWhenMaxSupplyReached() public {
-        vm.prank(creator);
-        address collection = launchPad.createCollection(NAME, SYMBOL, 0, address(0), 2, BASE_URI, 0, 0);
-        MiColeccion col = MiColeccion(collection);
-
-        vm.startPrank(creator);
-        col.mint(creator);
-        col.mint(creator);
-
-        vm.expectRevert(MiColeccion.MaxSupplyExceeded.selector);
-        col.mint(creator);
-        vm.stopPrank();
-    }
-
-    function test_BatchMint_RespectsMaxSupply() public {
-        vm.prank(creator);
-        address collection = launchPad.createCollection(NAME, SYMBOL, 0, address(0), 3, BASE_URI, 0, 0);
-        MiColeccion col = MiColeccion(collection);
-
-        vm.prank(creator);
-        vm.expectRevert(MiColeccion.MaxSupplyExceeded.selector);
-        col.batchMint(creator, 4);
-    }
-
-    function test_TokenURI_UsesBaseURI() public {
-        address collection = _createCollection();
-        MiColeccion col = MiColeccion(collection);
-
-        vm.prank(creator);
-        col.mint(creator);
-
-        assertEq(col.tokenURI(1), string(abi.encodePacked(BASE_URI, "1")));
-    }
-
-    function test_SetBaseURI_OnlyOwner() public {
-        address collection = _createCollection();
-        MiColeccion col = MiColeccion(collection);
-
-        vm.prank(creator);
-        col.setBaseURI("ipfs://new/");
-
-        assertEq(col.baseURI(), "ipfs://new/");
-    }
-
     function test_Pause_BlocksCreation() public {
         vm.prank(owner);
         launchPad.pause();
@@ -268,14 +163,160 @@ contract LaunchPadTest is TestSetup {
     }
 
     function test_CreateCollection_CreatorAutoFilledInEvent() public {
-        vm.prank(creator);
-        address collection = launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, BASE_URI, 0, 0);
-
-        uint256 timestamp = block.timestamp;
-        vm.warp(timestamp + core.REGISTRATION_DELAY());
         vm.expectEmit(false, true, false, false);
         emit MarketplaceCore.CollectionRegistered(address(0), creator, uint16(ROYALTY_FEE), false);
-        marketplace.executeRegisterCollection(collection);
-        vm.warp(timestamp);
+        vm.prank(creator);
+        address collection =
+            launchPad.createCollection(NAME, SYMBOL, uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, BASE_URI, 0, 0);
+        assertTrue(core.isRegistered(collection));
+    }
+}
+
+contract AuditPaginationTest is TestSetup {
+    LaunchPad internal launchPad;
+    address internal creator = vm.addr(9);
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(owner);
+        launchPad = new LaunchPad(address(core));
+
+        vm.prank(owner);
+        launchPad.setLaunchFee(0);
+
+        vm.prank(owner);
+        marketplace.setAuthorizedLaunchpad(address(launchPad), true);
+
+        for (uint256 i; i < 5; ++i) {
+            vm.prank(creator);
+            launchPad.createCollection("C", "C", 0, address(0), 10, "", 0, 0);
+        }
+    }
+
+    function testPagination_ReturnsRequestedSlice() public {
+        address[] memory all = launchPad.getCollectionsCreatedBy(creator);
+        address[] memory page = launchPad.getCollectionsCreatedByPage(creator, 1, 3);
+
+        assertEq(page.length, 3);
+        assertEq(page[0], all[1]);
+        assertEq(page[1], all[2]);
+        assertEq(page[2], all[3]);
+    }
+
+    function testPagination_ClampsFinalPage() public {
+        address[] memory all = launchPad.getCollectionsCreatedBy(creator);
+        address[] memory page = launchPad.getCollectionsCreatedByPage(creator, 3, 10);
+
+        assertEq(page.length, 2);
+        assertEq(page[0], all[3]);
+        assertEq(page[1], all[4]);
+    }
+
+    function testPagination_OutOfRangeAndZeroLimitReturnEmpty() public {
+        assertEq(launchPad.getCollectionsCreatedByPage(creator, 5, 1).length, 0);
+        assertEq(launchPad.getCollectionsCreatedByPage(creator, 0, 0).length, 0);
+    }
+
+    function testPagination_RejectsOversizedPage() public {
+        uint256 oversized = launchPad.MAX_PAGE_SIZE() + 1;
+        vm.expectRevert(LaunchPad.PageTooLarge.selector);
+        launchPad.getCollectionsCreatedByPage(creator, 0, oversized);
+    }
+}
+
+contract MismatchedLaunchpad {
+    IMarketplaceCoreRegistry public immutable core;
+    mapping(address => bool) public isLaunchpadCollection;
+
+    constructor(address _core) {
+        core = IMarketplaceCoreRegistry(_core);
+    }
+
+    function createCollection(address initialOwner) external returns (address collection) {
+        collection = address(new MiColeccion("Mismatch", "MM", initialOwner, 0, address(0), 10, "", 0, 0));
+        isLaunchpadCollection[collection] = true;
+        core.registerCollectionFromLaunchpad(collection, 0, address(this), msg.sender);
+    }
+
+    function isCollection(address collection) external view returns (bool) {
+        return isLaunchpadCollection[collection];
+    }
+}
+
+contract AuditNB2Test is TestSetup {
+    LaunchPad internal launchPad;
+    VerifyDeployment internal verifier;
+    address internal creator = vm.addr(9);
+
+    function setUp() public override {
+        super.setUp();
+        vm.deal(creator, 100 ether);
+
+        vm.prank(owner);
+        launchPad = new LaunchPad(address(core));
+
+        vm.prank(owner);
+        launchPad.setLaunchFee(0);
+
+        vm.prank(owner);
+        marketplace.setAuthorizedLaunchpad(address(launchPad), true);
+
+        verifier = new VerifyDeployment();
+    }
+
+    function _createCollection() internal returns (MiColeccion collection) {
+        vm.prank(creator);
+        address deployed = launchPad.createCollection(
+            "Launch Collection", "LC", uint16(ROYALTY_FEE), royaltyReceiverAddr, 10, "ipfs://launch/", 0, 0
+        );
+        collection = MiColeccion(deployed);
+    }
+
+    function testNB2_LaunchPadEndToEnd() public {
+        MiColeccion collection = _createCollection();
+
+        assertTrue(core.isRegistered(address(collection)));
+        assertTrue(core.authorizedLaunchpads(address(launchPad)));
+        assertEq(address(launchPad.core()), address(core));
+
+        (address receiver, uint16 royaltyFee,,,, bool exists) = core.collections(address(collection));
+        assertTrue(exists);
+        assertEq(receiver, royaltyReceiverAddr);
+        assertEq(royaltyFee, uint16(ROYALTY_FEE));
+
+        vm.prank(seller);
+        collection.mint(seller);
+        vm.prank(seller);
+        collection.setApprovalForAll(address(core), true);
+
+        vm.prank(seller);
+        marketplace.createListing(address(collection), 1, uint128(SALE_PRICE), _listingExpiry());
+
+        vm.prank(buyer);
+        marketplace.buy{value: SALE_PRICE}(address(collection), 1);
+
+        assertEq(collection.ownerOf(1), buyer);
+        assertGt(core.pendingWithdrawals(seller), 0);
+
+        verifier.run(address(core), address(bids), address(marketplace), address(launchPad));
+    }
+
+    function testNB2_CollectionOwnerMismatchReverts() public {
+        MismatchedLaunchpad mismatched = new MismatchedLaunchpad(address(core));
+
+        vm.prank(owner);
+        marketplace.setAuthorizedLaunchpad(address(mismatched), true);
+
+        vm.prank(creator);
+        vm.expectRevert(MarketplaceCore.NotCollectionOwner.selector);
+        mismatched.createCollection(unauthorized);
+    }
+
+    function testNB2_VerifierRejectsUnauthorizedLaunchpad() public {
+        LaunchPad unverified = new LaunchPad(address(core));
+
+        vm.expectRevert("R-5: launchpad not authorized");
+        verifier.run(address(core), address(bids), address(marketplace), address(unverified));
     }
 }

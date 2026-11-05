@@ -32,18 +32,16 @@ abstract contract BoundedStaticCall {
 
     function _staticcallBounded2(address target, bytes memory callData, uint256 gasLimit) internal view returns (bool ok, uint256 word0, uint256 word1) {
         _requireBoundedGas(gasLimit);
-        (bool success, bytes memory returnData) = target.staticcall{gas: gasLimit}(callData);
-        // Exact size check: address (32 bytes) + uint256 (32 bytes).
-        if (!success || returnData.length != 0x40) {
-            return (false, 0, 0);
-        }
         assembly ("memory-safe") {
-            word0 := mload(add(returnData, 0x20))
-            word1 := mload(add(returnData, 0x40))
+            let out := mload(0x40)
+            ok := staticcall(gasLimit, target, add(callData, 0x20), mload(callData), out, 0x40)
+            ok := and(ok, eq(returndatasize(), 0x40))
+            if ok {
+                word0 := mload(out)
+                word1 := mload(add(out, 0x20))
+            }
         }
-        ok = true;
     }
-
     function _requireBoundedGas(uint256 gasLimit) internal view {
         // EIP-150: account for the 63/64 gas forwarding rule plus a small
         // execution buffer. This mirrors _tryOwnerOfWithGas / _getRoyalty.
@@ -53,6 +51,7 @@ abstract contract BoundedStaticCall {
     }
 
     function _staticcallBoundedRaw(address target, bytes memory callData, uint256 gasLimit) internal view returns (uint256 status, uint256 word) {
+        _requireBoundedGas(gasLimit);
         assembly ("memory-safe") {
             // Temporary 32-byte output buffer at the free-memory pointer.
             let ptr := mload(0x40)

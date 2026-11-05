@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 /**
  * @title Hyperc
  * @notice Mintable ERC721 collection with configurable supply, royalties and metadata.
- * @dev Deployed by the LaunchPad factory. The creator becomes the owner and can mint,
+ * @dev Deployed by the LaunchPad factory. The creator becomes the owner,
  *      manage the base URI and update royalties. Royalties are exposed via ERC-2981.
  */
 contract Hyperc is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, ReentrancyGuard {
@@ -22,6 +22,8 @@ contract Hyperc is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, ReentrancyGu
 
     /// @notice Timestamp when minting ends. 0 = minting never ends.
     uint256 public mintEndsAt;
+
+    uint16 public constant MAX_ROYALTY_FEE = 2_000;
 
     string private _baseTokenURI;
 
@@ -37,6 +39,7 @@ contract Hyperc is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, ReentrancyGu
     error InsufficientPayment();
     error MintEnded();
     error TransferFailed();
+    error InvalidRoyaltyFee();
 
     constructor(
         string memory name_,
@@ -59,6 +62,7 @@ contract Hyperc is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, ReentrancyGu
         }
 
         if (royaltyFee_ > 0) {
+            if (royaltyFee_ > MAX_ROYALTY_FEE) revert InvalidRoyaltyFee();
             address receiver = royaltyReceiver_ == address(0) ? initialOwner_ : royaltyReceiver_;
             _setDefaultRoyalty(receiver, royaltyFee_);
         }
@@ -80,7 +84,7 @@ contract Hyperc is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, ReentrancyGu
     function batchMint(address to, uint256 amount) external payable nonReentrant returns (uint256[] memory tokenIds) {
         if (amount == 0) revert InvalidAmount();
         if (!isMintActive()) revert MintEnded();
-        if (msg.value != mintPrice * amount) revert InsufficientPayment();
+        if (msg.value < mintPrice * amount) revert InsufficientPayment();
         if (maxSupply != 0 && totalSupply() + amount > maxSupply) revert MaxSupplyExceeded();
 
         tokenIds = new uint256[](amount);
@@ -109,21 +113,10 @@ contract Hyperc is ERC721, ERC721Enumerable, ERC2981, Ownable2Step, ReentrancyGu
         emit MintPriceUpdated(oldPrice, newPrice);
     }
 
-    /// @notice Update the minting window from now. A duration of 0 makes minting eternal.
-    function setMintDuration(uint256 durationSeconds) external onlyOwner {
-        uint256 oldEndsAt = mintEndsAt;
-        mintEndsAt = durationSeconds == 0 ? 0 : block.timestamp + durationSeconds;
-        emit MintEndsAtUpdated(oldEndsAt, mintEndsAt);
-    }
-
     function setRoyalty(address receiver, uint96 royaltyFee) external onlyOwner {
+        if (royaltyFee > MAX_ROYALTY_FEE) revert InvalidRoyaltyFee();
         _setDefaultRoyalty(receiver, royaltyFee);
         emit RoyaltyUpdated(receiver, royaltyFee);
-    }
-
-    function setMaxSupply(uint256 newMaxSupply) external onlyOwner {
-        if (newMaxSupply != 0 && newMaxSupply < totalSupply()) revert InvalidMaxSupply();
-        maxSupply = newMaxSupply;
     }
 
     function withdraw(address payable recipient) external onlyOwner nonReentrant {

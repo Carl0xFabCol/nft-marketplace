@@ -7,9 +7,8 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./MERC721.sol";
 
 interface IMarketplaceCoreRegistry {
-    function proposeRegisterCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
+    function registerCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
 }
-
 /**
  * @title LaunchPad
  * @notice Permissionless factory that deploys MiColeccion ERC721 collections and
@@ -28,7 +27,6 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
     mapping(address => bool) public isLaunchpadCollection;
 
     event CollectionDeployed(address indexed collection, address indexed creator, string name, string symbol);
-    event CollectionRegisteredOnMarketplace(address indexed collection, uint16 royaltyFee, address indexed royaltyReceiver);
     event LaunchFeeUpdated(uint256 oldFee, uint256 newFee);
     event FeesWithdrawn(address indexed to, uint256 amount);
 
@@ -38,6 +36,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
     error TransferFailed();
     error NoFees();
     error PageTooLarge();
+    error RenounceOwnershipDisabled();
 
     struct DeployParams {
         string name;
@@ -71,7 +70,7 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         uint256 mintPrice,
         uint256 mintDuration
     ) external payable whenNotPaused nonReentrant returns (address collection) {
-        if (msg.value != launchFee) revert InsufficientLaunchFee();
+        if (msg.value < launchFee) revert InsufficientLaunchFee();
         if (royaltyFee > MAX_ROYALTY_FEE) revert FeeTooHigh();
         if (royaltyReceiver == address(0)) royaltyReceiver = msg.sender;
 
@@ -92,30 +91,16 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         _collectionsByCreator[msg.sender].push(collection);
         isLaunchpadCollection[collection] = true;
 
-        core.proposeRegisterCollectionFromLaunchpad(collection, royaltyFee, royaltyReceiver, msg.sender);
-
+        core.registerCollectionFromLaunchpad(collection, royaltyFee, royaltyReceiver, msg.sender);
         if (msg.value != 0) {
             accruedFees += msg.value;
         }
 
         emit CollectionDeployed(collection, msg.sender, name, symbol);
-        emit CollectionRegisteredOnMarketplace(collection, royaltyFee, royaltyReceiver);
     }
 
     function deployCollection(DeployParams memory p) internal returns (address collection) {
-        collection = address(
-            new Hyperc(
-                p.name,
-                p.symbol,
-                p.creator,
-                p.royaltyFee,
-                p.royaltyReceiver,
-                p.maxSupply,
-                p.baseURI,
-                p.mintPrice,
-                p.mintDuration
-            )
-        );
+        collection = address(new Hyperc(p.name, p.symbol, p.creator, p.royaltyFee, p.royaltyReceiver, p.maxSupply, p.baseURI, p.mintPrice, p.mintDuration));
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -124,20 +109,6 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
 
     function getCollectionsCreatedBy(address creator) external view returns (address[] memory) {
         return _collectionsByCreator[creator];
-    }
-
-    function getCollectionsCreatedBy(address creator, uint256 offset, uint256 limit) external view returns (address[] memory page) {
-        if (limit > MAX_PAGE_SIZE) revert PageTooLarge();
-
-        address[] storage all = _collectionsByCreator[creator];
-        uint256 length = all.length;
-        if (offset >= length || limit == 0) return new address[](0);
-
-        uint256 end = length - offset < limit ? length : offset + limit;
-        page = new address[](end - offset);
-        for (uint256 i = offset; i < end; ++i) {
-            page[i - offset] = all[i];
-        }
     }
 
     /// @notice Paginated view over a creator's collections.
@@ -186,6 +157,10 @@ contract LaunchPad is Ownable2Step, ReentrancyGuard, Pausable {
         if (!success) revert TransferFailed();
 
         emit FeesWithdrawn(recipient, amount);
+    }
+
+    function renounceOwnership() public view override onlyOwner {
+        revert RenounceOwnershipDisabled();
     }
 
     function pause() external onlyOwner {

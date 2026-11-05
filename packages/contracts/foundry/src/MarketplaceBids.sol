@@ -93,15 +93,12 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     error RenounceOwnershipDisabled();
     error InvalidPrice();
     error InvalidQuantity();
-    error NotTokenOwner();
-    error NotApproved();
     error BidNotFound();
     error BidExpired();
     error InsufficientValue();
     error TransferFailed();
     error NotBidder();
     error ArrayLengthMismatch();
-    error OnlyOwner();
     error OnlyMarketplace();
     error InvalidAddress();
     error NoWithdrawal();
@@ -141,7 +138,13 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     // COLLECTION BID FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    function placeCollectionBid(address collection, uint128 pricePerItem, uint32 quantity, uint64 expiresAt, address bidder) external payable whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
+    function placeCollectionBid(
+        address collection,
+        uint128 pricePerItem,
+        uint32 quantity,
+        uint64 expiresAt,
+        address bidder
+    ) external payable whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         if (!core.isRegistered(collection)) revert CollectionNotRegistered();
         if (pricePerItem < MIN_LISTING_PRICE) revert InvalidPrice();
         if (quantity == 0) revert InvalidQuantity();
@@ -163,7 +166,14 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         emit CollectionBidPlaced(collection, bidder, pricePerItem, quantity, expiresAt);
     }
 
-    function acceptCollectionBid(address collection, address bidder, uint256[] calldata tokenIds, address seller, uint128 minPricePerItem, uint128 minSellerProceeds) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
+    function acceptCollectionBid(
+        address collection,
+        address bidder,
+        uint256[] calldata tokenIds,
+        address seller,
+        uint128 minPricePerItem,
+        uint128 minSellerProceeds
+    ) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         CollectionBid storage bid = collectionBids[collection][bidder];
         if (bid.quantity == 0) revert BidNotFound();
         if (bid.expiresAt != 0 && bid.expiresAt <= block.timestamp) revert BidExpired();
@@ -317,7 +327,14 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
         }
     }
 
-    function acceptTokenBid(address collection, uint256 tokenId, address bidder, address seller, uint128 minPrice, uint128 minSellerProceeds) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
+    function acceptTokenBid(
+        address collection,
+        uint256 tokenId,
+        address bidder,
+        address seller,
+        uint128 minPrice,
+        uint128 minSellerProceeds
+    ) external whenNotPaused whenCoreNotPaused nonReentrant onlyMarketplace {
         TokenBid memory bid = tokenBids[collection][tokenId][bidder];
         if (bid.price == 0) revert BidNotFound();
         if (bid.expiresAt != 0 && bid.expiresAt <= block.timestamp) revert BidExpired();
@@ -375,10 +392,7 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     /// @dev M-05 best-effort wash-trading guard. Tokens may not exist yet, so
     ///      a failed ownerOf call is treated as "not owned".
     function _revertIfOwnsToken(address collection, uint256 tokenId, address bidder) internal view {
-        (bool success, uint256 word) = _staticcallBounded(
-            collection,
-            abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId)
-        );
+        (bool success, uint256 word) = _staticcallBounded(collection, abi.encodeWithSelector(IERC721.ownerOf.selector, tokenId));
         if (success && _isAddressWord(word) && address(uint160(word)) == bidder) {
             revert SelfBid();
         }
@@ -399,7 +413,7 @@ contract MarketplaceBids is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     function setMarketplaceAddress(address _marketplace) external onlyOwner {
         if (_marketplace == address(0)) revert InvalidAddress();
         if (marketplace != address(0)) revert AlreadySet();
-        
+
         marketplace = _marketplace;
         emit MarketplaceAddressUpdated(address(0), _marketplace);
     }

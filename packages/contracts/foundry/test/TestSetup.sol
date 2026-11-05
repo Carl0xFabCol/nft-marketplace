@@ -86,17 +86,9 @@ contract TestSetup is Test {
         uint16 royaltyFee,
         address royaltyReceiver
     ) internal {
-        // MockNFT ownership belongs to `owner`.
+        // MockNFT ownership belongs to `owner`. Registration is immediate.
         vm.prank(owner);
-        marketplace.proposeRegisterCollection(collection, royaltyFee, royaltyReceiver);
-        _executePendingRegistration(collection);
-    }
-
-    function _executePendingRegistration(address collection) internal {
-        uint256 timestamp = block.timestamp;
-        vm.warp(timestamp + core.REGISTRATION_DELAY());
-        marketplace.executeRegisterCollection(collection);
-        vm.warp(timestamp);
+        marketplace.registerCollection(collection, royaltyFee, royaltyReceiver);
     }
 
     function _mintNFT(address to, uint256 tokenId) internal {

@@ -58,15 +58,7 @@ interface IMarketplaceCore {
     // Collection management
     function registerCollectionFromRouter(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
     function registerCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
-    function proposeRegisterCollectionFromRouter(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
-    function proposeRegisterCollectionFromLaunchpad(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external;
-    function executeRegisterCollection(address collection) external;
     function isRegistered(address collection) external view returns (bool);
-    function emergencyUpdateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external;
-    function proposeEmergencyUpdateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external;
-    function executeEmergencyUpdateCollectionRoyalty(address collection) external;
-    function pendingRegistrations(address collection) external view returns (uint16 royaltyFee, address royaltyReceiver, address creator, uint64 executableAt, bool exists);
-    function pendingEmergencyRoyaltyUpdates(address collection) external view returns (address royaltyReceiver, uint16 royaltyFee, uint64 executableAt, bool exists);
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee, address sender) external;
 
@@ -80,8 +72,6 @@ interface IMarketplaceCore {
     function updateMarketplaceFee(uint16 newFee) external;
 
     function updateFeeReceiver(address newReceiver) external;
-
-    
 
     function setRouter(address newRouter) external;
     function setBidsContract(address newBids) external;
@@ -384,25 +374,8 @@ contract Marketplace is Ownable2Step {
     // COLLECTION MANAGEMENT - Delegate to Core
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    /// @notice Legacy alias for `proposeRegisterCollection`. Restricted to the
-    ///         owner/admin; registration only takes effect after the delay.
     function registerCollection(address collection, uint16 royaltyFee, address royaltyReceiver) external onlyOwner {
         core.registerCollectionFromRouter(collection, royaltyFee, royaltyReceiver, msg.sender);
-    }
-
-    /// @notice M-03: propose an external collection registration. It becomes
-    ///         effective only after Core's REGISTRATION_DELAY.
-    function proposeRegisterCollection(address collection, uint16 royaltyFee, address royaltyReceiver) external onlyOwner {
-        core.proposeRegisterCollectionFromRouter(collection, royaltyFee, royaltyReceiver, msg.sender);
-    }
-
-    /// @notice M-03: execute a queued registration after the delay.
-    function executeRegisterCollection(address collection) external {
-        core.executeRegisterCollection(collection);
-    }
-
-    function pendingRegistrations(address collection) external view returns (uint16 royaltyFee, address royaltyReceiver, address creator, uint64 executableAt, bool exists) {
-        return core.pendingRegistrations(collection);
     }
 
     function updateCollectionRoyalty(address collection, address royaltyReceiver, uint16 royaltyFee) external {
@@ -438,8 +411,6 @@ contract Marketplace is Ownable2Step {
         core.updateFeeReceiver(newReceiver);
     }
 
-    
-
     function setAuthorizedLaunchpad(address launchpad, bool authorized) external onlyOwner {
         core.setAuthorizedLaunchpad(launchpad, authorized);
     }
@@ -460,41 +431,12 @@ contract Marketplace is Ownable2Step {
         if (bids.paused()) bids.unpause();
     }
 
-
-    function emergencyUpdateCollectionRoyalty(
-        address collection,
-        address royaltyReceiver,
-        uint16 royaltyFee
-    ) external onlyOwner {
-        core.emergencyUpdateCollectionRoyalty(collection, royaltyReceiver, royaltyFee);
-    }
-
-    /// @notice M-03: propose an emergency royalty update. It becomes effective
-    ///         only after Core's REGISTRATION_DELAY.
-    function proposeEmergencyUpdateCollectionRoyalty(
-        address collection,
-        address royaltyReceiver,
-        uint16 royaltyFee
-    ) external onlyOwner {
-        core.proposeEmergencyUpdateCollectionRoyalty(collection, royaltyReceiver, royaltyFee);
-    }
-
-    function executeEmergencyUpdateCollectionRoyalty(address collection) external onlyOwner {
-        core.executeEmergencyUpdateCollectionRoyalty(collection);
-    }
-
-    function pendingEmergencyRoyaltyUpdates(address collection) external view returns (address royaltyReceiver, uint16 royaltyFee, uint64 executableAt, bool exists) {
-        return core.pendingEmergencyRoyaltyUpdates(collection);
-    }
-
     function configureBidsMarketplace() external onlyOwner {
         core.setRouter(address(this));
         core.setBidsContract(address(bids));
         bids.setMarketplaceAddress(address(this));
     }
 
-    /// @notice M-07: migrate the whole system to a new owner (e.g. a new
-    ///         timelock) by starting the Ownable2Step handoff on both components.
     function transferComponentOwnership(address newOwner) external onlyOwner {
         if (newOwner == address(0)) revert InvalidAddress();
         core.transferOwnership(newOwner);
