@@ -621,12 +621,23 @@ contract AuditR5Test is TestSetup {
     }
 
     function testR5_ValidDeploymentPasses() public view {
-        verifier.run(address(core), address(bids), address(marketplace));
+        verifier.verify(address(core), address(bids), address(marketplace));
     }
 
+    /// @dev A router that exists but is not the one Core is wired to.
     function testR5_WrongRouterRejected() public {
+        Marketplace impostor = new Marketplace(address(core), address(bids));
+
         vm.expectRevert("R-5: core.router mismatch");
-        verifier.run(address(core), address(bids), address(0xBEEF));
+        verifier.verify(address(core), address(bids), address(impostor));
+    }
+
+    /// @dev An address with no code is reported as such, before any state read.
+    function testR5_RouterWithoutCodeRejected() public {
+        vm.expectRevert(
+            bytes("MARKETPLACE has no code at 0x000000000000000000000000000000000000bEEF on chain 31337")
+        );
+        verifier.verify(address(core), address(bids), address(0xBEEF));
     }
 
     function testR5_PausedComponentsRequireExpectation() public {
@@ -634,9 +645,9 @@ contract AuditR5Test is TestSetup {
         marketplace.pause();
 
         vm.expectRevert("R-5: core is paused");
-        verifier.run(address(core), address(bids), address(marketplace));
+        verifier.verify(address(core), address(bids), address(marketplace));
 
-        verifier.run(address(core), address(bids), address(marketplace), true);
+        verifier.verify(address(core), address(bids), address(marketplace), true);
     }
 }
 

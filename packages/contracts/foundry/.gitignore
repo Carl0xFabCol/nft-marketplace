@@ -2,13 +2,25 @@
 cache/
 out/
 
-# Ignores development broadcast logs
-!/broadcast
-/broadcast/*/31337/
-/broadcast/**/dry-run/
+# Generated broadcast logs.
+#
+# These are build output, not a deployment record: the authoritative record is
+# deployments/<network>.json, promoted to stage `verified` only by
+# VerifyDeployment reading real on-chain state. Committing broadcast logs leaves
+# stale addresses from superseded (and now ABI-incompatible) deployments lying
+# around the repository for a human or a tool to pick up by mistake.
+#
+# Files already tracked stay tracked - .gitignore does not untrack them, so the
+# existing history is preserved. To stop tracking them going forward, run:
+#   git rm -r --cached packages/contracts/foundry/broadcast
+/broadcast/
 
 # Docs
 docs/
 
 # Dotenv file
 .env
+
+# Deployment script test artifacts
+deployments/test-artifacts/
+deployments/anvil-demo/

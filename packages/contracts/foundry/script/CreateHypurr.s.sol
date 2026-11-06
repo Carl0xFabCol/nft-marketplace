@@ -9,18 +9,28 @@ import {Marketplace} from "../src/Marketplace.sol";
 /**
  * @title CreateHypurr
  * @notice Deploys a standalone Hyperc collection and registers it immediately
- *         through the router. No delayed-registration API is used.
+ *         through the router. Registration is immediate; no delayed API exists.
+ *
+ * The router address is resolved fail-closed from the deployment record. It is
+ * never taken from the environment implicitly: Foundry auto-loads `.env`, and a
+ * stale MARKETPLACE_ADDRESS there previously redirected this script at an older
+ * live deployment without any warning (audit finding C-1). Use
+ * USE_ENV_ADDRESSES=true to target explicit addresses on purpose.
+ *
+ * ROYALTY SEMANTICS: Hyperc implements ERC-2981, so sales use the collection's
+ * own royaltyInfo(). The ROYALTY_FEE registered in Core is a fallback only. Both
+ * are set to the same 100 bps / collection owner here, so the effective royalty
+ * is the same either way. See RegisterCollection for the full explanation.
  *
  * Required environment:
  *   NETWORK, PRIVATE_KEY
- *   MARKETPLACE_ADDRESS or deployments/<NETWORK>.json
  *
  * Optional environment:
  *   HYPURR_OWNER               collection owner, defaults to the deployer
  *   CONFIRM_NEW_COLLECTION     must be true to deploy a brand new collection
  *   HYPURR_COLLECTION_ADDRESS  resume with an existing collection
  *   HYPURR_MINT_ONE            mint one token to HYPURR_OWNER (default false)
- *   USE_ENV_ADDRESSES          force MARKETPLACE_ADDRESS instead of the file
+ *   USE_ENV_ADDRESSES          target explicit addresses instead of the record
  */
 contract CreateHypurr is DeploymentConfig {
     string internal constant NAME = "Hypurr Testnet";
@@ -34,18 +44,29 @@ contract CreateHypurr is DeploymentConfig {
         NetworkConfig memory net = _validateNetwork();
         (uint256 privateKey, address deployer) = _deployer();
 
-        address marketplaceAddr = _resolveMarketplace(net);
-        _requireContract(marketplaceAddr, "MARKETPLACE_ADDRESS");
-
+        address marketplaceAddr = _resolveRouter(net);
         Marketplace marketplace = Marketplace(marketplaceAddr);
-        require(marketplace.owner() == deployer, "Deployer is not the marketplace/router owner");
 
-        address owner = vm.envOr("HYPURR_OWNER", deployer);
+        require(
+            marketplace.owner() == deployer,
+            string.concat(
+                "Deployer ",
+                vm.toString(deployer),
+                " is not the router owner (",
+                vm.toString(marketplace.owner()),
+                ")"
+            )
+        );
+        require(
+            ROYALTY_FEE <= marketplace.MAX_ROYALTY_FEE(),
+            "ROYALTY_FEE exceeds Marketplace.MAX_ROYALTY_FEE"
+        );
+
+        address owner = _envAddressOr("HYPURR_OWNER", deployer);
         require(owner != address(0), "HYPURR_OWNER must be non-zero");
 
-        address existing = vm.envOr("HYPURR_COLLECTION_ADDRESS", address(0));
-        bool mintOne = vm.envOr("HYPURR_MINT_ONE", false);
-        bool broadcasting = _isBroadcast();
+        address existing = _envAddressOr("HYPURR_COLLECTION_ADDRESS", address(0));
+        bool mintOne = _envBool("HYPURR_MINT_ONE");
 
         console.log("=================================");
         console.log("HYPURR COLLECTION");
@@ -55,10 +76,7 @@ contract CreateHypurr is DeploymentConfig {
         console.log("Deployer:", deployer);
         console.log("Marketplace:", marketplaceAddr);
         console.log("Collection owner:", owner);
-        if (!broadcasting) {
-            console.log("");
-            console.log("DRY RUN: no transactions are broadcast. Pass --broadcast to execute.");
-        }
+        _logDryRunNotice();
 
         address collection;
         if (existing != address(0)) {
@@ -72,7 +90,7 @@ contract CreateHypurr is DeploymentConfig {
             vm.stopBroadcast();
         } else {
             require(
-                vm.envOr("CONFIRM_NEW_COLLECTION", false),
+                _envBool("CONFIRM_NEW_COLLECTION"),
                 "Set CONFIRM_NEW_COLLECTION=true to deploy a new collection (or HYPURR_COLLECTION_ADDRESS to resume)"
             );
 
@@ -95,17 +113,11 @@ contract CreateHypurr is DeploymentConfig {
         console.log("Mint price (wei):", Hyperc(collection).mintPrice());
         console.log("Next token id:", Hyperc(collection).getNextTokenId());
         console.log("Registered:", marketplace.collections(collection).exists);
-    }
 
-    function _resolveMarketplace(NetworkConfig memory net) internal view returns (address) {
-        if (!vm.envOr("USE_ENV_ADDRESSES", false)) {
-            address fromFile = _deploymentAddressIfPresent(net.name, ".marketplace");
-            if (fromFile != address(0)) return fromFile;
+        if (!_isLive()) {
+            console.log("");
+            console.log("NOTE: dry run. All values above reflect simulated state only.");
         }
-
-        address fromEnv = vm.envOr("MARKETPLACE_ADDRESS", address(0));
-        require(fromEnv != address(0), "MARKETPLACE_ADDRESS is required (or provide deployments/<NETWORK>.json)");
-        return fromEnv;
     }
 
     function _registerIfNeeded(Marketplace marketplace, address collection, address owner) internal {
@@ -118,9 +130,8 @@ contract CreateHypurr is DeploymentConfig {
             return;
         }
 
-        // Immediate registration (the delayed flow no longer exists).
         marketplace.registerCollection(collection, ROYALTY_FEE, owner);
-        console.log("Collection registered immediately.");
+        console.log("Collection registered.");
     }
 
     function _verify(Marketplace marketplace, address collectionAddr, address owner) internal view {

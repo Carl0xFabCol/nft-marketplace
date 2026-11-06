@@ -478,9 +478,19 @@ contract MarketplaceCore is BoundedStaticCall, Ownable2Step, ReentrancyGuard, Pa
     }
 
     /**
-     * @notice Proposes an externally-deployed collection via the router.
-     * @dev M-03: the legacy name remains as an alias that schedules the same
-     *      delayed registration.
+     * @notice Registers an externally-deployed collection via the router.
+     *
+     * @dev Registration is IMMEDIATE. The delayed-registration flow this used to
+     *      schedule was removed; only the `CollectionRegistrationExecuted` event
+     *      name still carries that history, and it is kept for ABI stability.
+     *
+     * @dev The royalty stored here is a FALLBACK, not an enforced override. This
+     *      path does not set `royaltyOverridden`, so `_getRoyalty` prefers the
+     *      collection's own ERC-2981 `royaltyInfo` whenever it answers with a
+     *      non-zero receiver and an amount within MAX_ROYALTY_FEE. These values
+     *      apply only when ERC-2981 is absent or unusable. The marketplace-side
+     *      values become authoritative only via `updateCollectionRoyalty`, which
+     *      is the sole writer of `royaltyOverridden`.
      */
     function registerCollectionFromRouter(address collection, uint16 royaltyFee, address royaltyReceiver, address creator) external onlyRouter {
         _registerCollectionFromRouter(collection, royaltyFee, royaltyReceiver, creator);

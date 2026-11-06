@@ -299,7 +299,7 @@ contract AuditNB2Test is TestSetup {
         assertEq(collection.ownerOf(1), buyer);
         assertGt(core.pendingWithdrawals(seller), 0);
 
-        verifier.run(address(core), address(bids), address(marketplace), address(launchPad));
+        verifier.verify(address(core), address(bids), address(marketplace), address(launchPad));
     }
 
     function testNB2_CollectionOwnerMismatchReverts() public {
@@ -316,7 +316,7 @@ contract AuditNB2Test is TestSetup {
     function testNB2_VerifierRejectsUnauthorizedLaunchpad() public {
         LaunchPad unverified = new LaunchPad(address(core));
 
-        vm.expectRevert("R-5: launchpad not authorized");
-        verifier.run(address(core), address(bids), address(marketplace), address(unverified));
+        vm.expectRevert("R-5: launchpad not authorized in Core");
+        verifier.verify(address(core), address(bids), address(marketplace), address(unverified));
     }
 }

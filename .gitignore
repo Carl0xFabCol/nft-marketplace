@@ -18,9 +18,10 @@ apps/indexer/dist
 
 docs
 
-packages/contracts/out
-packages/contracts/cache
-packages/contracts/broadcast
+packages/contracts/foundry/out
+packages/contracts/foundry/cache
+packages/contracts/foundry/broadcast
+packages/contracts/foundry/deployments/test-artifacts
 
 .claude
 
