@@ -206,7 +206,7 @@ export class CollectionBidAcceptedHandler extends BaseBidsHandler<CollectionBidA
     for (const tokenId of tokenIds) {
       await this.updateNFTOwner(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), event.blockTimestamp)
       // Cancel any active listings for this token
-      await this.listingsRepo.deactivate(`${collection.toLowerCase()}-${tokenId}`, new Date(event.blockTimestamp * 1000))
+      await this.listingsRepo.deactivate(String(collection).toLowerCase(), tokenId.toString(), new Date(event.blockTimestamp * 1000))
     }
 
     await this.insertActivity({
@@ -347,7 +347,7 @@ export class TokenBidAcceptedHandler extends BaseBidsHandler<TokenBidAcceptedArg
     await this.bidsRepo.deactivateTokenBid(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
 
     // Cancel any active listing for this token
-    await this.listingsRepo.deactivate(`${collection.toLowerCase()}-${tokenId}`, new Date(event.blockTimestamp * 1000))
+    await this.listingsRepo.deactivate(String(collection).toLowerCase(), tokenId.toString(), new Date(event.blockTimestamp * 1000))
 
     // Update NFT owner
     await this.updateNFTOwner(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), event.blockTimestamp)

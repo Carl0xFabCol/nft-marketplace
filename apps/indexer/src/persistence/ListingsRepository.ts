@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { buildListingId, normalizeCollectionAddress, normalizeTokenId } from "@marketplace/shared"
 import { env } from "../config/env"
 import { logger } from "../utils/logger"
 
@@ -17,7 +18,6 @@ export class ListingsRepository {
    * Upsert a listing record.
    */
   async upsert(params: {
-    listingId: string
     collectionAddress: string
     tokenId: string
     sellerWallet: string
@@ -30,12 +30,16 @@ export class ListingsRepository {
     status: string
     source: string
   }): Promise<void> {
+    const collectionAddress = normalizeCollectionAddress(params.collectionAddress)
+    const tokenId = normalizeTokenId(params.tokenId)
+    const listingId = buildListingId(env.chainId, collectionAddress, tokenId)
+
     const { error } = await this.supabase.from("listings").upsert(
       {
-        listing_id: params.listingId,
+        listing_id: listingId,
         chain_id: env.chainId,
-        collection_address: params.collectionAddress.toLowerCase(),
-        token_id: params.tokenId,
+        collection_address: collectionAddress,
+        token_id: tokenId,
         seller_wallet: params.sellerWallet.toLowerCase(),
         price: params.price,
         expires_at: params.expiresAt,
@@ -47,13 +51,13 @@ export class ListingsRepository {
         source: params.source,
       },
       {
-        onConflict: "listing_id",
+        onConflict: "chain_id,collection_address,token_id",
         ignoreDuplicates: false,
       },
     )
 
     if (error) {
-      logger.error({ error, listingId: params.listingId }, "❌ Failed to upsert listing")
+      logger.error({ error, listingId }, "❌ Failed to upsert listing")
       throw error
     }
   }
@@ -61,18 +65,22 @@ export class ListingsRepository {
   /**
    * Update listing price.
    */
-  async updatePrice(listingId: string, newPrice: number, updatedAt: Date): Promise<void> {
+  async updatePrice(collectionAddress: string, tokenId: string, newPrice: number, updatedAt: Date): Promise<void> {
+    const collection = normalizeCollectionAddress(collectionAddress)
+    const token = normalizeTokenId(tokenId)
     const { error } = await this.supabase
       .from("listings")
       .update({
         price: newPrice,
         updated_at: updatedAt,
       })
-      .eq("listing_id", listingId)
+      .eq("chain_id", env.chainId)
+      .eq("collection_address", collection)
+      .eq("token_id", token)
       .eq("is_active", true)
 
     if (error) {
-      logger.error({ error, listingId, newPrice }, "❌ Failed to update listing price")
+      logger.error({ error, collectionAddress: collection, tokenId: token, newPrice }, "❌ Failed to update listing price")
       throw error
     }
   }
@@ -80,7 +88,9 @@ export class ListingsRepository {
   /**
    * Deactivate a listing (cancel or sale).
    */
-  async deactivate(listingId: string, updatedAt: Date, buyerWallet?: string): Promise<void> {
+  async deactivate(collectionAddress: string, tokenId: string, updatedAt: Date, buyerWallet?: string): Promise<void> {
+    const collection = normalizeCollectionAddress(collectionAddress)
+    const token = normalizeTokenId(tokenId)
     const updateData: any = {
       is_active: false,
       updated_at: updatedAt,
@@ -90,10 +100,15 @@ export class ListingsRepository {
       updateData.buyer_wallet = buyerWallet.toLowerCase()
     }
 
-    const { error } = await this.supabase.from("listings").update(updateData).eq("listing_id", listingId)
+    const { error } = await this.supabase
+      .from("listings")
+      .update(updateData)
+      .eq("chain_id", env.chainId)
+      .eq("collection_address", collection)
+      .eq("token_id", token)
 
     if (error) {
-      logger.error({ error, listingId }, "❌ Failed to deactivate listing")
+      logger.error({ error, collectionAddress: collection, tokenId: token }, "❌ Failed to deactivate listing")
       // Don't throw - listing might not exist
     }
   }

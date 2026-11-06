@@ -12,6 +12,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:rls": "node scripts/run-rls-tests.mjs",
     "generate-types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" > src/types.ts"
   },
   "devDependencies": {
@@ -23,6 +24,7 @@
     "@supabase/supabase-js": ">=2"
   },
   "dependencies": {
+    "@marketplace/shared": "workspace:*",
     "ws": "^8.21.0"
   }
 }

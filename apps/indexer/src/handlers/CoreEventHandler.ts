@@ -205,7 +205,6 @@ export class ListingCreatedHandler extends BaseCoreHandler<ListingCreatedArgs> {
     )
 
     await this.listingsRepo.upsert({
-      listingId: `${collection.toLowerCase()}-${tokenId}`,
       collectionAddress: String(collection).toLowerCase(),
       tokenId: tokenId.toString(),
       sellerWallet: String(seller).toLowerCase(),
@@ -255,7 +254,7 @@ export class ListingUpdatedHandler extends BaseCoreHandler<ListingUpdatedArgs> {
       "🔄 Handling ListingUpdated",
     )
 
-    await this.listingsRepo.updatePrice(`${collection.toLowerCase()}-${tokenId}`, Number(newPrice), new Date(event.blockTimestamp * 1000))
+    await this.listingsRepo.updatePrice(String(collection).toLowerCase(), tokenId.toString(), Number(newPrice), new Date(event.blockTimestamp * 1000))
 
     await this.insertActivity({
       event: "LISTING_UPDATED",
@@ -292,7 +291,7 @@ export class ListingCancelledHandler extends BaseCoreHandler<ListingCancelledArg
       "❌ Handling ListingCancelled",
     )
 
-    await this.listingsRepo.deactivate(`${collection.toLowerCase()}-${tokenId}`, new Date(event.blockTimestamp * 1000))
+    await this.listingsRepo.deactivate(String(collection).toLowerCase(), tokenId.toString(), new Date(event.blockTimestamp * 1000))
 
     await this.insertActivity({
       event: "LISTING_CANCELLED",
@@ -340,7 +339,7 @@ export class SaleHandler extends BaseCoreHandler<SaleArgs> {
     )
 
     // Update listing via repository
-    await this.listingsRepo.deactivate(`${collection.toLowerCase()}-${tokenId}`, new Date(event.blockTimestamp * 1000), String(buyer).toLowerCase())
+    await this.listingsRepo.deactivate(String(collection).toLowerCase(), tokenId.toString(), new Date(event.blockTimestamp * 1000), String(buyer).toLowerCase())
 
     // Update NFT owner
     await this.updateNFTOwner(String(collection).toLowerCase(), tokenId.toString(), String(buyer).toLowerCase(), event.blockTimestamp)

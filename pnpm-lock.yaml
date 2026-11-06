@@ -163,6 +163,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@marketplace/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@supabase/supabase-js':
         specifier: '>=2'
         version: 2.117.2
