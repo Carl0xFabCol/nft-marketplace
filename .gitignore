@@ -11,12 +11,13 @@ coverage
 .env.test
 .env.staging
 
-pnpm-lock.yaml
 
 apps/web/.next
 apps/indexer/dist
 
-docs
+docs/*
+!docs/PRODUCTION_PLAN.md
+!docs/INTEGRATION_AUDIT.md
 
 packages/contracts/foundry/out
 packages/contracts/foundry/cache
