@@ -9,7 +9,7 @@ export interface Listing {
   buyer_wallet: string | null;
   price: number;
   is_active: boolean;
-  chain_id: number | null;
+  chain_id: number;
   listed_at: string | null;
   expires_at: string | null;
   tx_hash: string;
