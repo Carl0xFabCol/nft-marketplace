@@ -1,11 +1,12 @@
 // hooks/useUserNfts.ts
 import { useMemo } from "react"
 import { Address } from "viem"
-import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi"
+import { useAccount, useConnection, usePublicClient, useReadContracts, useWriteContract } from "wagmi"
 import { erc721Abi } from "viem"
 import { EnrichedUserNFT, UserNFT } from "@/types/user.types"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 import { useTx } from "@/app/context/TxContext"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { UseBatchOperationsReturn } from "./useBatchOperations"
 import { useCancelListBatch } from "./useListingActions"
 import { waitForTxConfirmation } from "@/lib/tx"
@@ -14,19 +15,21 @@ interface UseUserNftsParams {
   nfts: EnrichedUserNFT[]
   batchOps: UseBatchOperationsReturn
   userAddress: Address
+  chainId: number
   /** Called right after the delist tx is sent — optimistic local patch. */
   onDelist?: (items: UserNFT[]) => void
   /** Called when the delist tx fails — restore the optimistic patch. */
   onDelistFail?: (items: UserNFT[]) => void
 }
 
-export function useUserNfts({ nfts, batchOps, userAddress, onDelist, onDelistFail }: UseUserNftsParams) {
-  const publicClient = usePublicClient()
+export function useUserNfts({ nfts, batchOps, userAddress, chainId, onDelist, onDelistFail }: UseUserNftsParams) {
+  const publicClient = usePublicClient({ chainId })
 
   const { writeContractAsync } = useWriteContract()
-  const { cancelListBatch } = useCancelListBatch()
+  const { cancelListBatch } = useCancelListBatch(chainId)
   const { address } = useAccount()
-  const { CORE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { chainId: connectedChainId } = useConnection()
+  const { CORE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
   const { delistBatch, approveBatch, clearBatch } = batchOps
   const { addTx, removeTx, updateTx } = useTx()
 
@@ -45,6 +48,7 @@ export function useUserNfts({ nfts, batchOps, userAddress, onDelist, onDelistFai
       functionName: "isApprovedForAll",
       args: [userAddress, CORE_CONTRACT_ADDRESS],
     })),
+    chainId,
     query: {
       enabled: uniqueCollections.length > 0 && address?.toLowerCase() === userAddress.toLowerCase(),
     },
@@ -76,6 +80,13 @@ export function useUserNfts({ nfts, batchOps, userAddress, onDelist, onDelistFai
   const handleDelist = async () => {
     const items = delistBatch
     if (!items.length) return
+
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      alert(chainGuardErrorMessage(error))
+      return
+    }
 
     const collectionAddresses = items.map((i) => i.collection_address as Address)
     const tokenIds = items.map((i) => BigInt(i.token_id))
@@ -111,11 +122,14 @@ export function useUserNfts({ nfts, batchOps, userAddress, onDelist, onDelistFai
     // Approve the marketplace to transfer all tokens of this collection.
     let txHash: `0x${string}` | undefined
     try {
+      assertWalletChain(connectedChainId, chainId)
+
       txHash = await writeContractAsync({
         address: collectionAddress,
         abi: erc721Abi,
         functionName: "setApprovalForAll",
         args: [CORE_CONTRACT_ADDRESS, true],
+        chainId,
       })
 
       addTx({ hash: txHash, label: "Approving collection", status: "loading" })
@@ -125,6 +139,11 @@ export function useUserNfts({ nfts, batchOps, userAddress, onDelist, onDelistFai
       setTimeout(() => removeTx(txHash!), 5000)
       clearBatch("approve")
     } catch (error) {
+      const chainError = chainGuardErrorMessage(error)
+      if (chainError) {
+        alert(chainError)
+        return
+      }
       console.error("Approval error:", error)
       if (txHash) {
         updateTx(txHash, { label: "Approval failed", status: "error" })

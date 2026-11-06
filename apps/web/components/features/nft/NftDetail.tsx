@@ -12,9 +12,10 @@ import { IpfsImage } from "@/components/features/nft/IpfsImage"
 
 interface NFTDetailProps {
   nft: NFTDetailData
+  chainId: number
 }
 
-export default function NFTDetail({ nft }: NFTDetailProps) {
+export default function NFTDetail({ nft, chainId }: NFTDetailProps) {
   const [activeTab, setActiveTab] = useState<"details" | "history" | "properties" | "bids">("details")
   const { address } = useConnection()
 
@@ -62,7 +63,7 @@ export default function NFTDetail({ nft }: NFTDetailProps) {
         </div>
 
         {/* Price / Actions */}
-        <NFTActions nft={nft} />
+        <NFTActions nft={nft} chainId={chainId} />
 
         {/* Tabs */}
         <div className="flex border-b border-(--text)/20">
@@ -100,7 +101,7 @@ export default function NFTDetail({ nft }: NFTDetailProps) {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="opacity-75">Contract:</span>
-                  <a href={explorerAddressUrl(nft.collection_address)} target="_blank" className="font-mono hover:text-(--accent)">
+                  <a href={explorerAddressUrl(nft.collection_address, chainId)} target="_blank" className="font-mono hover:text-(--accent)">
                     {nft.collection_address.slice(0, 6)}...{nft.collection_address.slice(-4)}
                   </a>
                 </div>
@@ -113,8 +114,8 @@ export default function NFTDetail({ nft }: NFTDetailProps) {
           )}
           {activeTab === "properties" && <NFTProperties nft={nft} />}
 
-          {activeTab === "bids" && <NFTBids bids={nft.bids ?? []} owner={address?.toLowerCase() == nft.owner_wallet} collectionAddress={nft.collection_address} tokenId={nft.token_id} />}
-          {activeTab === "history" && <NFTHistory nft={nft} />}
+          {activeTab === "bids" && <NFTBids bids={nft.bids ?? []} chainId={chainId} owner={address?.toLowerCase() == nft.owner_wallet} collectionAddress={nft.collection_address} tokenId={nft.token_id} />}
+          {activeTab === "history" && <NFTHistory nft={nft} chainId={chainId} />}
         </div>
       </div>
     </div>

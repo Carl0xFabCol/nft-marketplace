@@ -3,8 +3,10 @@
 
 import { Address, isAddress } from "viem"
 import { requireWalletMatch } from "@/lib/supabase/auth"
+import { createSupabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { SUPPORTED_CHAIN_IDS } from "@/lib/chains"
+import { normalizeTokenId } from "@marketplace/shared"
 
 export interface BatchListingData {
   txHash: `0x${string}`
@@ -35,41 +37,60 @@ export async function saveBatchListingToDB(data: BatchListingData) {
     if (!Array.isArray(prices) || prices.length !== tokenIds.length) throw new Error("Invalid price list")
     if (!Array.isArray(expiresAts) || expiresAts.length !== tokenIds.length) throw new Error("Invalid expiration list")
 
+    const normalizedTokenIds: string[] = []
+    const seenListings = new Set<string>()
+
     for (let index = 0; index < tokenIds.length; index++) {
       if (typeof collections[index] !== "string" || !isAddress(collections[index])) throw new Error("Invalid collection address")
-      if (typeof tokenIds[index] !== "string" || !UINT_PATTERN.test(tokenIds[index])) throw new Error("Invalid token id")
+      if (typeof tokenIds[index] !== "string") throw new Error("Invalid token id")
       if (typeof prices[index] !== "string" || !UINT_PATTERN.test(prices[index]) || BigInt(prices[index]) <= BigInt(0)) throw new Error("Invalid price")
       if (typeof expiresAts[index] !== "string" || !TIMESTAMP_PATTERN.test(expiresAts[index])) throw new Error("Invalid expiration")
+
+      const tokenId = normalizeTokenId(tokenIds[index])
+      const listingKey = `${chainId}:${collections[index].toLowerCase()}:${tokenId}`
+      if (seenListings.has(listingKey)) throw new Error("Duplicate listing in batch")
+      seenListings.add(listingKey)
+      normalizedTokenIds.push(tokenId)
     }
 
     // The caller must own the wallet that appears as seller on the rows.
-    const supabase = await requireWalletMatch(seller)
+    await requireWalletMatch(seller)
 
-    const rows = tokenIds.map((tokenId, index) => {
+    const hash = txHash.toLowerCase()
+    const sellerWallet = seller.toLowerCase()
+    const rows = normalizedTokenIds.map((tokenId, index) => {
       const rawExpire = expiresAts[index]
       const expiresAt = Number(rawExpire) > 0 ? new Date(Number(rawExpire) * 1000).toISOString() : null
 
       return {
-        tx_hash: txHash,
         collection_address: collections[index].toLowerCase(),
-        listing_id: `${collections[index].toLowerCase()}-${tokenId}`,
         token_id: tokenId,
-        seller_wallet: seller.toLowerCase(),
         price: prices[index],
-        chain_id: chainId,
-        is_active: true,
-        status: "pending",
-        source: "optimistic",
         expires_at: expiresAt,
       }
     })
 
-    const { error: dbError } = await supabase.from("listings").upsert(rows, {
-      onConflict: "listing_id",
+    const admin = createSupabaseAdmin()
+    const { data: savedCount, error: dbError } = await admin.rpc("sec01_save_listing_batch", {
+      p_seller: sellerWallet,
+      p_tx_hash: hash,
+      p_chain_id: chainId,
+      p_rows: rows,
     })
 
     if (dbError) {
-      console.error("Failed to upsert optimistic listings:", dbError)
+      console.error("Failed to save optimistic listings:", dbError)
+
+      // Only surface the database's ownership conflict, not arbitrary DB text.
+      if (dbError.code === "42501" && dbError.message.startsWith("Forbidden")) {
+        throw new Error(dbError.message)
+      }
+
+      throw new Error("Failed to save listings")
+    }
+
+    if (savedCount !== rows.length) {
+      console.error("Listing batch saved an unexpected row count:", savedCount, rows.length)
       throw new Error("Failed to save listings")
     }
 
@@ -79,7 +100,7 @@ export async function saveBatchListingToDB(data: BatchListingData) {
     const message = err instanceof Error ? err.message : ""
 
     // Auth and validation errors are safe to surface; raw DB errors are not.
-    if (message === "Unauthorized" || message.startsWith("Forbidden") || message.startsWith("Invalid") || message.startsWith("Unsupported")) {
+    if (message === "Unauthorized" || message.startsWith("Forbidden") || message.startsWith("Invalid") || message.startsWith("Unsupported") || message.startsWith("Duplicate")) {
       throw err
     }
 

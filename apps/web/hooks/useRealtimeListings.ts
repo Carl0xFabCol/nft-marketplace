@@ -2,7 +2,7 @@
 
 import { Address } from "viem"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
-import { toUserListing, RealtimeListingRow } from "@/lib/listingMerge"
+import { listingMatchesChain, toUserListing, RealtimeListingRow } from "@/lib/listingMerge"
 import { UserListing } from "@/types/user.types"
 
 // hooks/useRealtimeListings.ts
@@ -19,13 +19,15 @@ export interface UseRealtimeListingsOptions {
   userAddress?: Address
   /** Filter by collection — the collection page. */
   collectionAddress?: Address
+  /** Ignore rows from other chains. */
+  chainId?: number
   /** INSERT or UPDATE with `is_active = true` (new listing, price change, pending → confirmed). */
   onUpsert: (listing: UserListing) => void
   /** UPDATE with `is_active = false` or DELETE (delist, sale, cancelled). */
   onDeactivate: (listing: UserListing) => void
 }
 
-export function useRealtimeListings({ userAddress, collectionAddress, onUpsert, onDeactivate }: UseRealtimeListingsOptions) {
+export function useRealtimeListings({ userAddress, collectionAddress, chainId, onUpsert, onDeactivate }: UseRealtimeListingsOptions) {
   const filter = collectionAddress
     ? `collection_address=eq.${collectionAddress.toLowerCase()}`
     : userAddress
@@ -38,12 +40,12 @@ export function useRealtimeListings({ userAddress, collectionAddress, onUpsert, 
     enabled: Boolean(filter),
     onChange: (change) => {
       if (change.eventType === "DELETE") {
-        if (change.old) onDeactivate(toUserListing(change.old))
+        if (change.old && listingMatchesChain(change.old, chainId)) onDeactivate(toUserListing(change.old))
         return
       }
 
       const row = change.new
-      if (!row) return
+      if (!row || !listingMatchesChain(row, chainId)) return
 
       const listing = toUserListing(row)
       if (row.is_active) onUpsert(listing)

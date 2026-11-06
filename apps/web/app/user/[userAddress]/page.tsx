@@ -6,6 +6,7 @@ import { isAddress } from "viem"
 import { UserService } from "@/services/user.service"
 import UserDashboard from "@/components/features/user/UserDashboard"
 import { getServerSupabase } from "@/lib/supabase/server"
+import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
 
 interface UserPageProps {
   params: Promise<{ userAddress: string }>
@@ -16,8 +17,10 @@ export default async function UserPage({ params }: UserPageProps) {
   const supabase = await getServerSupabase()
   if (!isAddress(userAddress)) notFound()
 
+  const chainId = DEFAULT_CHAIN_ID
+
   const [userData, profile, avatarOptions] = await Promise.all([
-    UserService.getUserData(supabase, userAddress),
+    UserService.getUserData(supabase, userAddress, chainId),
     UserService.getUserProfile(supabase, userAddress).catch((error) => {
       console.error("Failed to load user profile:", error)
       return null
@@ -30,7 +33,7 @@ export default async function UserPage({ params }: UserPageProps) {
 
   return (
     <div className="w-full pb-5 pt-16">
-      <UserDashboard userAddress={userAddress} initialData={userData} profile={profile} avatarOptions={avatarOptions} />
+      <UserDashboard userAddress={userAddress} chainId={chainId} initialData={userData} profile={profile} avatarOptions={avatarOptions} />
     </div>
   )
 }

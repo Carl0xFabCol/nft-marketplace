@@ -7,28 +7,31 @@ import { useEnsureApproval } from "@/hooks/useEnsureApproval"
 import Link from "next/link"
 import { FaGavel } from "react-icons/fa"
 import { HypeIcon } from "@/components/ui/HypeIcon"
-import { useAccount, usePublicClient } from "wagmi"
+import { useAccount, useConnection, usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { UserTokenBid } from "@/types/user.types"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserTokenBid, upsertTokenBid, deactivateTokenBid } from "@/lib/bidMerge"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 
 interface NFTBidsProps {
   bids: UserTokenBid[]
+  chainId: number
   owner?: boolean
   /** Used for the realtime subscription filter. */
   collectionAddress: Address
   tokenId: string
 }
 
-export default function NFTBids({ bids, owner = false, collectionAddress, tokenId }: NFTBidsProps) {
+export default function NFTBids({ bids, chainId, owner = false, collectionAddress, tokenId }: NFTBidsProps) {
   const [bidList, setBidList] = useState<UserTokenBid[]>(bids)
-  const { acceptTokenBid } = useAcceptTokenBid()
-  const { ensureApproval } = useEnsureApproval()
+  const { acceptTokenBid } = useAcceptTokenBid(chainId)
+  const { ensureApproval } = useEnsureApproval(chainId)
   const { addTx, updateTx, removeTx } = useTx()
-  const publicClient = usePublicClient()
+  const publicClient = usePublicClient({ chainId })
   const { address } = useAccount()
+  const { chainId: connectedChainId } = useConnection()
 
   // Sync when the server re-delivers fresh bids (e.g. router.refresh()).
   const [prevBids, setPrevBids] = useState(bids)
@@ -60,6 +63,14 @@ export default function NFTBids({ bids, owner = false, collectionAddress, tokenI
     if (!address || !bid.collection_address || !bid.token_id || !bid.bidder_wallet) return
 
     const collection = bid.collection_address as Address
+
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      alert(chainGuardErrorMessage(error))
+      return
+    }
+
     let hash: `0x${string}` | undefined
 
     try {

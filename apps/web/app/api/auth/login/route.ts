@@ -128,7 +128,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // password per wallet address. Neither is guessable from the wallet
     // address, eliminating the old deterministic ${wallet}@wallet.local
     // credential-derivation weakness.
-    const { data: mapping } = await supabaseAdmin.from("user_wallets").select("supabase_user_id, email, supabase_password").eq("wallet_address", walletAddress).single()
+    const { data: mapping, error: mappingError } = await supabaseAdmin
+      .from("user_wallets")
+      .select("supabase_user_id, email, supabase_password")
+      .eq("wallet_address", walletAddress)
+      .maybeSingle()
+
+    if (mappingError) {
+      console.error("Failed to look up wallet mapping:", mappingError)
+      return NextResponse.json({ error: "Failed to look up wallet mapping" }, { status: 500 })
+    }
 
     let email: string
     let password: string

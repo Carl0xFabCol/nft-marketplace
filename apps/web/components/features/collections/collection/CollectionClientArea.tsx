@@ -22,6 +22,7 @@ import { EnrichedUserNFT, UserCollectionBid, UserListing } from "@/types/user.ty
 
 interface CollectionClientAreaProps {
   colAddress: Address
+  chainId: number
   collectionBids: UserCollectionBid[]
   initialNftsData: {
     nfts: EnrichedUserNFT[]
@@ -34,7 +35,7 @@ interface CollectionClientAreaProps {
   initialFloorPrice: string
 }
 
-export default function CollectionClientArea({ colAddress, collectionBids, initialNftsData, initialFloorPrice }: CollectionClientAreaProps) {
+export default function CollectionClientArea({ colAddress, chainId, collectionBids, initialNftsData, initialFloorPrice }: CollectionClientAreaProps) {
   const [showColBidCard, setShowColBidCard] = useState(false)
   const [showBidCard, setShowBidCard] = useState(false)
   const [showBuyCard, setShowBuyCard] = useState(false)
@@ -59,6 +60,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
 
   useRealtimeListings({
     collectionAddress: colAddress,
+    chainId,
     onUpsert: handleUpsertListing,
     onDeactivate: handleDeactivateListing,
   })
@@ -75,6 +77,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     address: colAddress,
     abi: erc721Abi,
     functionName: "name",
+    chainId,
   })
 
   // floor_price comes from the server — only recompute when filters change and
@@ -105,6 +108,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
 
     try {
       const data = await NFTService.getCollectionNFTs(colAddress, {
+        chainId,
         page: 1,
         limit: 24,
         onlyListed,
@@ -121,7 +125,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     } finally {
       setIsLoading(false)
     }
-  }, [colAddress, onlyListed, sortBy, sortDir])
+  }, [colAddress, chainId, onlyListed, sortBy, sortDir])
 
   // Avoid the double fetch on the initial mount
   useEffect(() => {
@@ -142,6 +146,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
     try {
       const nextPage = currentPage + 1
       const data = await NFTService.getCollectionNFTs(colAddress, {
+        chainId,
         page: nextPage,
         limit: 24,
         onlyListed,
@@ -150,8 +155,8 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
       })
 
       setNfts((prev) => {
-        const existingIds = new Set(prev.map((nft) => nft.token_id))
-        const newNfts = data.nfts.filter((nft) => !existingIds.has(nft.token_id))
+        const existingIds = new Set(prev.map((nft) => `${nft.chain_id}:${nft.collection_address.toLowerCase()}-${nft.token_id}`))
+        const newNfts = data.nfts.filter((nft) => !existingIds.has(`${nft.chain_id}:${nft.collection_address.toLowerCase()}-${nft.token_id}`))
         return [...prev, ...newNfts]
       })
 
@@ -164,7 +169,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
       setIsLoading(false)
       abortControllerRef.current = null
     }
-  }, [colAddress, currentPage, isLoading, hasMore, onlyListed, sortBy, sortDir])
+  }, [colAddress, chainId, currentPage, isLoading, hasMore, onlyListed, sortBy, sortDir])
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -305,7 +310,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
               <AnimatePresence>
                 {sortedNFTs.map((nft) => (
                   <NFTCard
-                    key={`${nft.token_id}-${nft.collection_address}`}
+                    key={`${nft.chain_id}-${nft.collection_address}-${nft.token_id}`}
                     token={{
                       ...nft,
                       price: nft.active_listing?.price,
@@ -342,6 +347,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
         {showBuyCard && (
           <BuyCard
             items={batchOps.buyBatch}
+            chainId={chainId}
             collectionName={colName as string}
             onClose={() => setShowBuyCard(false)}
             onSuccess={(tokenIds: string[]) => updateNFTAfterBuy(tokenIds)}
@@ -353,6 +359,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
           <BidCard
             items={batchOps.bidBatch}
             collectionAddress={colAddress}
+            chainId={chainId}
             collectionName={colName as string}
             onClose={() => setShowBidCard(false)}
             onSuccess={() => batchOps.clearBatch("bid")}
@@ -360,7 +367,7 @@ export default function CollectionClientArea({ colAddress, collectionBids, initi
           />
         )}
 
-        {showColBidCard && <ColBidCard collectionAddress={colAddress} floorPrice={floorPrice} onClose={() => setShowColBidCard(false)} />}
+        {showColBidCard && <ColBidCard collectionAddress={colAddress} chainId={chainId} floorPrice={floorPrice} onClose={() => setShowColBidCard(false)} />}
       </AnimatePresence>
     </div>
   )

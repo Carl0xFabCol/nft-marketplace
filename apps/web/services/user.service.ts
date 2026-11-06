@@ -4,8 +4,15 @@ import { Address, isAddress } from "viem"
 import { UserCollectionSummary, UserPageData, UserListing, UserTokenBid, UserCollectionBid, Activity, UserProfile, ProfileNftOption } from "@/types/user.types"
 import { clampInt } from "@/lib/validation"
 
-import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
+import { DEFAULT_CHAIN_ID, SUPPORTED_CHAIN_IDS } from "@marketplace/shared"
 const DEFAULT_CHAIN = DEFAULT_CHAIN_ID
+
+function requireSupportedChain(chainId: number): number {
+  if (!SUPPORTED_CHAIN_IDS.includes(chainId as (typeof SUPPORTED_CHAIN_IDS)[number])) {
+    throw new Error("Invalid chain id")
+  }
+  return chainId
+}
 
 export class UserService {
   /**
@@ -52,15 +59,17 @@ export class UserService {
       }))
   }
 
-  static async getUserData(supabase: SupabaseClient, userAddress: Address): Promise<UserPageData> {
+  static async getUserData(supabase: SupabaseClient, userAddress: Address, chainId: number): Promise<UserPageData> {
+    chainId = requireSupportedChain(chainId)
+
     const [listingsRes, colBidsRes, tokenBidsRes, collectionsRes, nftsRes, activityRes] = await Promise.allSettled([
-      this.getUserListings(supabase, userAddress),
+      this.getUserListings(supabase, userAddress, chainId),
       this.getUserCollectionBids(supabase, userAddress),
       this.getUserTokenBids(supabase, userAddress),
-      this.getUserCollections(supabase, userAddress),
+      this.getUserCollections(supabase, userAddress, chainId),
       // Match the inventory's default sort so the first render is consistent
       // with the sort indicator shown in the UI.
-      this.getUserNFTsPaginated(supabase, userAddress, { page: 1, limit: 24, sortBy: "price", sortDir: "asc" }),
+      this.getUserNFTsPaginated(supabase, userAddress, { chainId, page: 1, limit: 24, sortBy: "price", sortDir: "asc" }),
       this.getUserActivityPaginated(supabase, userAddress, { page: 1, limit: 24 }),
     ])
 
@@ -89,7 +98,8 @@ export class UserService {
   static async getUserNFTsPaginated(
     supabase: SupabaseClient,
     userAddress: Address,
-    options?: {
+    options: {
+      chainId: number
       page?: number
       limit?: number
       collectionAddress?: Address
@@ -106,8 +116,16 @@ export class UserService {
   /**
    * The user's active listings.
    */
-  static async getUserListings(supabase: SupabaseClient, userAddress: Address): Promise<UserListing[]> {
-    const { data, error } = await supabase.from("listings").select("*").eq("seller_wallet", userAddress.toLowerCase()).eq("is_active", true).order("created_at", { ascending: false })
+  static async getUserListings(supabase: SupabaseClient, userAddress: Address, chainId: number): Promise<UserListing[]> {
+    chainId = requireSupportedChain(chainId)
+
+    const { data, error } = await supabase
+      .from("listings")
+      .select("*")
+      .eq("seller_wallet", userAddress.toLowerCase())
+      .eq("chain_id", chainId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
 
     if (error) throw error
     return (data as UserListing[]) || []
@@ -136,15 +154,21 @@ export class UserService {
   /**
    * Collections related to the user (owned NFTs, placed bids).
    */
-  static async getUserCollections(supabase: SupabaseClient, userAddress: Address): Promise<UserCollectionSummary[]> {
+  static async getUserCollections(supabase: SupabaseClient, userAddress: Address, chainId: number): Promise<UserCollectionSummary[]> {
+    chainId = requireSupportedChain(chainId)
     const addr = userAddress.toLowerCase()
 
     const [nftColRes, colBidRes, tokenBidRes] = await Promise.all([
-      supabase.from("collections").select(`*, user_nfts:nfts!inner(owner_wallet, collection_address)`).eq("nfts.owner_wallet", addr),
+      supabase
+        .from("collections")
+        .select(`*, user_nfts:nfts!inner(owner_wallet, collection_address)`)
+        .eq("chain_id", chainId)
+        .eq("nfts.owner_wallet", addr)
+        .eq("nfts.chain_id", chainId),
 
-      supabase.from("collection_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("is_active", true),
+      supabase.from("collection_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("is_active", true).eq("collections.chain_id", chainId),
 
-      supabase.from("token_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("is_active", true),
+      supabase.from("token_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("is_active", true).eq("collections.chain_id", chainId),
     ])
 
     type OwnedCollectionRow = UserCollectionSummary & {

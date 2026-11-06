@@ -7,6 +7,7 @@
 // and the later realtime event are never racy — the later event simply
 // overwrites with the newer row (both carry the same DB truth).
 import { Address } from "viem"
+import { tryNormalizeTokenId } from "@marketplace/shared"
 import { EnrichedUserNFT, UserListing } from "@/types/user.types"
 
 // A row from the `listings` table as delivered by Supabase Realtime.
@@ -34,12 +35,13 @@ export type RealtimeListingRow = {
 /** Normalize a realtime row (possibly column-filtered) into a UserListing. */
 export function toUserListing(row: RealtimeListingRow): UserListing {
   const rawPrice = row.price ?? 0
+  const rawTokenId = String(row.token_id)
 
   return {
     id: row.id ?? "",
     listing_id: row.listing_id ?? null,
     collection_address: row.collection_address.toLowerCase(),
-    token_id: String(row.token_id),
+    token_id: tryNormalizeTokenId(rawTokenId) ?? rawTokenId,
     seller_wallet: row.seller_wallet?.toLowerCase() ?? null,
     buyer_wallet: row.buyer_wallet?.toLowerCase() ?? null,
     price: typeof rawPrice === "string" ? Number(rawPrice) : rawPrice,
@@ -55,15 +57,29 @@ export function toUserListing(row: RealtimeListingRow): UserListing {
   }
 }
 
-const listingKey = (collectionAddress: string, tokenId: string) => `${collectionAddress.toLowerCase()}-${String(tokenId)}`
+export function listingKey(chainId: number | null | undefined, collectionAddress: string, tokenId: string): string {
+  const chain = chainId ?? "unknown"
+  const token = tryNormalizeTokenId(tokenId) ?? String(tokenId)
+  return `${chain}:${collectionAddress.toLowerCase()}-${token}`
+}
+
+/**
+ * Realtime payloads may omit columns depending on the publication. When a
+ * target chain is known, only rows that explicitly carry that chain are
+ * accepted; an ambiguous row is dropped rather than merged into the page.
+ */
+export function listingMatchesChain(row: { chain_id?: number | null } | undefined, chainId?: number): boolean {
+  if (chainId === undefined) return true
+  return row?.chain_id === chainId
+}
 
 /**
  * Set/overwrite `active_listing` for the matching NFT (INSERT / price change /
  * pending → confirmed).
  */
 export function upsertListingIntoNfts(nfts: EnrichedUserNFT[], listing: UserListing): EnrichedUserNFT[] {
-  const key = listingKey(listing.collection_address, listing.token_id)
-  return nfts.map((nft) => (listingKey(nft.collection_address, nft.token_id) === key ? { ...nft, active_listing: listing } : nft))
+  const key = listingKey(listing.chain_id, listing.collection_address, listing.token_id)
+  return nfts.map((nft) => (listingKey(nft.chain_id, nft.collection_address, nft.token_id) === key ? { ...nft, active_listing: listing } : nft))
 }
 
 /**
@@ -71,9 +87,9 @@ export function upsertListingIntoNfts(nfts: EnrichedUserNFT[], listing: UserList
  * records a buyer, the NFT also changes owner (sale).
  */
 export function deactivateListingInNfts(nfts: EnrichedUserNFT[], listing: UserListing): EnrichedUserNFT[] {
-  const key = listingKey(listing.collection_address, listing.token_id)
+  const key = listingKey(listing.chain_id, listing.collection_address, listing.token_id)
   return nfts.map((nft) => {
-    if (listingKey(nft.collection_address, nft.token_id) !== key) return nft
+    if (listingKey(nft.chain_id, nft.collection_address, nft.token_id) !== key) return nft
     if (listing.buyer_wallet && listing.buyer_wallet.toLowerCase() !== nft.owner_wallet?.toLowerCase()) {
       return { ...nft, active_listing: null, owner_wallet: listing.buyer_wallet as Address }
     }
@@ -83,8 +99,8 @@ export function deactivateListingInNfts(nfts: EnrichedUserNFT[], listing: UserLi
 
 /** Upsert into a flat listings array (used for the floor column). */
 export function upsertListingIntoListings(listings: UserListing[], listing: UserListing): UserListing[] {
-  const key = listingKey(listing.collection_address, listing.token_id)
-  const idx = listings.findIndex((l) => listingKey(l.collection_address, l.token_id) === key)
+  const key = listingKey(listing.chain_id, listing.collection_address, listing.token_id)
+  const idx = listings.findIndex((l) => listingKey(l.chain_id, l.collection_address, l.token_id) === key)
   if (idx === -1) return [...listings, listing]
   const copy = [...listings]
   copy[idx] = listing
@@ -93,6 +109,6 @@ export function upsertListingIntoListings(listings: UserListing[], listing: User
 
 /** Remove a deactivated listing from a flat listings array. */
 export function deactivateListingInListings(listings: UserListing[], listing: UserListing): UserListing[] {
-  const key = listingKey(listing.collection_address, listing.token_id)
-  return listings.filter((l) => listingKey(l.collection_address, l.token_id) !== key)
+  const key = listingKey(listing.chain_id, listing.collection_address, listing.token_id)
+  return listings.filter((l) => listingKey(l.chain_id, l.collection_address, l.token_id) !== key)
 }

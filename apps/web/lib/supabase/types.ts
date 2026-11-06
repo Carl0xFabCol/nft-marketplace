@@ -211,7 +211,7 @@ export type Database = {
       listings: {
         Row: {
           buyer_wallet: string | null
-          chain_id: number | null
+          chain_id: number
           collection_address: string
           created_at: string
           expires_at: string | null
@@ -227,7 +227,7 @@ export type Database = {
         }
         Insert: {
           buyer_wallet?: string | null
-          chain_id?: number | null
+          chain_id: number
           collection_address: string
           created_at: string
           expires_at?: string | null
@@ -243,7 +243,7 @@ export type Database = {
         }
         Update: {
           buyer_wallet?: string | null
-          chain_id?: number | null
+          chain_id?: number
           collection_address?: string
           created_at?: string
           expires_at?: string | null

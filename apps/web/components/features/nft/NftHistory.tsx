@@ -8,6 +8,7 @@ import { explorerTokenInstanceUrl, explorerTxUrl } from "@/lib/chains"
 import { Tables } from "@/lib/supabase/types"
 
 interface NFTHistoryProps {
+  chainId: number
   nft: {
     history?: Tables<"activity">[]
     token_id: string
@@ -15,7 +16,7 @@ interface NFTHistoryProps {
   }
 }
 
-export function NFTHistory({ nft }: NFTHistoryProps) {
+export function NFTHistory({ nft, chainId }: NFTHistoryProps) {
   const history = nft.history || []
 
   // Map an activity event to an icon. Events arrive uppercase (e.g. "SALE",
@@ -107,7 +108,7 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
               <div className="col-span-1 flex items-center gap-2">
                 <span className="text-xs opacity-75">{timeAgo}</span>
                 <a
-                  href={explorerTxUrl(activity.tx_hash)}
+                  href={explorerTxUrl(activity.tx_hash, chainId)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs hover:text-(--accent) transition-colors"
@@ -125,7 +126,7 @@ export function NFTHistory({ nft }: NFTHistoryProps) {
       {history.length > 0 && (
         <div className="flex justify-center pt-4 border-t border-(--text)/20">
           <Link
-            href={explorerTokenInstanceUrl(nft.collection_address, nft.token_id)}
+            href={explorerTokenInstanceUrl(nft.collection_address, nft.token_id, chainId)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm hover:text-(--accent) transition-colors"

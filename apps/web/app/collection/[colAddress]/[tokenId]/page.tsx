@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { isAddress } from "viem"
 import { NFTService } from "@/services/nft.service"
+import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
 import NFTDetail from "@/components/features/nft/NftDetail"
 import { NFTDetailSkeleton } from "@/components/features/nft/NftDetailSkeleton"
 
@@ -20,8 +21,10 @@ export default async function NFTPage({ params }: NFTPageProps) {
     notFound()
   }
 
+  const chainId = DEFAULT_CHAIN_ID
+
   // Fetch data on the server
-  const nftData = await NFTService.getNFTDetail(colAddress, tokenId)
+  const nftData = await NFTService.getNFTDetail(colAddress, tokenId, chainId)
 
   if (!nftData) {
     notFound()
@@ -30,7 +33,7 @@ export default async function NFTPage({ params }: NFTPageProps) {
   return (
     <div className="w-full min-h-screen px-1 pb-2 overflow-scroll pt-16">
       <Suspense fallback={<NFTDetailSkeleton />}>
-        <NFTDetail nft={nftData} />
+        <NFTDetail nft={nftData} chainId={chainId} />
       </Suspense>
     </div>
   )
@@ -44,7 +47,7 @@ export async function generateMetadata({ params }: NFTPageProps) {
     return { title: "NFT not found | Marketplace" }
   }
 
-  const nftData = await NFTService.getNFTDetail(colAddress, tokenId)
+  const nftData = await NFTService.getNFTDetail(colAddress, tokenId, DEFAULT_CHAIN_ID)
 
   return {
     title: `${nftData?.name || `NFT #${tokenId}`} | Marketplace`,

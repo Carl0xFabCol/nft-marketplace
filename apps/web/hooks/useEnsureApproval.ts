@@ -6,10 +6,10 @@ import { useContractAddresses } from "@/hooks/useContractAddresses"
 import { useTx } from "@/app/context/TxContext"
 import { waitForTxConfirmation } from "@/lib/tx"
 
-export function useEnsureApproval() {
+export function useEnsureApproval(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const publicClient = usePublicClient()
-  const { CORE_CONTRACT_ADDRESS } = useContractAddresses()
+  const publicClient = usePublicClient({ chainId })
+  const { CORE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
   const { addTx, updateTx, removeTx } = useTx()
 
   const ensureApproval = async (collection: Address, owner: Address): Promise<`0x${string}` | null> => {
@@ -29,6 +29,7 @@ export function useEnsureApproval() {
       abi: erc721Abi,
       functionName: "setApprovalForAll",
       args: [CORE_CONTRACT_ADDRESS, true],
+      chainId,
     })
 
     addTx({ hash, status: "loading", label: "Approving collection..." })

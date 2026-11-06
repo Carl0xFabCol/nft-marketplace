@@ -5,7 +5,8 @@ import { FaGavel } from "react-icons/fa"
 import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useBidCollection } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
-import { usePublicClient } from "wagmi"
+import { useConnection, usePublicClient } from "wagmi"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { Address } from "viem"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { Modal } from "@/components/ui/Modal"
@@ -14,17 +15,20 @@ import { waitForTxConfirmation } from "@/lib/tx"
 
 interface ColBidCardProps {
   collectionAddress: Address
+  chainId: number
   floorPrice?: bigint
   onClose: () => void
   onSuccess?: () => void
 }
 
-export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }: ColBidCardProps) {
+export function ColBidCard({ collectionAddress, chainId, floorPrice, onClose, onSuccess }: ColBidCardProps) {
   const [price, setPrice] = useState<string>("")
   const [quantity, setQuantity] = useState<string>("")
   const [expirationDate, setExpirationDate] = useState<Date>(new Date())
-  const publicClient = usePublicClient()
-  const { bidCollection } = useBidCollection()
+  const [formError, setFormError] = useState<string | null>(null)
+  const publicClient = usePublicClient({ chainId })
+  const { bidCollection } = useBidCollection(chainId)
+  const { chainId: connectedChainId } = useConnection()
   const { addTx, removeTx, updateTx } = useTx()
 
   const totalBalance = price && quantity ? Number(price) * Number(quantity) : 0
@@ -35,6 +39,14 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
   const handleBid = async () => {
     if (!price || !quantity || Number(quantity) < 1) {
       alert("Please enter valid price and quantity")
+      return
+    }
+
+    setFormError(null)
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      setFormError(chainGuardErrorMessage(error))
       return
     }
 
@@ -145,6 +157,7 @@ export function ColBidCard({ collectionAddress, floorPrice, onClose, onSuccess }
 
           {/* Footer */}
           <div className="p-4 flex items-center justify-between border-t border-(--text)/20">
+            {formError && <p className="text-sm text-red-500">{formError}</p>}
             <div className="flex flex-col gap-1">
               <span className="text-sm opacity-75">Total Balance Needed</span>
               <div className="flex items-center gap-2 text-2xl font-bold">

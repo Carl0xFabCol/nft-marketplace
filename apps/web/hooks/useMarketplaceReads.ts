@@ -48,43 +48,49 @@ export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
   }
 }
 
-export function useMarketplaceInfo() {
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+export function useMarketplaceInfo(chainId?: number) {
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const { data: owner } = useReadContract({
     address: MARKETPLACE_CONTRACT_ADDRESS,
     abi: MarketplaceABI,
     functionName: "owner",
+    chainId,
   })
 
   const { data: marketplaceFee } = useReadContract({
     address: MARKETPLACE_CONTRACT_ADDRESS,
     abi: MarketplaceABI,
     functionName: "marketplaceFee",
+    chainId,
   })
 
   const { data: feeReceiver } = useReadContract({
     address: MARKETPLACE_CONTRACT_ADDRESS,
     abi: MarketplaceABI,
     functionName: "feeReceiver",
+    chainId,
   })
 
   const { data: totalListings, refetch: refetchTotalListings } = useReadContract({
     address: MARKETPLACE_CONTRACT_ADDRESS,
     abi: MarketplaceABI,
     functionName: "totalListings",
+    chainId,
   })
 
   const { data: totalSales, refetch: refetchTotalSales } = useReadContract({
     address: MARKETPLACE_CONTRACT_ADDRESS,
     abi: MarketplaceABI,
     functionName: "totalSales",
+    chainId,
   })
 
   const { data: totalVolume, refetch: refetchTotalVolume } = useReadContract({
     address: MARKETPLACE_CONTRACT_ADDRESS,
     abi: MarketplaceABI,
     functionName: "totalVolume",
+    chainId,
   })
 
   return { owner, marketplaceFee, feeReceiver, totalListings, totalSales, totalVolume, refetchTotalSales, refetchTotalVolume, refetchTotalListings }

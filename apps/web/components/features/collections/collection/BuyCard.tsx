@@ -1,28 +1,33 @@
 "use client"
 
+import { useState } from "react"
 import { FaShoppingCart, FaTrash } from "react-icons/fa"
 import { HypeIcon } from "@/components/ui/HypeIcon"
 import { RiNftFill } from "react-icons/ri"
 import { useBuy, useBuyBatch } from "@/hooks/useBuyActions"
 import { useTx } from "@/app/context/TxContext"
 import { BatchNFT } from "@/types/user.types"
-import { usePublicClient } from "wagmi"
+import { useConnection, usePublicClient } from "wagmi"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { Modal } from "@/components/ui/Modal"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { waitForTxConfirmation } from "@/lib/tx"
 
 interface BuyCardProps {
   items: BatchNFT[]
+  chainId: number
   collectionName?: string
   onClose: () => void
   onSuccess?: (tokenIds: string[]) => void
   onRemoveItem: (item: BatchNFT) => void
 }
 
-export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveItem }: BuyCardProps) {
-  const { buy } = useBuy()
-  const { buyBatch } = useBuyBatch()
-  const publicClient = usePublicClient()
+export function BuyCard({ items, chainId, collectionName, onClose, onSuccess, onRemoveItem }: BuyCardProps) {
+  const [formError, setFormError] = useState<string | null>(null)
+  const { buy } = useBuy(chainId)
+  const { buyBatch } = useBuyBatch(chainId)
+  const publicClient = usePublicClient({ chainId })
+  const { chainId: connectedChainId } = useConnection()
   const { addTx, removeTx, updateTx } = useTx()
 
   const totalPrice = items.reduce((total, item) => {
@@ -32,6 +37,14 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
 
   const handleBuy = async () => {
     if (!items.length) return
+
+    setFormError(null)
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      setFormError(chainGuardErrorMessage(error))
+      return
+    }
 
     let hash: `0x${string}` | undefined
     try {
@@ -99,7 +112,7 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
           {/* Items list - scrollable */}
           <div className="overflow-y-auto max-h-[50vh]">
             {items.map((item) => (
-              <div key={`${item.collection_address}-${item.token_id}`} className="flex justify-between items-center px-6 py-3  ">
+              <div key={`${item.chain_id}-${item.collection_address}-${item.token_id}`} className="flex justify-between items-center px-6 py-3  ">
                 {/* Token info */}
                 <div className="flex flex-2 items-center gap-4">
                   <div className="w-13 rounded-xl overflow-hidden">{item.image_url ? <IpfsImage src={item.image_url} alt={`#${item.token_id}`} className="w-full h-full object-cover" /> : <RiNftFill className="text-2xl opacity-75" />}</div>
@@ -128,6 +141,7 @@ export function BuyCard({ items, collectionName, onClose, onSuccess, onRemoveIte
 
           {/* Footer */}
           <div className="p-4 flex items-center justify-between border-t border-(--text)/20 bg-(--bg)/50">
+            {formError && <p className="text-sm text-red-500">{formError}</p>}
             <div className="flex  gap-4">
               <span className="text-xl font-bold">Total Price: </span>
               <div className="flex items-center gap-2 text-xl ">

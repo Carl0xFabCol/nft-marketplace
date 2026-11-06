@@ -5,9 +5,9 @@ import type { PublicClient } from "viem"
 import { MarketplaceABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 
-export function useBuy() {
+export function useBuy(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const buy = async (collection: `0x${string}`, tokenId: bigint, value: bigint) => {
     const txHash = await writeContractAsync({
@@ -16,6 +16,7 @@ export function useBuy() {
       functionName: "buy",
       args: [collection, tokenId],
       value,
+      chainId,
     })
     return txHash
   }
@@ -28,10 +29,10 @@ export interface UseBuyBatchResult {
   publicClient: PublicClient | undefined
 }
 
-export function useBuyBatch(): UseBuyBatchResult {
+export function useBuyBatch(chainId: number): UseBuyBatchResult {
   const { writeContractAsync } = useWriteContract()
-  const publicClient = usePublicClient()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const publicClient = usePublicClient({ chainId })
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const buyBatch = async (_collection: `0x${string}`, _tokenIds: bigint[], value: bigint) => {
     const txHash = await writeContractAsync({
@@ -40,6 +41,7 @@ export function useBuyBatch(): UseBuyBatchResult {
       functionName: "buyBatch",
       args: [_collection, _tokenIds],
       value,
+      chainId,
     })
     return txHash
   }

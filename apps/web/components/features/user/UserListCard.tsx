@@ -8,8 +8,8 @@ import { HypeIcon } from "@/components/ui/HypeIcon"
 import { MdOutlineLocalOffer } from "react-icons/md"
 import { RiNftFill } from "react-icons/ri"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
-import { CHAIN_ID } from "@/lib/chains"
 import { MarketplaceABI } from "@/lib/abi"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { EnrichedUserNFT, UserListing, Collection, UserNFT } from "@/types/user.types"
 import { BatchType } from "@/hooks/useBatchOperations"
 import { useMarketplaceInfo } from "@/hooks/useMarketplaceReads"
@@ -30,11 +30,13 @@ interface ListItemWithPrice extends EnrichedUserNFT {
 export interface ListableItem {
   collection_address: Address
   token_id: string
+  chain_id: number
   price?: bigint
 }
 
 interface UserListCardProps {
   items: EnrichedUserNFT[]
+  chainId: number
   collections: Collection[]
   listings: UserListing[]
   onClose: () => void
@@ -46,13 +48,14 @@ interface UserListCardProps {
   removeFromBatch: (token: UserNFT, batch: BatchType) => void
 }
 
-export function UserListCard({ items, collections, listings, onClose, onSuccess, onOptimisticList, onOptimisticListFail, removeFromBatch }: UserListCardProps) {
+export function UserListCard({ items, chainId, collections, listings, onClose, onSuccess, onOptimisticList, onOptimisticListFail, removeFromBatch }: UserListCardProps) {
   const [priceAll, setPriceAll] = useState<string>("")
   const [listItems, setListItems] = useState<ListItemWithPrice[]>(items)
+  const [formError, setFormError] = useState<string | null>(null)
   const { addTx, removeTx, updateTx } = useTx()
-  const info = useMarketplaceInfo()
+  const info = useMarketplaceInfo(chainId)
   const { address, chainId: connectedChainId } = useConnection()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const [prevItems, setPrevItems] = useState(items)
   if (items !== prevItems) {
@@ -61,7 +64,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
   }
 
   const { writeContractAsync } = useWriteContract()
-  const publicClient = usePublicClient()
+  const publicClient = usePublicClient({ chainId })
 
   const { data: names } = useReadContracts({
     contracts: collections.map((col) => ({
@@ -69,6 +72,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
       abi: erc721Abi,
       functionName: "name",
     })),
+    chainId,
     query: {
       enabled: Boolean(collections.length),
     },
@@ -81,6 +85,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
       functionName: "collections",
       args: [col.contract_address as Address],
     })),
+    chainId,
     query: {
       enabled: Boolean(collections.length),
     },
@@ -143,20 +148,33 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     const validItems = listItems.filter((i) => i.price && i.price > BigInt(0))
     if (!validItems.length) return
 
+    setFormError(null)
+    if (!address) {
+      setFormError("Connect a wallet to list items.")
+      return
+    }
+
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      setFormError(chainGuardErrorMessage(error))
+      return
+    }
+
+    const seller = address.toLowerCase() as Address
     let txHash: `0x${string}` | undefined
     try {
       const collections = validItems.map((i) => i.collection_address as Address)
       const tokenIds = validItems.map((i) => i.token_id.toString())
       const prices = validItems.map((i) => i.price!.toString())
       const expiresAts = validItems.map((i) => dateToEpochSeconds(i.expiresAt).toString())
-      const seller = address!.toLowerCase() as Address
-      const chainId = connectedChainId ?? CHAIN_ID
 
       txHash = await writeContractAsync({
         address: MARKETPLACE_CONTRACT_ADDRESS,
         abi: MarketplaceABI,
         functionName: "createListingBatch",
         args: [collections, tokenIds.map(BigInt), prices.map(BigInt), expiresAts.map(BigInt)],
+        chainId,
       })
       const hash = txHash
 
@@ -198,21 +216,24 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
       // reverted listing doesn't linger forever.
       onOptimisticListFail?.(validItems)
       if (hash) {
-        failListingsByTxHash(hash).catch((e) => console.error("Failed to fail listings:", e))
+        failListingsByTxHash(hash, chainId).catch((e) => console.error("Failed to fail listings:", e))
       }
     }
   }
 
-  const updateItemExpirationDate = (tokenId: string, collection: string, expiresAt: Date) => {
-    setListItems((prev) => prev.map((item) => (item.token_id === tokenId && item.collection_address.toLowerCase() === collection.toLowerCase() ? { ...item, expiresAt: expiresAt } : item)))
+  const isSameItem = (a: ListableItem, b: ListableItem) =>
+    a.token_id === b.token_id && a.chain_id === b.chain_id && a.collection_address.toLowerCase() === b.collection_address.toLowerCase()
+
+  const updateItemExpirationDate = (target: ListItemWithPrice, expiresAt: Date) => {
+    setListItems((prev) => prev.map((item) => (isSameItem(item, target) ? { ...item, expiresAt } : item)))
   }
 
-  const updateItemPrice = (tokenId: string, collection: string, value: string) => {
+  const updateItemPrice = (target: ListItemWithPrice, value: string) => {
     if (!/^\d*\.?\d*$/.test(value)) return
 
     const wei = value === "" ? BigInt(0) : parseEther(value)
 
-    setListItems((prev) => prev.map((item) => (item.token_id === tokenId && item.collection_address.toLowerCase() === collection.toLowerCase() ? { ...item, priceHype: value, price: wei } : item)))
+    setListItems((prev) => prev.map((item) => (isSameItem(item, target) ? { ...item, priceHype: value, price: wei } : item)))
   }
 
   const updateAllPrices = (value: string) => {
@@ -231,8 +252,8 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
     )
   }
 
-  const removeListItem = (tokenId: string, collection: Address) => {
-    removeFromBatch({ token_id: tokenId, collection_address: collection } as UserNFT, "list")
+  const removeListItem = (item: ListItemWithPrice) => {
+    removeFromBatch(item, "list")
   }
 
   const getCollectionName = (collectionAddress: string): string => {
@@ -292,7 +313,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
           const royaltyAmount = item.priceHype ? (Number(item.priceHype) * royaltyPercent) / 100 : 0
 
           return (
-            <div className="flex items-center px-6 justify-between w-full py-6 " key={`${item.collection_address}-${item.token_id}`}>
+            <div className="flex items-center px-6 justify-between w-full py-6 " key={`${item.chain_id}-${item.collection_address}-${item.token_id}`}>
               {/* NFT info */}
               <div className="flex flex-2 items-center gap-3">
                 <RiNftFill className="text-xl opacity-75" />
@@ -326,7 +347,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
                     type="text"
                     inputMode="decimal"
                     value={item.priceHype ?? ""}
-                    onChange={(e) => updateItemPrice(item.token_id, item.collection_address, e.target.value)}
+                    onChange={(e) => updateItemPrice(item, e.target.value)}
                     className="rounded flex-1 p-3 text-sm w-[80%]"
                     placeholder="0.00 HYPE"
                   />
@@ -336,12 +357,12 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
               {/* Expiration date input */}
 
               <div className="flex flex-1">
-                <ExpirationPicker onChange={(date: Date) => updateItemExpirationDate(item.token_id, item.collection_address, date)} />
+                <ExpirationPicker onChange={(date: Date) => updateItemExpirationDate(item, date)} />
               </div>
 
               {/* Remove button */}
               <div className="flex flex-[0.2] justify-center gap-2 items-center">
-                <button onClick={() => removeListItem(item.token_id, item.collection_address)} className="p-2 bg-transparent! text-(--text)! hover:opacity-75">
+                <button onClick={() => removeListItem(item)} className="p-2 bg-transparent! text-(--text)! hover:opacity-75">
                   <FaTrash className="opacity-75" />
                 </button>
               </div>
@@ -390,7 +411,9 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
               </div>
             </div>
           </div>
-          <div className="flex  gap-4 items-center justify-end">
+          <div className="flex flex-col gap-2 items-end">
+            {formError && <p className="text-sm text-red-500">{formError}</p>}
+            <div className="flex gap-4 items-center justify-end">
             {/* Set all price */}
             <div className=" flex ">
               <div className="flex gap-2 items-center">
@@ -419,6 +442,7 @@ export function UserListCard({ items, collections, listings, onClose, onSuccess,
               <span>{listItems.length}</span>
               <span>items</span>
             </button>
+            </div>
           </div>
         </div>
       </div>

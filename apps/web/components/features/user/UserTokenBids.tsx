@@ -5,7 +5,8 @@ import { FaInbox } from "react-icons/fa"
 import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useTx } from "@/app/context/TxContext"
 import { waitForTxConfirmation } from "@/lib/tx"
-import { useAccount, usePublicClient } from "wagmi"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
+import { useAccount, useConnection, usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { Collection, UserTokenBid } from "@/types/user.types"
 import Link from "next/link"
@@ -21,17 +22,19 @@ interface UserTokenBidsProps {
   batchOps: UseBatchOperationsReturn
   /** Page owner — used for the realtime subscription filter. */
   userAddress: Address
+  chainId: number
 }
 
-export default function UserTokenBids({ tokenBids, selectedCollection, batchOps, collections, userAddress }: UserTokenBidsProps) {
+export default function UserTokenBids({ tokenBids, selectedCollection, batchOps, collections, userAddress, chainId }: UserTokenBidsProps) {
   const [bids, setBids] = useState(tokenBids)
   const { addTx, removeTx, updateTx } = useTx()
-  const publicClient = usePublicClient()
+  const publicClient = usePublicClient({ chainId })
   const { address } = useAccount()
+  const { chainId: connectedChainId } = useConnection()
 
   const { cancelTokenBidBatch, addToBatch, removeFromBatch, isInBatch, clearBatch } = batchOps
-  const { cancelTokenBid } = useCancelTokenBid()
-  const { cancelTokenBids } = useCancelTokenBidBatch()
+  const { cancelTokenBid } = useCancelTokenBid(chainId)
+  const { cancelTokenBids } = useCancelTokenBidBatch(chainId)
 
   // Sync when the server re-delivers a fresh list (e.g. router.refresh()).
   const [prevTokenBids, setPrevTokenBids] = useState(tokenBids)
@@ -70,6 +73,14 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
 
   const handleCancelBids = async () => {
     if (!cancelTokenBidBatch.length) return
+
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      alert(chainGuardErrorMessage(error))
+      return
+    }
+
     let hash: `0x${string}` | undefined
     try {
       const bids = cancelTokenBidBatch.filter(

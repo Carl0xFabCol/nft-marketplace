@@ -31,12 +31,13 @@ const slideVariants = {
 
 interface UserDashboardProps {
   userAddress: Address
+  chainId: number
   initialData: UserPageData
   profile: UserProfile | null
   avatarOptions: ProfileNftOption[]
 }
 
-export default function UserDashboard({ userAddress, initialData, profile, avatarOptions }: UserDashboardProps) {
+export default function UserDashboard({ userAddress, chainId, initialData, profile, avatarOptions }: UserDashboardProps) {
   const [currentView, setCurrentView] = useState<ViewType>("inventory")
   const [selectedCollection, setSelectedCollection] = useState<Address | "">("")
   const [showSidebar, setShowSidebar] = useState(false)
@@ -105,6 +106,7 @@ export default function UserDashboard({ userAddress, initialData, profile, avata
                   {currentView === "inventory" && (
                     <UserInventory
                       userAddress={userAddress}
+                      chainId={chainId}
                       initialNfts={filteredNFTs}
                       listings={initialData.listings}
                       hasMoreNfts={initialData.hasMore}
@@ -113,10 +115,17 @@ export default function UserDashboard({ userAddress, initialData, profile, avata
                     />
                   )}
                   {currentView === "colBids" && (
-                    <UserCollectionBids collections={initialData.collections} collectionBids={initialData.collectionBids} batchOps={batchOps} userAddress={userAddress} />
+                    <UserCollectionBids collections={initialData.collections} collectionBids={initialData.collectionBids} batchOps={batchOps} userAddress={userAddress} chainId={chainId} />
                   )}
                   {currentView === "tokenBids" && (
-                    <UserTokenBids collections={initialData.collections} tokenBids={initialData.tokenBids} selectedCollection={selectedCollection} batchOps={batchOps} userAddress={userAddress} />
+                    <UserTokenBids
+                      collections={initialData.collections}
+                      tokenBids={initialData.tokenBids}
+                      selectedCollection={selectedCollection}
+                      batchOps={batchOps}
+                      userAddress={userAddress}
+                      chainId={chainId}
+                    />
                   )}
                   {currentView === "history" && <UserHistory activity={initialData.activity} userAddress={userAddress} totalPages={initialData.activityTotalPages ?? 1} />}
                 </motion.div>

@@ -11,6 +11,7 @@ import { useConnection, usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 
 type NftCardToken = EnrichedUserNFT & {
   price?: number
@@ -30,11 +31,11 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
   const [bidHovered, setBidHovered] = useState<boolean>(false)
   const [hovered, setHovered] = useState<string | null>(null)
   const { addToBatch, isInBatch, removeFromBatch } = batchOps
-  const { address } = useConnection()
-  const publicClient = usePublicClient()
-  const { acceptTokenBid } = useAcceptTokenBid()
-  const { acceptCollectionBid } = useAcceptCollectionBid()
-  const { ensureApproval } = useEnsureApproval()
+  const { address, chainId: connectedChainId } = useConnection()
+  const publicClient = usePublicClient({ chainId: token.chain_id })
+  const { acceptTokenBid } = useAcceptTokenBid(token.chain_id)
+  const { acceptCollectionBid } = useAcceptCollectionBid(token.chain_id)
+  const { ensureApproval } = useEnsureApproval(token.chain_id)
   const { addTx, removeTx, updateTx } = useTx()
   const handleNFTClick = (nft: NftCardToken, e: React.MouseEvent) => {
     if (isUserPage) {
@@ -130,6 +131,13 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
   const handleAcceptBid = async () => {
     if (!token.topBid || !address) return
 
+    try {
+      assertWalletChain(connectedChainId, token.chain_id)
+    } catch (error) {
+      alert(chainGuardErrorMessage(error))
+      return
+    }
+
     const bid = token.topBid
     const collection = token.collection_address as Address
     let hash: `0x${string}` | undefined
@@ -163,7 +171,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
 
   return (
     <motion.div
-      key={token.token_id + token.collection_address}
+      key={`${token.chain_id}-${token.collection_address}-${token.token_id}`}
       initial={{ filter: "blur(5px)", opacity: 0.3 }}
       animate={{ filter: "blur(0px)", opacity: 1 }}
       transition={{ duration: 0.2, delay: (index ?? 0) * 0.03 }}
@@ -171,7 +179,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
                          relative border-2 
                         bg-(--accent)/10 rounded-lg
                          transition-all flex flex-col justify-between 
-                        ${hovered === token.token_id + token.collection_address ? "border-(--accent)!" : "border-(--accent)/30"}
+                        ${hovered === `${token.chain_id}-${token.collection_address}-${token.token_id}` ? "border-(--accent)!" : "border-(--accent)/30"}
                         ${getBorderClass(token)}
                       `}
     >
@@ -179,7 +187,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
         <div
           id="nft-img"
           className="relative w-full aspect-square cursor-pointer overflow-hidden"
-          onMouseEnter={() => setHovered(token.token_id + token.collection_address)}
+          onMouseEnter={() => setHovered(`${token.chain_id}-${token.collection_address}-${token.token_id}`)}
           onMouseLeave={() => setHovered(null)}
           onClick={(e) => handleNFTClick(token, e)}
         >

@@ -8,7 +8,8 @@ import { FaInbox } from "react-icons/fa"
 import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useTx } from "@/app/context/TxContext"
 import { waitForTxConfirmation } from "@/lib/tx"
-import { usePublicClient } from "wagmi"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
+import { useConnection, usePublicClient } from "wagmi"
 import { Address } from "viem"
 import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
@@ -20,13 +21,15 @@ interface UserCollectionBidsProps {
   batchOps: UseBatchOperationsReturn
   /** Page owner — used for the realtime subscription filter. */
   userAddress: Address
+  chainId: number
 }
 
-export default function UserCollectionBids({ collectionBids, collections, batchOps, userAddress }: UserCollectionBidsProps) {
+export default function UserCollectionBids({ collectionBids, collections, batchOps, userAddress, chainId }: UserCollectionBidsProps) {
   const [bids, setBids] = useState<UserCollectionBid[]>(collectionBids)
-  const publicClient = usePublicClient()
+  const publicClient = usePublicClient({ chainId })
   const { cancelCollectionBidBatch, addToBatch, removeFromBatch, isInBatch } = batchOps
-  const { cancelCollectionBid } = useCancelCollectionBid()
+  const { cancelCollectionBid } = useCancelCollectionBid(chainId)
+  const { chainId: connectedChainId } = useConnection()
   const { addTx, removeTx, updateTx } = useTx()
 
   // Sync when the server re-delivers a fresh list (e.g. router.refresh()).
@@ -65,6 +68,13 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
   const handleCancelCollectionBids = async () => {
     const collectionAddresses = cancelCollectionBidBatch.map((i) => i.collection_address).filter((address): address is Address => Boolean(address))
     if (!collectionAddresses.length) return
+
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      alert(chainGuardErrorMessage(error))
+      return
+    }
 
     try {
       // The contract has no batch cancel for collection bids — send and

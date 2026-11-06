@@ -6,6 +6,7 @@ import CollectionClientArea from "../../../components/features/collections/colle
 import { notFound } from "next/navigation"
 import { isAddress } from "viem"
 import { NFTService } from "@/services/nft.service"
+import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
 
 export default async function CollectionPage({ params }: { params: { colAddress: string } }) {
   const supabase = await getServerSupabase()
@@ -13,8 +14,10 @@ export default async function CollectionPage({ params }: { params: { colAddress:
 
   if (!isAddress(colAddress)) notFound()
 
+  const chainId = DEFAULT_CHAIN_ID
+
   const [initialNftsData, collectionBidsResult, collectionResult] = await Promise.all([
-    NFTService.getCollectionNFTs(colAddress, { page: 1, limit: 24 }),
+    NFTService.getCollectionNFTs(colAddress, { chainId, page: 1, limit: 24 }),
 
     supabase
       .from("collection_bids")
@@ -24,7 +27,12 @@ export default async function CollectionPage({ params }: { params: { colAddress:
       .gt("expires_at", new Date().toISOString())
       .order("price", { ascending: false }),
 
-    supabase.from("collections").select("floor_price").eq("contract_address", colAddress.toLowerCase()).single(),
+    supabase
+      .from("collections")
+      .select("floor_price")
+      .eq("contract_address", colAddress.toLowerCase())
+      .eq("chain_id", chainId)
+      .single(),
   ])
 
   return (
@@ -34,6 +42,7 @@ export default async function CollectionPage({ params }: { params: { colAddress:
       </div>
       <CollectionClientArea
         colAddress={colAddress}
+        chainId={chainId}
         collectionBids={collectionBidsResult.data ?? []}
         initialNftsData={initialNftsData}
         initialFloorPrice={collectionResult.data?.floor_price?.toString() ?? "0"}

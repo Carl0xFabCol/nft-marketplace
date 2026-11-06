@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useAccount } from "wagmi"
+import { useAccount, useConnection } from "wagmi"
 import { useRouter } from "next/navigation"
 import { FaShoppingCart, FaGavel, FaTag } from "react-icons/fa"
 import { HypeIcon } from "@/components/ui/HypeIcon"
@@ -14,20 +14,23 @@ import { BidCard } from "../collections/collection/BidCard"
 import { useBatchOperations } from "@/hooks/useBatchOperations"
 import { BatchNFT, NFTDetail } from "@/types/user.types"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 
 interface NFTActionsProps {
   nft: NFTDetail
+  chainId: number
 }
 
-export function NFTActions({ nft }: NFTActionsProps) {
+export function NFTActions({ nft, chainId }: NFTActionsProps) {
   const router = useRouter()
   const { address: userAddress } = useAccount()
+  const { chainId: connectedChainId } = useConnection()
   const [showBidModal, setShowBidModal] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const { removeFromBatch, clearBatch, addToBatch, bidBatch } = useBatchOperations()
-  const { buy } = useBuy()
-  const { cancelList } = useCancelList()
-  const { publicClient } = useBidTokenBatch()
+  const { buy } = useBuy(chainId)
+  const { cancelList } = useCancelList(chainId)
+  const { publicClient } = useBidTokenBatch(chainId)
   const { addTx, updateTx, removeTx } = useTx()
 
   const isOwner = userAddress?.toLowerCase() === nft.owner_wallet.toLowerCase()
@@ -39,6 +42,13 @@ export function NFTActions({ nft }: NFTActionsProps) {
   // Handler for buying the NFT
   const handleBuy = async () => {
     if (!nft.listing || !userAddress) return
+
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      alert(chainGuardErrorMessage(error))
+      return
+    }
 
     setIsProcessing(true)
     let hash: `0x${string}` | undefined
@@ -89,6 +99,13 @@ export function NFTActions({ nft }: NFTActionsProps) {
   // Handler for cancelling the listing
   const handleCancelListing = async () => {
     if (!nft.listing || !userAddress) return
+
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      alert(chainGuardErrorMessage(error))
+      return
+    }
 
     setIsProcessing(true)
     let hash: `0x${string}` | undefined
@@ -238,6 +255,7 @@ export function NFTActions({ nft }: NFTActionsProps) {
         <BidCard
           items={bidBatch}
           collectionAddress={nft.collection_address}
+          chainId={chainId}
           collectionName={nft.collection?.name}
           onClose={() => {
             setShowBidModal(false)

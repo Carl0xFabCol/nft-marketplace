@@ -62,7 +62,9 @@ export function useBatchOperations(): UseBatchOperationsReturn {
 
   const removeFromBatch = useCallback((item: BatchItem, type: BatchType) => {
     const itemTokenId = "token_id" in item ? item.token_id : undefined
-    const matchesNft = (i: BatchNFT) => i.token_id == itemTokenId && i.collection_address.toLowerCase() == item.collection_address?.toLowerCase()
+    const itemChainId = "chain_id" in item ? item.chain_id : undefined
+    const matchesNft = (i: BatchNFT) =>
+      i.token_id == itemTokenId && i.collection_address.toLowerCase() == item.collection_address?.toLowerCase() && (itemChainId === undefined || i.chain_id === itemChainId)
     const matchesTokenBid = (i: UserTokenBid) => i.token_id == itemTokenId && String(i.collection_address).toLowerCase() == String(item.collection_address).toLowerCase()
     const matchesCollectionBid = (i: UserCollectionBid) => String(i.collection_address).toLowerCase() == String(item.collection_address).toLowerCase()
 
@@ -94,7 +96,9 @@ export function useBatchOperations(): UseBatchOperationsReturn {
   const isInBatch = useCallback(
     (item: BatchItem, type: BatchType): boolean => {
       const itemTokenId = "token_id" in item ? item.token_id : undefined
-      const matchesNft = (i: BatchNFT) => i.token_id == itemTokenId && i.collection_address.toLowerCase() == item.collection_address?.toLowerCase()
+      const itemChainId = "chain_id" in item ? item.chain_id : undefined
+      const matchesNft = (i: BatchNFT) =>
+        i.token_id == itemTokenId && i.collection_address.toLowerCase() == item.collection_address?.toLowerCase() && (itemChainId === undefined || i.chain_id === itemChainId)
       const matchesTokenBid = (i: UserTokenBid) => i.token_id == itemTokenId && String(i.collection_address).toLowerCase() == String(item.collection_address).toLowerCase()
       const matchesCollectionBid = (i: UserCollectionBid) => String(i.collection_address).toLowerCase() == String(item.collection_address).toLowerCase()
 

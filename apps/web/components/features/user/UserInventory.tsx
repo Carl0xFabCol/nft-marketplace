@@ -15,10 +15,11 @@ import { SortBy, SortDir } from "@/lib/constants"
 import { UserService } from "@/services/user.service"
 import { supabase } from "@/lib/supabase/client"
 import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
-import { toUserListing, upsertListingIntoNfts, deactivateListingInNfts, upsertListingIntoListings, deactivateListingInListings } from "@/lib/listingMerge"
+import { listingKey, toUserListing, upsertListingIntoNfts, deactivateListingInNfts, upsertListingIntoListings, deactivateListingInListings } from "@/lib/listingMerge"
 
 interface UserInventoryProps {
   userAddress: Address
+  chainId: number
   initialNfts: EnrichedUserNFT[]
   listings: UserListing[]
   collections: Collection[]
@@ -26,7 +27,7 @@ interface UserInventoryProps {
   hasMoreNfts: boolean
 }
 
-export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, collections, batchOps, listings: initialListings }: UserInventoryProps) {
+export default function UserInventory({ userAddress, chainId, initialNfts, hasMoreNfts, collections, batchOps, listings: initialListings }: UserInventoryProps) {
   const [showListCard, setShowListCard] = useState(false)
   const [sortBy, setSortBy] = useState<SortBy>("price")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -66,6 +67,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
 
   useRealtimeListings({
     userAddress,
+    chainId,
     onUpsert: handleUpsertListing,
     onDeactivate: handleDeactivateListing,
   })
@@ -78,6 +80,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
         const listing = toUserListing({
           collection_address: item.collection_address,
           token_id: String(item.token_id),
+          chain_id: item.chain_id,
           seller_wallet: userAddress,
           price: item.price ? item.price.toString() : "0",
           is_active: true,
@@ -93,15 +96,15 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
 
   const revertOptimisticList = useCallback((items: ListableItem[]) => {
     if (!items.length) return
-    const keys = new Set(items.map((i) => `${i.collection_address.toLowerCase()}-${String(i.token_id)}`))
-    setNfts((prev) => prev.map((nft) => (keys.has(`${nft.collection_address.toLowerCase()}-${String(nft.token_id)}`) ? { ...nft, active_listing: null } : nft)))
+    const keys = new Set(items.map((i) => listingKey(i.chain_id, i.collection_address, String(i.token_id))))
+    setNfts((prev) => prev.map((nft) => (keys.has(listingKey(nft.chain_id, nft.collection_address, nft.token_id)) ? { ...nft, active_listing: null } : nft)))
   }, [])
 
   // ─── Optimistic delist patch ───
   const applyOptimisticDelist = useCallback((items: UserNFT[]) => {
     if (!items.length) return
-    const keys = new Set(items.map((i) => `${i.collection_address.toLowerCase()}-${String(i.token_id)}`))
-    setNfts((prev) => prev.map((nft) => (keys.has(`${nft.collection_address.toLowerCase()}-${String(nft.token_id)}`) ? { ...nft, active_listing: null } : nft)))
+    const keys = new Set(items.map((i) => listingKey(i.chain_id, i.collection_address, String(i.token_id))))
+    setNfts((prev) => prev.map((nft) => (keys.has(listingKey(nft.chain_id, nft.collection_address, nft.token_id)) ? { ...nft, active_listing: null } : nft)))
   }, [])
 
   // If the delist tx fails, restore the listing from the live listings array.
@@ -109,9 +112,9 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
     (items: UserNFT[]) => {
       if (!items.length) return
       items.forEach((item) => {
-        const key = `${item.collection_address.toLowerCase()}-${String(item.token_id)}`
-        const listing = listings.find((l) => `${l.collection_address.toLowerCase()}-${String(l.token_id)}` === key)
-        setNfts((prev) => prev.map((nft) => (`${nft.collection_address.toLowerCase()}-${String(nft.token_id)}` === key ? { ...nft, active_listing: listing ?? nft.active_listing } : nft)))
+        const key = listingKey(item.chain_id, item.collection_address, String(item.token_id))
+        const listing = listings.find((l) => listingKey(l.chain_id, l.collection_address, l.token_id) === key)
+        setNfts((prev) => prev.map((nft) => (listingKey(nft.chain_id, nft.collection_address, nft.token_id) === key ? { ...nft, active_listing: listing ?? nft.active_listing } : nft)))
       })
     },
     [listings],
@@ -119,15 +122,16 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
 
   // ─── Bid accepted: the token leaves the seller's wallet, drop it from state ───
   const handleBidAccepted = useCallback((sold: UserNFT) => {
-    const key = `${sold.collection_address.toLowerCase()}-${String(sold.token_id)}`
-    setNfts((prev) => prev.filter((nft) => `${nft.collection_address.toLowerCase()}-${String(nft.token_id)}` !== key))
-    setListings((prev) => prev.filter((listing) => `${listing.collection_address.toLowerCase()}-${String(listing.token_id)}` !== key))
+    const key = listingKey(sold.chain_id, sold.collection_address, String(sold.token_id))
+    setNfts((prev) => prev.filter((nft) => listingKey(nft.chain_id, nft.collection_address, nft.token_id) !== key))
+    setListings((prev) => prev.filter((listing) => listingKey(listing.chain_id, listing.collection_address, listing.token_id) !== key))
   }, [])
 
   const { approvalMap, allApproved, handleDelist, approveCollection } = useUserNfts({
     nfts,
     batchOps,
     userAddress,
+    chainId,
     onDelist: applyOptimisticDelist,
     onDelistFail: revertOptimisticDelist,
   })
@@ -139,6 +143,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
 
     try {
       const data = await UserService.getUserNFTsPaginated(supabase, userAddress, {
+        chainId,
         page: 1,
         limit: 24,
         sortBy,
@@ -153,7 +158,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
     } finally {
       setIsLoading(false)
     }
-  }, [userAddress, sortBy, sortDir])
+  }, [userAddress, chainId, sortBy, sortDir])
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -173,6 +178,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
     try {
       const nextPage = currentPage + 1
       const data = await UserService.getUserNFTsPaginated(supabase, userAddress, {
+        chainId,
         page: nextPage,
         limit: 24,
         sortBy,
@@ -180,8 +186,8 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
       })
 
       setNfts((prev) => {
-        const existingIds = new Set(prev.map((n) => n.token_id))
-        return [...prev, ...data.nfts.filter((n) => !existingIds.has(n.token_id))]
+        const existingIds = new Set(prev.map((n) => listingKey(n.chain_id, n.collection_address, n.token_id)))
+        return [...prev, ...data.nfts.filter((n) => !existingIds.has(listingKey(n.chain_id, n.collection_address, n.token_id)))]
       })
 
       setCurrentPage(nextPage)
@@ -193,7 +199,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
       setIsLoading(false)
       abortControllerRef.current = null
     }
-  }, [userAddress, currentPage, isLoading, hasMore, sortBy, sortDir])
+  }, [userAddress, chainId, currentPage, isLoading, hasMore, sortBy, sortDir])
 
   useEffect(() => {
     const el = observerRef.current
@@ -317,7 +323,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
           <AnimatePresence>
             {sortedNFTs.map((nft: EnrichedUserNFT) => (
               <NFTCard
-                key={`${nft.token_id}-${nft.collection_address}`}
+                key={`${nft.chain_id}-${nft.collection_address}-${nft.token_id}`}
                 isUserPage={true}
                 token={{
                   ...nft,
@@ -344,6 +350,7 @@ export default function UserInventory({ userAddress, initialNfts, hasMoreNfts, c
           <UserListCard
             removeFromBatch={removeFromBatch}
             items={listTokensBatch}
+            chainId={chainId}
             collections={collections}
             listings={listings}
             onOptimisticList={applyOptimisticList}

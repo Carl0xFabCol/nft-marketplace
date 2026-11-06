@@ -7,7 +7,8 @@ import { RiNftFill } from "react-icons/ri"
 import { useBidToken, useBidTokenBatch } from "@/hooks/useBidActions"
 import { useTx } from "@/app/context/TxContext"
 import { BatchNFT } from "@/types/user.types"
-import { usePublicClient } from "wagmi"
+import { useConnection, usePublicClient } from "wagmi"
+import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { Modal } from "@/components/ui/Modal"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
@@ -23,19 +24,22 @@ interface BidItemWithPrice extends BatchNFT {
 interface BidCardProps {
   items: BatchNFT[]
   collectionAddress: string
+  chainId: number
   collectionName?: string | null
   onClose: () => void
   onSuccess?: () => void
   onRemoveItem: (item: BatchNFT) => void
 }
 
-export function BidCard({ items, collectionAddress, collectionName, onClose, onSuccess, onRemoveItem }: BidCardProps) {
+export function BidCard({ items, collectionAddress, chainId, collectionName, onClose, onSuccess, onRemoveItem }: BidCardProps) {
   const [priceAll, setPriceAll] = useState<string>("")
+  const [formError, setFormError] = useState<string | null>(null)
   const [bidItems, setBidItems] = useState<BidItemWithPrice[]>(items.map((item) => ({ ...item, priceHype: "", bidPrice: BigInt(0) })))
 
-  const { bidToken } = useBidToken()
-  const publicClient = usePublicClient()
-  const { bidTokenBatch } = useBidTokenBatch()
+  const { bidToken } = useBidToken(chainId)
+  const publicClient = usePublicClient({ chainId })
+  const { bidTokenBatch } = useBidTokenBatch(chainId)
+  const { chainId: connectedChainId } = useConnection()
   const { addTx, removeTx, updateTx } = useTx()
 
   const [prevItems, setPrevItems] = useState(items)
@@ -54,6 +58,14 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
 
     if (!validItems.length) {
       alert("Please set bid prices for all items")
+      return
+    }
+
+    setFormError(null)
+    try {
+      assertWalletChain(connectedChainId, chainId)
+    } catch (error) {
+      setFormError(chainGuardErrorMessage(error))
       return
     }
 
@@ -160,7 +172,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
           {/* Items list - scrollable */}
           <div className="overflow-y-auto max-h-[50vh]">
             {bidItems.map((item) => (
-              <div key={`${item.collection_address}-${item.token_id}`} className="flex justify-between items-center p-6 ">
+              <div key={`${item.chain_id}-${item.collection_address}-${item.token_id}`} className="flex justify-between items-center p-6 ">
                 {/* Token info */}
                 <div className="flex flex-2 items-center gap-4">
                   <div className="w-13 rounded-xl overflow-hidden">{item.image_url ? <IpfsImage src={item.image_url} alt={`#${item.token_id}`} className="w-full h-full object-cover" /> : <RiNftFill className="text-2xl opacity-75" />}</div>
@@ -211,6 +223,7 @@ export function BidCard({ items, collectionAddress, collectionName, onClose, onS
 
           {/* Footer */}
           <div className="p-4 flex items-center justify-between border-t border-(--text)/20 bg-(--bg)/50">
+            {formError && <p className="text-sm text-red-500">{formError}</p>}
             <div className="flex items-center gap-4">
               <span className="text-xl font-bold ">Total balance needed: </span>
               <div className="flex items-center gap-2 text-xl">

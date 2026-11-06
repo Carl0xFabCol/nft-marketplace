@@ -4,13 +4,14 @@ import { useChainId } from "wagmi"
 import { getContractAddresses } from "@marketplace/contracts"
 
 /**
- * Returns the marketplace contract addresses for whichever chain the wallet
- * is currently connected to (Sepolia or Elysium). Falls back to the default
- * chain's addresses if not connected yet / connected to an unsupported chain.
+ * Returns the marketplace contract addresses for an explicit chain, or for the
+ * wallet's current chain when no chain is passed (legacy callers). Pages should
+ * always pass their server-resolved chain so wallet state cannot change the
+ * target contract addresses.
  */
-export function useContractAddresses() {
-  const chainId = useChainId()
-  const addresses = getContractAddresses(chainId)
+export function useContractAddresses(chainId?: number) {
+  const connectedChainId = useChainId()
+  const addresses = getContractAddresses(chainId ?? connectedChainId)
 
   return {
     MARKETPLACE_CONTRACT_ADDRESS: addresses.MARKETPLACE,

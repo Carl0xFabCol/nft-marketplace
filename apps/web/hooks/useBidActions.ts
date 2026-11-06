@@ -5,9 +5,9 @@ import { MarketplaceABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 import type { Address, PublicClient } from "viem"
 
-export function useBidToken() {
+export function useBidToken(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const bidToken = async (collection: Address, tokenId: bigint, price: bigint, expiresAt: number) => {
     const txHash = await writeContractAsync({
@@ -16,6 +16,7 @@ export function useBidToken() {
       functionName: "placeTokenBid",
       args: [collection, tokenId, price, BigInt(expiresAt)],
       value: price,
+      chainId,
     })
     return txHash
   }
@@ -34,10 +35,10 @@ export interface UseBidTokenBatchResult {
   publicClient: PublicClient | undefined
 }
 
-export function useBidTokenBatch(): UseBidTokenBatchResult {
+export function useBidTokenBatch(chainId: number): UseBidTokenBatchResult {
   const { writeContractAsync } = useWriteContract()
-  const publicClient = usePublicClient()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const publicClient = usePublicClient({ chainId })
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
   const bidTokenBatch = async (collection: `0x${string}`, tokenIds: bigint[], prices: bigint[], totalValue: bigint, expiresAts: number[]) => {
     const txHash = await writeContractAsync({
       address: MARKETPLACE_CONTRACT_ADDRESS,
@@ -45,6 +46,7 @@ export function useBidTokenBatch(): UseBidTokenBatchResult {
       functionName: "placeTokenBidBatch",
       args: [collection, tokenIds, prices, expiresAts.map(BigInt)],
       value: totalValue,
+      chainId,
     })
     return txHash
   }
@@ -52,9 +54,9 @@ export function useBidTokenBatch(): UseBidTokenBatchResult {
   return { bidTokenBatch, publicClient }
 }
 
-export function useCancelTokenBid() {
+export function useCancelTokenBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const cancelTokenBid = async (collection: `0x${string}`, tokenId: number) => {
     const txHash = await writeContractAsync({
@@ -62,6 +64,7 @@ export function useCancelTokenBid() {
       abi: MarketplaceABI,
       functionName: "cancelTokenBid",
       args: [collection, BigInt(tokenId)],
+      chainId,
     })
     return txHash
   }
@@ -69,9 +72,9 @@ export function useCancelTokenBid() {
   return { cancelTokenBid }
 }
 
-export function useCancelTokenBidBatch() {
+export function useCancelTokenBidBatch(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const cancelTokenBids = async (collections: `0x${string}`[], tokenIds: bigint[]) => {
     const txHash = await writeContractAsync({
@@ -79,6 +82,7 @@ export function useCancelTokenBidBatch() {
       abi: MarketplaceABI,
       functionName: "cancelTokenBidBatch",
       args: [collections, tokenIds],
+      chainId,
     })
     return txHash
   }
@@ -86,9 +90,9 @@ export function useCancelTokenBidBatch() {
   return { cancelTokenBids }
 }
 
-export function useAcceptTokenBid() {
+export function useAcceptTokenBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const acceptTokenBid = async (collection: `0x${string}`, tokenId: number, bidder: `0x${string}`) => {
     const txHash = await writeContractAsync({
@@ -96,6 +100,7 @@ export function useAcceptTokenBid() {
       abi: MarketplaceABI,
       functionName: "acceptTokenBid",
       args: [collection, BigInt(tokenId), bidder],
+      chainId,
     })
     return txHash
   }
@@ -103,9 +108,9 @@ export function useAcceptTokenBid() {
   return { acceptTokenBid }
 }
 
-export function useAcceptCollectionBid() {
+export function useAcceptCollectionBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const acceptCollectionBid = async (collection: `0x${string}`, bidder: `0x${string}`, tokenIds: bigint[]) => {
     const txHash = await writeContractAsync({
@@ -113,6 +118,7 @@ export function useAcceptCollectionBid() {
       abi: MarketplaceABI,
       functionName: "acceptCollectionBid",
       args: [collection, bidder, tokenIds],
+      chainId,
     })
     return txHash
   }
@@ -120,9 +126,9 @@ export function useAcceptCollectionBid() {
   return { acceptCollectionBid }
 }
 
-export function useBidCollection() {
+export function useBidCollection(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const bidCollection = async (collection: Address, price: bigint, quantity: number, expiresAt: number) => {
     const txHash = await writeContractAsync({
@@ -131,6 +137,7 @@ export function useBidCollection() {
       functionName: "placeCollectionBid",
       args: [collection, price, quantity, BigInt(expiresAt)],
       value: price * BigInt(quantity),
+      chainId,
     })
     return txHash
   }
@@ -138,9 +145,9 @@ export function useBidCollection() {
   return { bidCollection }
 }
 
-export function useCancelCollectionBid() {
+export function useCancelCollectionBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses()
+  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const cancelCollectionBid = async (collection: `0x${string}`) => {
     const txHash = await writeContractAsync({
@@ -148,6 +155,7 @@ export function useCancelCollectionBid() {
       abi: MarketplaceABI,
       functionName: "cancelCollectionBid",
       args: [collection],
+      chainId,
     })
     return txHash
   }
