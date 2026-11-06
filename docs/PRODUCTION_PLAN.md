@@ -2,11 +2,52 @@
 
 ## Phase 0: Foundation and safety net (no behavior changes)
 
-- Create CI in `.github/workflows` (currently empty): `forge test`, typecheck, turbo tests.
-- Write `generate-abis.ts` with a `--check` mode (events-only and full bundles).
-- Write `generate-addresses.ts` with the 9 rejection rules and a `--check` mode.
-- Create `pnpm validate:integration` (config events vs. ABI, handlers vs. config, `CHAIN_ID`, etc.).
-- Add tests 3, 4, 5, 7, and 8 from the report. They must fail at first (`ContractAuthorized`, `acceptTokenBid` arity).
+- [x] Create CI in `.github/workflows` (currently empty): `forge test`, typecheck, turbo tests.
+  - `.github/workflows/ci.yml`: jobs `contracts` (forge build + test, then `generate:abis:check`), `typescript` (`turbo run test`, `turbo run typecheck --filter=!@marketplace/database`), and `integration-contract-tests` (`continue-on-error`, known failures). Pinned Foundry v1.5.1, pnpm 9.0.0, Node 22, `--frozen-lockfile`. No secrets, no live RPC/Supabase.
+  - Precondition: `pnpm-lock.yaml` and `docs/PRODUCTION_PLAN.md` / `docs/INTEGRATION_AUDIT.md` are now tracked (they were gitignored). `.gitattributes` forces LF on `*.generated.ts`.
+- [x] Write `generate-abis.ts` with a `--check` mode (events-only and full bundles).
+  - `packages/contracts/scripts/generate-abis.ts` → `src/abis/{events,full,launchpad,collection}.generated.ts`. Header stamps the solc version and a keccak256 over **LF-normalized** compilation sources.
+  - Not consumed yet: `src/abis/index.ts` and the hand-pasted `*.abi.ts` files are untouched (Phase 4). Package `exports` gained `./abis/generated/*` and `./integration-checks` for tests only.
+- [x] Write `generate-addresses.ts` with the 9 rejection rules and a `--check` mode.
+  - `packages/contracts/scripts/generate-addresses.ts` and `scripts/lib/addresses.ts`. The RPC layer is injectable (`ChainReader`). Rule 6 also checks `core.router`, `core.bidsContract` and `bids.marketplace`.
+  - Not run against the legacy stack. No `addresses.generated.ts` exists and `addresses.ts` is untouched (Phase 6). It is not yet a CI `--check` step, because there are no verified records and it needs live RPC (add it in Phase 6).
+- [x] Create `pnpm validate:integration` (config events vs. ABI, handlers vs. config, `CHAIN_ID`, etc.).
+  - `scripts/validate-integration.mjs [--chain-id N] [--live]` runs `apps/indexer/src/__integration__/integration.integration.test.ts` (checks a, b, c, f, plus d with `--live`) and test #8.
+  - `dotenv/config` is mocked, so no `.env` is ever read. (d) is off in CI.
+- [x] Add tests 3, 4, 5, 7, and 8 from the report. They must fail at first (`ContractAuthorized`, `acceptTokenBid` arity).
+  - #3 `foundry/test/EventSignatures.t.sol` and #4 `foundry/test/RouterEmitsNoDomainEvents.t.sol` both pass.
+  - #5 `scripts/__tests__/generate-abis.test.ts` plus the CI `--check` step.
+  - #6 (9-rule negative suite) `scripts/__tests__/generate-addresses.test.ts`, with mock RPC only.
+  - #7 is in the indexer integration suite.
+  - #8 `packages/contracts/src/__integration__/frontend-call-shape.integration.test.ts`, with a guard that its table covers every `functionName:` in apps/web.
+
+### Known-failing tests (intentional; run in CI job `integration-contract-tests`, continue-on-error)
+
+Do not weaken these. Each one turns green when the listed phase fixes the code.
+
+| Test / check | Failure today | Fixed in |
+| --- | --- | --- |
+| #7 / validate (a) events exist in generated ABI | `core:ContractAuthorized` is configured, but the event is now `LaunchpadAuthorized` | Phase 3 (IDX-5 / ABI-4) |
+| #8 call-shape: `acceptTokenBid` | web passes 3 args, contract takes 5 (`minPrice`, `minSellerProceeds`) | Phase 4 (ABI-1) |
+| #8 call-shape: `acceptCollectionBid` | web passes 3 args, contract takes 5 (`minPricePerItem`, `minSellerProceeds`) | Phase 4 (ABI-1) |
+| validate (c) CHAIN_ID required | `apps/indexer/src/config/env.ts:71` silently defaults to 11155111 | Phase 3 (ADDR-3) |
+| validate (f) default chain id consistent | indexer 11155111 vs shared/contracts 99801 | Phase 3 (ADDR-3) |
+| `@marketplace/database` typecheck | missing `@marketplace/shared` dependency; supabase-js generic type error in `src/client.ts` | Phase 1 (or cleanup; `packages/database/src/repositories/*` is slated for deletion) |
+
+`(b)` handler/config bijection **passes** today, because `ContractAuthorizedHandler` exists and matches the stale config. It will catch the Phase 3 change if handlers and config are not updated together.
+
+### Audit vs. code discrepancies found in Phase 0
+
+- `.github/workflows/` did not exist at all; only `.github/ISSUE_TEMPLATE/` did. `packages/contracts/foundry/.github/workflows/test.yml` exists but GitHub never runs it, because only the repo root is scanned.
+- `foundry/lib/*` is vendored as tracked files, not git submodules.
+- `pnpm-lock.yaml` and `docs/` were gitignored. Both are now tracked (except for other files in `docs/`).
+- The deployment record written by `DeploymentConfig.sol` has no `verifiedAt`, commit SHA, deploy block, or artifact hash, although §3.3 and §8.3 assume them. `DEPLOYMENT_METADATA.verifiedAt` uses `updatedAt`. The artifact-hash-at-deploy check from §8.3 needs a record field (future work).
+- With `core.autocrlf=true` and no `.gitattributes`, solc's `metadata.sources[*].keccak256` differs between Windows and Linux checkouts. That is why the ABI header hashes LF-normalized sources.
+- "28 indexed events" (§10 #3) doesn't match the artifacts: Core has 22 events and Bids 13. Test #3 pins all of them, plus ERC-721 `Transfer` and `LaunchPad.CollectionDeployed` (37 assertions).
+- The audit predicted only #7 and #8 to fail. Checks (c) and (f) also fail today, and (b) passes.
+- `@marketplace/indexer` has no `typecheck` script, so `turbo run typecheck` never typechecks it. Adding one is out of Phase 0 scope.
+- The collection contract is `Hyperc` (`src/MERC721.sol`), not `MiColeccion`. The web's `MiColeccionABI` call sites are checked against `HypercAbi`.
+- An untracked `apps/indexer/pnpm-lock.yaml` exists next to the root lockfile. It was left as-is; consider deleting it.
 
 ## Phase 1: Recover lost work
 
