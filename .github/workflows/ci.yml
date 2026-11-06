@@ -37,6 +37,25 @@ jobs:
       - name: forge test
         run: forge test
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+
+      # Test #5: committed src/abis/*.generated.ts must be byte-identical to a
+      # fresh regeneration from the artifacts built above.
+      - name: Generated ABIs are up to date
+        working-directory: .
+        run: pnpm --filter @marketplace/contracts generate:abis:check
+
   typescript:
     name: TypeScript (typecheck + test)
     runs-on: ubuntu-latest

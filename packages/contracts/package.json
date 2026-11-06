@@ -10,11 +10,17 @@
     "./addresses": "./src/addresses.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
+    "test": "vitest run",
+    "generate:abis": "tsx scripts/generate-abis.ts",
+    "generate:abis:check": "tsx scripts/generate-abis.ts --check"
   },
   "devDependencies": {
-    "typescript": "^5"
+    "@types/node": "^26.6.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5",
+    "viem": "^2.44.1",
+    "vitest": "^3"
   },
   "peerDependencies": {
     "viem": ">=2"
