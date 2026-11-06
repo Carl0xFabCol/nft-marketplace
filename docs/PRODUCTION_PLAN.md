@@ -32,7 +32,9 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 | #8 call-shape: `acceptCollectionBid` | web passes 3 args, contract takes 5 (`minPricePerItem`, `minSellerProceeds`) | Phase 4 (ABI-1) |
 | validate (c) CHAIN_ID required | `apps/indexer/src/config/env.ts:71` silently defaults to 11155111 | Phase 3 (ADDR-3) |
 | validate (f) default chain id consistent | indexer 11155111 vs shared/contracts 99801 | Phase 3 (ADDR-3) |
-| `@marketplace/database` typecheck | missing `@marketplace/shared` dependency; supabase-js generic type error in `src/client.ts` | Phase 1 (or cleanup; `packages/database/src/repositories/*` is slated for deletion) |
+| `@marketplace/database` typecheck | supabase-js generic type error in `src/client.ts` (2 errors). Phase 1 fixed the missing `@marketplace/shared` dependency, which took it from 6 errors to 2. | cleanup (`packages/database/src/repositories/*` is slated for deletion) |
+| web `rls.integration.test.ts` (22 tests) | **skipped**: needs a local Supabase stack (`SEC01_TEST_SUPABASE_*`) | when a local Supabase env exists (Docker + Supabase CLI) |
+| pgTAP `sec01_rls_privileges.test.sql` | **not run**: no disposable Postgres with pgTAP | same env. Not in CI. |
 
 `(b)` handler/config bijection **passes** today, because `ContractAuthorizedHandler` exists and matches the stale config. It will catch the Phase 3 change if handlers and config are not updated together.
 
@@ -51,14 +53,56 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 
 ## Phase 1: Recover lost work
 
-- Review and merge `fix/bigint-precision` (commit `fc85e2b`).
-- Resolve conflicts in the 9 Foundry tests in favor of `main`.
-- Fix `docs/SEC01_STATUS.md`, which declares something as implemented that does not exist.
-- Make the pgTAP RLS tests (764 lines) run against a disposable Postgres and disable the 22 skips.
+Branch `chore/production-readiness-phase1`. It is **not merged to main** and must not be deployed before Phase 2 (see "Cutover hazard" below).
+
+- [x] Review and bring in `fix/bigint-precision` (commit `fc85e2b`), path-wise with `git checkout fc85e2b -- <paths>`, not as a merge.
+  - 60 files came in as-is. None of the 62 non-Foundry files had changed on main since the merge-base `e2b5985`.
+  - Commits:
+    - `feat(shared): canonical listing identity helpers`
+    - `fix(indexer,database): chain-scoped listing identity`
+    - `feat(web): wallet trust boundary and chain-scoped reads/writes`. The auth/actions and chainGuard groups are folded into one commit because `failListingsByTxHash(hash, chainId)` doesn't typecheck without its callers.
+    - `feat(database): SEC-01 migrations and RLS test suites (files only)`
+  - Adaptations:
+    - `@marketplace/database` now declares `@marketplace/shared` (lockfile importer entry only).
+    - `apps/web` gets a `test` script and its own `vitest.config.ts` (`@` alias), so the 6 recovered web test files run under turbo/CI.
+- [x] Resolve the Foundry conflicts in favor of `main`. All 27 Foundry files plus `.gas-snapshot` were discarded:
+  - 16 tests: 9 modified on both sides, 7 deleted on main.
+  - 5 `src` + 6 `script` files. Their branch changes are `forge fmt` plus a pragma pin `^0.8.24`→`0.8.24`, with no logic change.
+  - `git diff main -- packages/contracts/foundry` is empty. `forge test` passes 336/336, and `generate:abis:check` is up to date.
+- [x] Fix `docs/SEC01_STATUS.md`. Rewritten from scratch (tracked via a `.gitignore` exception). It now separates in-repo code, unapplied migrations, unverified suites, and what is missing.
+- [ ] Make the pgTAP RLS suite run against a disposable Postgres, and run the 22 skipped tests. **Blocked: no environment.**
+  - The baseline dump is now present at `packages/database/baseline/` (untracked).
+  - Docker, the Supabase CLI and pgTAP are not installed. The user chose to stop before DB work.
+  - The 22 skips are in `apps/web/lib/supabase/rls.integration.test.ts` and need GoTrue + PostgREST, i.e. `supabase start`. Plain Postgres is not enough.
+  - Expect 2 pgTAP failures on a schema-only baseline: the duplicate `supabase_user_id = 1111…` test and the other seller's active listing on `0x…10` token 1 both rely on pre-existing rows. Report them; do not re-skip.
+- Test results on the branch:
+  - typecheck (excluding database): green.
+  - turbo test: shared 8, database 2, indexer 31 (28 before), contracts 72, web 40 passed / 22 skipped.
+  - `validate:integration`: same as Phase 0. (a), (c), (f) and #8 `acceptTokenBid`/`acceptCollectionBid` fail as known; (b) passes.
+
+### Audit vs. code discrepancies found in Phase 1
+
+- **IDX-4 is not on `fc85e2b`.**
+  - §5 IDX-4 and P1-1 say the fix "is already implemented on fix/bigint-precision". It is not.
+  - The indexer still uses `Number(price)` at `CoreEventHandler.ts:211` and `:257` and at `BidsEventHandler.ts:143` and `:300`.
+  - `ListingsRepository` and `BidsRepository` still take `price: number`.
+  - The branch's indexer changes are listing identity only. The web side already sent wei as strings.
+  - Moved to Phase 3.
+- **The SEC01 status note was never on `main`.** §6.3 says `docs/SEC01_STATUS.md` "sits on main". It was never tracked (`docs/*` is gitignored), and it was not on disk or on any branch.
+- **"22 RLS tests skipped" are vitest tests, not pgTAP.** The pgTAP file has no skips.
+- **SQL line counts.** The six migrations total 1,800 lines, not the 2,254 stated in the audit header. The individual file sizes match §6.3.
+- **M-7 is not covered by the branch** (§7 implies it was verified there). Neither the indexer upsert nor the RPC conflict path resets `buyer_wallet`. `apps/web/lib/listingMerge.ts:93` then hides a relisted token's active listing.
+- **090400 revokes too broadly and pins `search_path` blind.** It revokes EXECUTE on *every* SECURITY DEFINER function and pins `search_path` without inspecting bodies. Review the functions in the baseline before applying it.
 
 ## Phase 2: Database migrations (while there are only ~46 rows)
 
 - ➕ Make a full backup before starting.
+- **Cutover hazard.**
+  - The recovered code needs SEC-01 migrations 090000–090500: the `(chain_id, collection_address, token_id)` conflict target and the `sec01_save_listing_batch` RPC.
+  - Current `main` (`onConflict: "listing_id"`) breaks once 090500 drops that unique.
+  - Apply the six migrations and deploy the Phase 1 branch together, in that order. The SEC-01 migrations cover M-3, so they sit between M-2 and M-4 in the order below.
+- M-7 must be written here: the indexer upsert and the `sec01_save_listing_batch` `ON CONFLICT` must set `buyer_wallet = NULL`. It is not on the branch.
+- Before applying, test the SEC-01 migrations, the pgTAP suite and the 22 RLS integration tests on a local Supabase stack (see Phase 1).
 - Apply in this order, with human approval: M-1 (`chain_id` in bids), M-2 (composite identity for collections), M-3 (listings), M-4 (`activity.chain_id` to integer), M-6 (unique on `indexer_state`), M-7 (`buyer_wallet` in relist).
 - Run tests 18, 19, and 20 (constraints, cross-chain uniqueness, round-trip over snapshot).
 - Leave M-5 (RPCs with `p_chain_id`) for phase 3.
@@ -73,6 +117,7 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 - IDX-6/7: add `chain_id` to bid writes and filters, and make inserts idempotent with a unique constraint on the on-chain identity. Do not derive the remaining amount from the DB state.
 - Apply M-5 together with the repository change, in a coordinated way.
 - IDX-9: throw an error if `blockTimestamp` is missing.
+- IDX-4 (moved from Phase 1; not on `fc85e2b`): carry wei as decimal strings through `CoreEventHandler`/`BidsEventHandler` and `ListingsRepository`/`BidsRepository`, with no `Number(price)`. Add test #12 (`1234567890123456789n` round-trip).
 - ADDR-3: make `CHAIN_ID` mandatory and remove the fallbacks (`11155111` / `sepolia`).
 - Do per-chunk checkpointing with streaming (IDX-8). It is P2, but essential if there is ever a backfill.
 - Add a `prepare-deployment` that upserts `indexer_state` with `deployBlock - 1`.
