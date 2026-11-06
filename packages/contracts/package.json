@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
     "generate:abis": "tsx scripts/generate-abis.ts",
-    "generate:abis:check": "tsx scripts/generate-abis.ts --check"
+    "generate:abis:check": "tsx scripts/generate-abis.ts --check",
+    "generate:addresses": "tsx scripts/generate-addresses.ts",
+    "generate:addresses:check": "tsx scripts/generate-addresses.ts --check"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
