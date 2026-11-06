@@ -11,6 +11,8 @@ coverage
 .env.test
 .env.staging
 
+AGENTS.md
+CLAUDE.md
 
 apps/web/.next
 apps/indexer/dist
