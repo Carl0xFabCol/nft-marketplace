@@ -104,6 +104,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Tests #7 + #8 and checks (a)(b)(c)(f). (d) is live-RPC only: no --live here.
+      - name: validate:integration (known failing)
+        run: pnpm validate:integration --chain-id 99801
+
       - name: Database typecheck (known failing)
         if: always()
         run: pnpm --filter @marketplace/database typecheck

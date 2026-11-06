@@ -10,7 +10,8 @@
     "dev:web": "pnpm --filter @marketplace/web dev",
     "dev:indexer": "pnpm --filter @marketplace/indexer dev",
     "build:web": "pnpm --filter @marketplace/web build",
-    "build:contracts": "pnpm --filter @marketplace/contracts build"
+    "build:contracts": "pnpm --filter @marketplace/contracts build",
+    "validate:integration": "node scripts/validate-integration.mjs"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

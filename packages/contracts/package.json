@@ -7,7 +7,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./abis": "./src/abis/index.ts",
-    "./addresses": "./src/addresses.ts"
+    "./addresses": "./src/addresses.ts",
+    "./abis/generated/events": "./src/abis/events.generated.ts",
+    "./abis/generated/full": "./src/abis/full.generated.ts",
+    "./abis/generated/launchpad": "./src/abis/launchpad.generated.ts",
+    "./abis/generated/collection": "./src/abis/collection.generated.ts",
+    "./integration-checks": "./scripts/lib/integration-checks.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
