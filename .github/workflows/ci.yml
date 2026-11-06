@@ -1,0 +1,90 @@
+name: CI
+
+# Phase 0 safety net. No secrets, no deployments, no live-chain or Supabase
+# access: forge tests run on the in-process EVM and TS tests mock all I/O.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Contracts (forge build + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/contracts/foundry
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1
+
+      - name: forge build
+        run: forge build
+
+      - name: forge test
+        run: forge test
+
+  typescript:
+    name: TypeScript (typecheck + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm turbo run test
+
+      # @marketplace/database typecheck is a known pre-existing failure; it runs
+      # in integration-contract-tests instead (see docs/PRODUCTION_PLAN.md).
+      - name: Typecheck
+        run: pnpm turbo run typecheck --filter=!@marketplace/database
+
+  integration-contract-tests:
+    name: Integration contract tests (known failing)
+    runs-on: ubuntu-latest
+    # These checks encode defects the audit found that later phases fix.
+    # They are expected to fail until then; see the "Known-failing tests"
+    # table in docs/PRODUCTION_PLAN.md. Do not weaken them to turn this green.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Database typecheck (known failing)
+        if: always()
+        run: pnpm --filter @marketplace/database typecheck
