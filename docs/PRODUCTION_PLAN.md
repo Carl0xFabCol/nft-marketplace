@@ -116,8 +116,15 @@ Branch `chore/production-readiness-phase1`. It is **not merged to main** and mus
 - ➕ Make a full backup before starting.
 - **Cutover hazard.**
   - The recovered code needs SEC-01 migrations 090000–090500: the `(chain_id, collection_address, token_id)` conflict target and the `sec01_save_listing_batch` RPC.
-  - Current `main` (`onConflict: "listing_id"`) breaks once 090500 drops that unique.
-  - Apply the six migrations and deploy the Phase 1 branch together, in that order. The SEC-01 migrations cover M-3, so they sit between M-2 and M-4 in the order below.
+  - Current `main` (`onConflict: "listing_id"`) breaks once 090500 drops that unique (42P10, verified locally).
+  - Apply the seven SEC-01 migrations (090000–090600) and deploy the Phase 1 branch together, in that order. The SEC-01 migrations cover M-3, so they sit between M-2 and M-4 in the order below.
+- **Runbook: indexer during the cutover.**
+  1. **Stop the indexer before applying 090500/090600.** Note its last processed block (`indexer_state`).
+  2. Apply 090000–090600.
+  3. Deploy the recovered indexer (`ListingsRepository` keyed by `chain_id, collection_address, token_id`) and web code.
+  4. **Restart the indexer only with the recovered code.** It resumes from the saved cursor.
+  - Why: 090500 rewrites `listing_id` to `<chain>:<addr>-<token>`. The old indexer's `updatePrice`/`deactivate` (`.eq("listing_id", "<addr>-<token>")`) then **update 0 rows without any error**, so sales and cancels are silently lost and listings stay active. The old upsert fails loudly with 42P10, but the updates do not. Verified locally on 2026-11-07 (SEC01_STATUS §3.6).
+  - Do not restart the old indexer as a "rollback". Rolling back means restoring the backup and the old code together.
 - M-7 must be written here: the indexer upsert and the `sec01_save_listing_batch` `ON CONFLICT` must set `buyer_wallet = NULL`. It is not on the branch.
 - Before applying, test the SEC-01 migrations, the pgTAP suite and the 22 RLS integration tests on a local Supabase stack (see Phase 1).
 - Apply in this order, with human approval: M-1 (`chain_id` in bids), M-2 (composite identity for collections), M-3 (listings), M-4 (`activity.chain_id` to integer), M-6 (unique on `indexer_state`), M-7 (`buyer_wallet` in relist).
