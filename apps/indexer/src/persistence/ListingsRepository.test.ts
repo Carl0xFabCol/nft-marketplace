@@ -54,7 +54,7 @@ describe("ListingsRepository.upsert", () => {
       collectionAddress,
       tokenId,
       sellerWallet,
-      price: 1,
+      price: "1",
       expiresAt: null,
       isActive: true,
       txHash: `0x${"A".repeat(64)}`,
@@ -84,9 +84,9 @@ describe("ListingsRepository.updatePrice", () => {
     const qb = makeQueryBuilder()
     from.mockReturnValue(qb)
 
-    await buildRepo().updatePrice(collectionAddress, tokenId, 2, timestamp)
+    await buildRepo().updatePrice(collectionAddress, tokenId, "2", timestamp)
 
-    expect(qb.update).toHaveBeenCalledWith({ price: 2, updated_at: timestamp })
+    expect(qb.update).toHaveBeenCalledWith({ price: "2", updated_at: timestamp })
     expect(qb.eq).toHaveBeenCalledWith("chain_id", env.chainId)
     expect(qb.eq).toHaveBeenCalledWith("collection_address", collectionAddress.toLowerCase())
     expect(qb.eq).toHaveBeenCalledWith("token_id", "1")

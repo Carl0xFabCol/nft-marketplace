@@ -28,7 +28,7 @@ describe("BidsRepository inserts carry chain_id (M-1)", () => {
     await buildRepo().insertCollectionBid({
       collectionAddress,
       bidderWallet,
-      price: 1,
+      price: "1",
       quantity: 2,
       expiresAt: null,
       isActive: true,
@@ -50,7 +50,7 @@ describe("BidsRepository inserts carry chain_id (M-1)", () => {
       collectionAddress,
       tokenId: "7",
       bidderWallet,
-      price: 1,
+      price: "1",
       expiresAt: null,
       isActive: true,
       createdAt: timestamp,

@@ -3,6 +3,7 @@ import type { IEventHandler } from "./IEventHandler"
 import type { ParsedEvent } from "../types/indexer.types"
 import type { MetadataFetcher } from "../fetchers/MetadataFetcher"
 import { logger } from "../utils/logger"
+import { toWeiString } from "../utils/wei"
 import { getContractAddresses } from "@marketplace/contracts"
 import { env } from "../config/env"
 import type { ActivityRepository } from "../persistence/ActivityRepository"
@@ -208,7 +209,7 @@ export class ListingCreatedHandler extends BaseCoreHandler<ListingCreatedArgs> {
       collectionAddress: String(collection).toLowerCase(),
       tokenId: tokenId.toString(),
       sellerWallet: String(seller).toLowerCase(),
-      price: Number(price),
+      price: toWeiString(price),
       expiresAt: expiresAt && Number(expiresAt) > 0 ? new Date(Number(expiresAt) * 1000) : null,
       isActive: true,
       txHash: String(event.transactionHash).toLowerCase(),
@@ -254,7 +255,7 @@ export class ListingUpdatedHandler extends BaseCoreHandler<ListingUpdatedArgs> {
       "🔄 Handling ListingUpdated",
     )
 
-    await this.listingsRepo.updatePrice(String(collection).toLowerCase(), tokenId.toString(), Number(newPrice), new Date(event.blockTimestamp * 1000))
+    await this.listingsRepo.updatePrice(String(collection).toLowerCase(), tokenId.toString(), toWeiString(newPrice), new Date(event.blockTimestamp * 1000))
 
     await this.insertActivity({
       event: "LISTING_UPDATED",
@@ -359,7 +360,7 @@ export class SaleHandler extends BaseCoreHandler<SaleArgs> {
     })
 
     // Update collection stats via repository
-    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), Number(price) / 1e18, 1)
+    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), price, 1)
   }
 }
 

@@ -21,7 +21,8 @@ export class ListingsRepository {
     collectionAddress: string
     tokenId: string
     sellerWallet: string
-    price: number
+    // IDX-4: exact base-10 wei string; numeric(78,0) receives it without loss.
+    price: string
     expiresAt: Date | null
     isActive: boolean
     txHash: string
@@ -67,7 +68,7 @@ export class ListingsRepository {
   /**
    * Update listing price.
    */
-  async updatePrice(collectionAddress: string, tokenId: string, newPrice: number, updatedAt: Date): Promise<void> {
+  async updatePrice(collectionAddress: string, tokenId: string, newPrice: string, updatedAt: Date): Promise<void> {
     const collection = normalizeCollectionAddress(collectionAddress)
     const token = normalizeTokenId(tokenId)
     const { error } = await this.supabase

@@ -222,6 +222,14 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
     - indexer tsconfig: `module: ESNext`, `moduleResolution: bundler`. There is no emit step; the runtime is tsx/vitest.
     - `createAnonClient`/`createServiceClient` drop their unused `<T>` generic. This is type-only; no caller passed one.
   - `@marketplace/database` typecheck is now **green**. CI runs `turbo run typecheck` with no exclusion, and the "Database typecheck (known failing)" step is removed.
+- [x] 2. IDX-4: wei is carried as bigint and leaves the indexer only as an exact decimal string.
+  - `ListingsRepository.upsert/updatePrice` and `BidsRepository.insert*Bid` take `price: string` (into `numeric(78,0)`).
+  - `CollectionsRepository.incrementStats(addr, volumeWei: bigint, sales)` sends `p_volume` as an exact ether decimal (`formatEther`, e.g. `"1.234567890123456789"`). The RPC signature `(text, numeric, integer)` is unchanged.
+  - Helpers live in `src/utils/wei.ts`.
+  - Test #12 (`handlers/WeiPrecision.test.ts`) runs real handlers and repos over a recording supabase fake (`src/test-utils/`). It sends `1234567890123456789n` and gets the identical string back in the listings, bids, activity and stats payloads.
+  - A source guard fails if `Number(<price|amount|volume|wei>)` or `/ 1e18` reappears in handlers or repos.
+  - `quantity` (uint32) and `expiresAt` (uint64 seconds) intentionally stay `Number`.
+  - **Open (Phase 4):** PostgREST returns `numeric` columns as JSON numbers. A web read of `listings.price` can still round unless it selects `price::text`. The write side is exact now.
 
 ## Phase 4: Frontend
 

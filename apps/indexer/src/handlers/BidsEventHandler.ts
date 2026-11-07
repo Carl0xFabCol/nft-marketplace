@@ -3,6 +3,7 @@ import type { IEventHandler } from "./IEventHandler"
 import type { ParsedEvent } from "../types/indexer.types"
 import type { MetadataFetcher } from "../fetchers/MetadataFetcher"
 import { logger } from "../utils/logger"
+import { toWeiString } from "../utils/wei"
 import { getContractAddresses } from "@marketplace/contracts"
 import { env } from "../config/env"
 import type { ActivityRepository } from "../persistence/ActivityRepository"
@@ -140,7 +141,7 @@ export class CollectionBidPlacedHandler extends BaseBidsHandler<CollectionBidPla
     await this.bidsRepo.insertCollectionBid({
       collectionAddress: String(collection).toLowerCase(),
       bidderWallet: String(bidder).toLowerCase(),
-      price: Number(pricePerItem),
+      price: toWeiString(pricePerItem),
       quantity: Number(quantity),
       expiresAt: expiresAt && Number(expiresAt) > 0 ? new Date(Number(expiresAt) * 1000) : null,
       isActive: true,
@@ -223,7 +224,7 @@ export class CollectionBidAcceptedHandler extends BaseBidsHandler<CollectionBidA
     })
 
     // Update collection stats
-    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), Number(totalPrice) / 1e18, tokenIds.length)
+    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), totalPrice, tokenIds.length)
   }
 }
 
@@ -297,7 +298,7 @@ export class TokenBidPlacedHandler extends BaseBidsHandler<TokenBidPlacedArgs> {
       collectionAddress: String(collection).toLowerCase(),
       tokenId: tokenId.toString(),
       bidderWallet: String(bidder).toLowerCase(),
-      price: Number(price),
+      price: toWeiString(price),
       expiresAt: expiresAt && Number(expiresAt) > 0 ? new Date(Number(expiresAt) * 1000) : null,
       isActive: true,
       createdAt: new Date(event.blockTimestamp * 1000),
@@ -365,7 +366,7 @@ export class TokenBidAcceptedHandler extends BaseBidsHandler<TokenBidAcceptedArg
     })
 
     // Update collection stats
-    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), Number(price) / 1e18, 1)
+    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), price, 1)
   }
 }
 

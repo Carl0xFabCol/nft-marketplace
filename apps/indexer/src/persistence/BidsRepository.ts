@@ -48,7 +48,7 @@ export class BidsRepository {
   /**
    * Insert a new collection bid.
    */
-  async insertCollectionBid(params: { collectionAddress: string; bidderWallet: string; price: number; quantity: number; expiresAt: Date | null; isActive: boolean; createdAt: Date }): Promise<void> {
+  async insertCollectionBid(params: { collectionAddress: string; bidderWallet: string; price: string; quantity: number; expiresAt: Date | null; isActive: boolean; createdAt: Date }): Promise<void> {
     const { error } = await this.supabase.from("collection_bids").insert({
       // M-1: chain_id is NOT NULL with no default. Filters stay chain-less until IDX-6 (Phase 3).
       chain_id: env.chainId,
@@ -154,7 +154,7 @@ export class BidsRepository {
   /**
    * Insert a new token bid.
    */
-  async insertTokenBid(params: { collectionAddress: string; tokenId: string; bidderWallet: string; price: number; expiresAt: Date | null; isActive: boolean; createdAt: Date }): Promise<void> {
+  async insertTokenBid(params: { collectionAddress: string; tokenId: string; bidderWallet: string; price: string; expiresAt: Date | null; isActive: boolean; createdAt: Date }): Promise<void> {
     const { error } = await this.supabase.from("token_bids").insert({
       // M-1: chain_id is NOT NULL with no default. Filters stay chain-less until IDX-6 (Phase 3).
       chain_id: env.chainId,
