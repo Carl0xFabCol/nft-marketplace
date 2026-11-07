@@ -27,4 +27,12 @@ export interface IEventFetcher {
    * @returns Array of parsed events, sorted by block number and log index
    */
   fetchEventsForContracts(requests: ContractFetchRequest[], toBlock: bigint): Promise<ParsedEvent[]>
+
+  /**
+   * Fetch the events of ONE block range [fromBlock, toBlock] (no further
+   * chunking), each contract starting no earlier than its own fromBlock.
+   * Used by the orchestrator to stream and checkpoint chunk by chunk (IDX-8).
+   * @returns Array of parsed events, sorted by block number and log index
+   */
+  fetchChunk(requests: ContractFetchRequest[], fromBlock: bigint, toBlock: bigint): Promise<ParsedEvent[]>
 }

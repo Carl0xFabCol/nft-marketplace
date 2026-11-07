@@ -35,6 +35,9 @@ interface Setup {
   confirmations?: number
   collections?: { contract_address: string; indexer_block: number }[]
   collectionState?: Record<string, number>
+  batchSize?: number
+  /** Any fetched chunk containing this block throws (RPC failure). */
+  fetchFailsAt?: bigint
 }
 
 function setup(s: Setup) {
@@ -43,25 +46,31 @@ function setup(s: Setup) {
   const provider = { getBlockNumber: vi.fn(async () => (heads.length > 1 ? heads.shift()! : heads[0])) }
   const providerPool = { executeWithFallback: vi.fn(async (op: (p: typeof provider) => Promise<bigint>) => op(provider)) }
 
-  // Honors each request's own fromBlock (per contract address), like the real fetcher.
-  const fetchEventsForContracts = vi.fn(async (requests: ContractFetchRequest[], toBlock: bigint) => {
+  // One chunk [from, to]; honors each request's own fromBlock (per contract
+  // address), like the real fetcher. calls[] records the order of fetches.
+  const calls: string[] = []
+  const fetchChunk = vi.fn(async (requests: ContractFetchRequest[], from: bigint, to: bigint) => {
+    calls.push(`fetch ${from}-${to}`)
+    if (s.fetchFailsAt !== undefined && from <= s.fetchFailsAt && s.fetchFailsAt <= to) throw new Error(`rpc failed for ${from}-${to}`)
     const fromByAddress = new Map(requests.map((r) => [r.contract.address.toLowerCase(), r.fromBlock]))
     return s.events.filter((e) => {
-      const from = fromByAddress.get(e.contractAddress.toLowerCase())
-      return from !== undefined && e.blockNumber >= from && e.blockNumber <= toBlock
+      const start = fromByAddress.get(e.contractAddress.toLowerCase())
+      return start !== undefined && e.blockNumber >= start && e.blockNumber >= from && e.blockNumber <= to
     })
   })
-  const eventFetcher = { fetchEventsForContracts }
+  const eventFetcher = { fetchChunk }
 
   const dispatched: ParsedEvent[] = []
   const handlerRegistry = {
     dispatch: vi.fn(async (e: ParsedEvent) => {
+      calls.push(`dispatch ${e.blockNumber}`)
       if (s.failOn?.(e)) throw new Error(`handler failed at ${e.blockNumber}`)
       dispatched.push(e)
     }),
   }
 
   const updateLastBlock = vi.fn(async (_chainId: number, block: number) => {
+    calls.push(`checkpoint ${block}`)
     state.last_block = block
   })
   const stateRepo = { getState: vi.fn(async () => ({ chain_id: CHAIN, last_block: state.last_block })), updateLastBlock }
@@ -85,9 +94,9 @@ function setup(s: Setup) {
     contractStateRepo as never,
     collectionsRepo as never,
     [CORE],
-    { pollingIntervalMs: 0, batchSize: 1000, chainId: CHAIN, confirmations: s.confirmations ?? 0 },
+    { pollingIntervalMs: 0, batchSize: s.batchSize ?? 1000, chainId: CHAIN, confirmations: s.confirmations ?? 0 },
   )
-  return { orchestrator, state, collectionState, fetchEventsForContracts, dispatched, updateLastBlock, contractStateRepo }
+  return { orchestrator, state, collectionState, fetchChunk, calls, dispatched, updateLastBlock, contractStateRepo }
 }
 
 describe("IndexerOrchestrator cursor (IDX-2 / IDX-3)", () => {
@@ -128,7 +137,7 @@ describe("IndexerOrchestrator cursor (IDX-2 / IDX-3)", () => {
 
     failing = false
     await t.orchestrator.runOnce()
-    expect(t.fetchEventsForContracts.mock.calls[1][0][0].fromBlock).toBe(105n)
+    expect(t.fetchChunk.mock.calls[1][0][0].fromBlock).toBe(105n)
     expect(t.state.last_block).toBe(120)
     expect(t.dispatched.map((e) => e.blockNumber)).toEqual([103n, 105n, 110n])
   })
@@ -136,7 +145,7 @@ describe("IndexerOrchestrator cursor (IDX-2 / IDX-3)", () => {
   it("test #10: a provider reporting a lower head never rewinds the cursor", async () => {
     const t = setup({ last: 150, head: 140n, events: [] })
     await t.orchestrator.runOnce()
-    expect(t.fetchEventsForContracts).not.toHaveBeenCalled()
+    expect(t.fetchChunk).not.toHaveBeenCalled()
     expect(t.updateLastBlock).not.toHaveBeenCalled()
     expect(t.state.last_block).toBe(150)
   })
@@ -154,7 +163,7 @@ describe("IndexerOrchestrator cursor (IDX-2 / IDX-3)", () => {
   it("applies the confirmation lag: head 200 with CONFIRMATIONS=12 indexes up to 188", async () => {
     const t = setup({ last: 100, head: 200n, confirmations: 12, events: [ev(150n), ev(190n)] })
     await t.orchestrator.runOnce()
-    expect(t.fetchEventsForContracts).toHaveBeenCalledWith(expect.anything(), 188n)
+    expect(t.fetchChunk).toHaveBeenCalledWith(expect.anything(), 101n, 188n)
     expect(t.dispatched.map((e) => e.blockNumber)).toEqual([150n])
     expect(t.state.last_block).toBe(188)
   })
@@ -162,7 +171,7 @@ describe("IndexerOrchestrator cursor (IDX-2 / IDX-3)", () => {
   it("does nothing while the confirmed head is behind the cursor", async () => {
     const t = setup({ last: 100, head: 105n, confirmations: 12, events: [] })
     await t.orchestrator.runOnce()
-    expect(t.fetchEventsForContracts).not.toHaveBeenCalled()
+    expect(t.fetchChunk).not.toHaveBeenCalled()
     expect(t.updateLastBlock).not.toHaveBeenCalled()
   })
 
@@ -203,5 +212,62 @@ describe("IndexerStateRepository.updateLastBlock (IDX-3 DB-side guard)", () => {
       { method: "eq", args: ["chain_id", CHAIN] },
       { method: "or", args: ["last_block.is.null,last_block.lt.104"] },
     ])
+  })
+})
+
+describe("IndexerOrchestrator per-chunk streaming (IDX-8)", () => {
+  // last 100, head 130, batchSize 10 -> chunks 101-110, 111-120, 121-130.
+  it("checkpoints after every chunk", async () => {
+    const t = setup({ last: 100, head: 130n, batchSize: 10, events: [ev(105n), ev(115n), ev(125n)] })
+    await t.orchestrator.runOnce()
+    expect(t.updateLastBlock.mock.calls.map((c) => c[1])).toEqual([110, 120, 130])
+  })
+
+  it("streams: a chunk is processed and checkpointed before the next one is fetched", async () => {
+    const t = setup({ last: 100, head: 130n, batchSize: 10, events: [ev(105n), ev(115n)] })
+    await t.orchestrator.runOnce()
+    expect(t.calls).toEqual([
+      "fetch 101-110",
+      "dispatch 105",
+      "checkpoint 110",
+      "fetch 111-120",
+      "dispatch 115",
+      "checkpoint 120",
+      "fetch 121-130",
+      "checkpoint 130",
+    ])
+  })
+
+  it("a handler failure in chunk 2 keeps chunk 1, holds at B-1 and never fetches chunk 3", async () => {
+    const t = setup({ last: 100, head: 130n, batchSize: 10, events: [ev(105n), ev(113n), ev(117n), ev(125n)], failOn: (e) => e.blockNumber === 117n })
+    await t.orchestrator.runOnce()
+    expect(t.updateLastBlock.mock.calls.map((c) => c[1])).toEqual([110, 116])
+    expect(t.fetchChunk).toHaveBeenCalledTimes(2)
+    expect(t.dispatched.map((e) => e.blockNumber)).toEqual([105n, 113n])
+  })
+
+  it("a fetch failure in chunk 2 keeps chunk 1 and the next run resumes at chunk 2", async () => {
+    const setupArgs: Parameters<typeof setup>[0] = { last: 100, head: 130n, batchSize: 10, events: [ev(105n), ev(115n), ev(125n)], fetchFailsAt: 115n }
+    const t = setup(setupArgs)
+    await expect(t.orchestrator.runOnce()).rejects.toThrow("rpc failed for 111-120")
+    expect(t.state.last_block).toBe(110)
+
+    setupArgs.fetchFailsAt = undefined
+    await t.orchestrator.runOnce()
+    const fetched = t.fetchChunk.mock.calls.map((c) => `${c[1]}-${c[2]}`)
+    expect(fetched).toEqual(["101-110", "111-120", "111-120", "121-130"])
+    expect(t.dispatched.map((e) => e.blockNumber)).toEqual([105n, 115n, 125n])
+    expect(t.state.last_block).toBe(130)
+  })
+
+  it("stops between chunks when stop() is requested", async () => {
+    const t = setup({ last: 100, head: 130n, batchSize: 10, events: [ev(105n)] })
+    t.fetchChunk.mockImplementationOnce(async () => {
+      t.orchestrator.stop()
+      return [ev(105n)]
+    })
+    await t.orchestrator.runOnce()
+    expect(t.fetchChunk).toHaveBeenCalledTimes(1)
+    expect(t.state.last_block).toBe(110)
   })
 })

@@ -117,6 +117,15 @@ export class BatchEventFetcher implements IEventFetcher {
   }
 
   /**
+   * Fetch and sort the events of a single chunk [fromBlock, toBlock].
+   * The orchestrator calls this once per chunk and checkpoints after each one,
+   * so at most one chunk of events is held in memory (IDX-8).
+   */
+  async fetchChunk(requests: ContractFetchRequest[], fromBlock: bigint, toBlock: bigint): Promise<ParsedEvent[]> {
+    return this.sortEvents(await this.fetchEventsForRange(requests, fromBlock, toBlock))
+  }
+
+  /**
    * Fetch events from all contracts for a specific block range.
    * Each contract uses its own fromBlock, but the range is bounded by
    * the chunk's from/to blocks.

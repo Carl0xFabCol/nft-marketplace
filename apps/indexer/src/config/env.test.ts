@@ -12,6 +12,7 @@ async function loadEnv(vars: Record<string, string | undefined>) {
   vi.stubEnv("SUPABASE_URL", "http://127.0.0.1:1")
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "env-test-stub")
   vi.stubEnv("CONFIRMATIONS", undefined)
+  vi.stubEnv("BATCH_SIZE", undefined)
   for (const [k, v] of Object.entries(vars)) vi.stubEnv(k, v)
   return (await import("./env")).env
 }
@@ -47,6 +48,12 @@ describe("env CONFIRMATIONS (IDX-3)", () => {
 
   it.each(["-1", "1.5", "abc"])("rejects %s", async (value) => {
     await expect(loadEnv({ CHAIN_ID: "99801", CONFIRMATIONS: value })).rejects.toThrow(/CONFIRMATIONS/)
+  })
+})
+
+describe("env BATCH_SIZE (IDX-8)", () => {
+  it.each(["0", "-5", "abc"])("rejects %s (a 0-block chunk would never advance)", async (value) => {
+    await expect(loadEnv({ CHAIN_ID: "99801", BATCH_SIZE: value })).rejects.toThrow(/BATCH_SIZE/)
   })
 })
 

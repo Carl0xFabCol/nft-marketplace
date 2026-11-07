@@ -303,6 +303,23 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
     - `CONFIRMATIONS` default 12, 0 accepted, -1/1.5/abc rejected;
     - `getViemChain(1)` throws.
   - **validate (c) and (f) are green.**
+- [x] 8. IDX-8: per-chunk checkpointing and streaming.
+  - New `BatchEventFetcher.fetchChunk(requests, from, to)`: one range, sorted, no further chunking. `fetchEventsForContracts` is kept, and nothing in the indexer calls it any more.
+  - The orchestrator splits `[minFromBlock, safeHead]` into `BATCH_SIZE` chunks. For each chunk it fetches → processes in order → checkpoints to `chunk.to`, using the same clamp as task 4.
+    - A handler failure at B checkpoints B-1 and ends the run.
+    - A fetch failure ends the run; earlier chunks stay checkpointed.
+    - `stop()` is honored between chunks.
+    - Only one chunk of events is in memory at a time.
+  - Cursor semantics are unchanged from task 4; the checkpoint is just written more often.
+  - `BATCH_SIZE` is now validated as a positive integer. A 0 would loop forever in `BlockRangeUtil.chunk`.
+  - Tests:
+    - a checkpoint per chunk;
+    - call-order streaming (fetch → dispatch → checkpoint per chunk);
+    - a handler failure in chunk 2 (keeps chunk 1, holds at B-1, chunk 3 never fetched);
+    - a fetch failure in chunk 2 (cursor at chunk 1's end; the next run resumes at chunk 2);
+    - stop between chunks;
+    - `fetchChunk` does not re-chunk and sorts;
+    - `BATCH_SIZE` 0/-5/abc rejected.
 
 ## Phase 4: Frontend
 

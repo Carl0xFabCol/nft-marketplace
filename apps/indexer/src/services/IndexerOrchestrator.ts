@@ -1,4 +1,5 @@
 import { erc721Abi } from "viem"
+import { BlockRangeUtil } from "../utils/BlockRange"
 import type { ProviderPool } from "../providers/ProviderPool"
 import type { BatchEventFetcher } from "../fetchers/BatchEventFetcher"
 import type { HandlerRegistry } from "../handlers/HandlerRegistry"
@@ -31,6 +32,8 @@ interface IterationPlan {
   globalLast: bigint
   collectionCursors: CollectionCursor[]
   fetchRequests: ContractFetchRequest[]
+  /** Lowest block any contract still needs (start of the first chunk). */
+  minFromBlock: bigint
   /** head - confirmations: the highest block this run may index. */
   safeHead: bigint
 }
@@ -138,6 +141,12 @@ export class IndexerOrchestrator {
    *   failing one. Activity and stats are idempotent on (tx_hash, log_index);
    *   bid inserts are not yet (IDX-7, Phase 3B).
    *
+   * Streaming (IDX-8): [minFromBlock, safeHead] is split into batchSize
+   * chunks. Each chunk is fetched, processed and checkpointed before the next
+   * one is fetched, so a long backfill keeps its progress when a later chunk
+   * fails and never holds more than one chunk of events in memory. A fetch
+   * error ends the run; chunks before it stay checkpointed.
+   *
    * Not handled here: reorgs deeper than the confirmation lag (no
    * last_block_hash yet; Phase 3B).
    */
@@ -149,31 +158,43 @@ export class IndexerOrchestrator {
       const plan = await this.buildPlan()
       if (!plan) return
 
-      const { fetchRequests, safeHead } = plan
+      const { fetchRequests, minFromBlock, safeHead } = plan
+      const chunks = BlockRangeUtil.chunk(minFromBlock, safeHead, this.config.batchSize)
 
       logger.info(
         {
+          fromBlock: minFromBlock.toString(),
           safeHead: safeHead.toString(),
+          chunks: chunks.length,
           contracts: fetchRequests.map((r) => ({ name: r.contract.name, fromBlock: r.fromBlock.toString() })),
         },
         "🔍 Fetching events...",
       )
 
-      const events = await this.eventFetcher.fetchEventsForContracts(fetchRequests, safeHead)
-      logger.info({ eventCount: events.length, toBlock: safeHead.toString() }, `📊 Fetched ${events.length} events`)
+      let eventsProcessed = 0
+      for (const chunk of chunks) {
+        if (this.shouldStop) {
+          logger.info({ stoppedBefore: chunk.from.toString() }, "⏹️  Stop requested; ending run between chunks")
+          return
+        }
 
-      const failedAtBlock = await this.processEvents(events)
-      const target = failedAtBlock === null ? safeHead : failedAtBlock - 1n
-      await this.checkpoint(plan, target)
+        const events = await this.eventFetcher.fetchChunk(fetchRequests, chunk.from, chunk.to)
+        logger.debug({ from: chunk.from.toString(), to: chunk.to.toString(), events: events.length }, "📦 Chunk fetched")
 
-      if (failedAtBlock !== null) {
-        this.recordFailedRun(failedAtBlock, target)
-        return
+        const failedAtBlock = await this.processEvents(events)
+        const target = failedAtBlock === null ? chunk.to : failedAtBlock - 1n
+        await this.checkpoint(plan, target)
+
+        if (failedAtBlock !== null) {
+          this.recordFailedRun(failedAtBlock, target)
+          return
+        }
+        eventsProcessed += events.length
       }
 
       this.consecutiveFailedRuns = 0
       logger.info(
-        { run: this.currentRun, lastBlock: safeHead.toString(), eventsProcessed: events.length },
+        { run: this.currentRun, lastBlock: safeHead.toString(), eventsProcessed, chunks: chunks.length },
         `✅ Run #${this.currentRun} complete`,
       )
     } catch (error) {
@@ -256,7 +277,7 @@ export class IndexerOrchestrator {
       return null
     }
 
-    return { globalLast, collectionCursors, fetchRequests, safeHead }
+    return { globalLast, collectionCursors, fetchRequests, minFromBlock, safeHead }
   }
 
   /**

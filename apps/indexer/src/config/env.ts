@@ -81,6 +81,12 @@ function loadEnv(): EnvConfig {
     return value
   }
 
+  const optionalPositiveInt = (key: string, defaultValue: number): number => {
+    const value = optionalNonNegativeInt(key, defaultValue)
+    if (value === 0) throw new Error(`❌ ${key} must be a positive integer, got "0"`)
+    return value
+  }
+
   const optionalNumber = (key: string, defaultValue: number): number => {
     const value = process.env[key]
     return value ? Number(value) : defaultValue
@@ -103,7 +109,8 @@ function loadEnv(): EnvConfig {
     conduitApiKey: optional("CONDUIT_API_KEY"),
 
     // Performance
-    batchSize: optionalNumber("BATCH_SIZE", 5000),
+    // Blocks per chunk; each chunk is fetched, processed and checkpointed (IDX-8).
+    batchSize: optionalPositiveInt("BATCH_SIZE", 5000),
     maxParallelRequests: optionalNumber("MAX_PARALLEL_REQUESTS", 3),
     pollingIntervalMs: optionalNumber("POLLING_INTERVAL_MS", 15000),
     // IDX-3: only blocks at or below head - CONFIRMATIONS are indexed. 12 is
