@@ -26,6 +26,7 @@ packages/contracts/foundry/out
 packages/contracts/foundry/cache
 packages/contracts/foundry/broadcast
 packages/contracts/foundry/deployments/test-artifacts
+packages/database/baseline/
 
 .claude
 
