@@ -37,7 +37,9 @@ None of these migrations has been applied to the live Supabase project. Applying
 | `20261028090400_sec01_security_definer_hardening.sql` | Default-deny EXECUTE on every SECURITY DEFINER function in `public`. Re-grants 7 read RPCs. Pins `search_path = public, pg_temp` on known functions. | Reviewed 2026-11-07 (§3): the baseline has **no** SECURITY DEFINER functions, so 090400 only touches `sec01_save_listing_batch`, which is already pinned and fully qualified. It always emits one WARNING, "owned by non-superuser postgres", because `postgres` is not a superuser on Supabase. That warning is noise. |
 | `20261028090500_sec01_listing_chain_identity.sql` | Audit **M-3**: UNIQUE(`chain_id, collection_address, token_id`), `chain_id NOT NULL`, canonical-form CHECKs. Drops the single-column `listing_id` unique. Rewrites `listing_id` to `chain:addr-token`. Chain-scoped trigger and RPC. | Not re-runnable (unguarded `ADD CONSTRAINT`), but transactional. **Incomplete (§3):** the baseline's `UNIQUE (collection_address, token_id)` and `UNIQUE (tx_hash, collection_address, token_id)` survive, so cross-chain listings still fail with 23505. A follow-up migration is proposed. |
 
-**Deploy coupling:** the code in §1 and migrations 090000–090500 must go live together. Verified locally on 2026-11-07 (§3.5):
+| `20261028090600_sec01_listings_drop_unscoped_uniques.sql` | Finishes M-3. Drops every unique constraint or index on `listings` that lacks `chain_id` (today `listings_collection_address_token_id_key` and `unique_tx_token`). The postcondition asserts that none remain and that `sec01_listings_chain_identity_key` exists. | Re-runnable (catalog-driven). Verified locally in §3.8. |
+
+**Deploy coupling:** the code in §1 and migrations 090000–090600 must go live together. Verified locally on 2026-11-07 (§3.5):
 - The new indexer and web code need 090500 (the conflict target) and the RPC.
 - The current `main` code (`onConflict: "listing_id"`) fails with **42P10** once 090500 drops that unique.
 - Worse, main's indexer `updatePrice`/`deactivate` (`.eq("listing_id", "<addr>-<token>")`) **silently match 0 rows** after 090500 rewrites `listing_id` to `<chain>:<addr>-<token>`. There is no error. An old indexer left running after the migration leaves sold or cancelled listings active.
@@ -124,7 +126,9 @@ No environment-difference failures. The tests create their own users through GoT
 | b5 | RPC as anon / authenticated | 42501 / 42501 |
 | b6 | branch indexer upsert of the same token on a second chain | **23505 `listings_collection_address_token_id_key`** (same bug as pgTAP #90) |
 
-### 3.7 Proposed fixes (not applied; awaiting approval)
+### 3.7 Fixes (approved 2026-11-07; status per item)
+
+Items 1–3 and 5 are applied. Item 4 is decided: keep the FK, and the UI handles it in Phase 4. The pgTAP suite gained one assertion, "every unique constraint and unique index on listings includes chain_id", which brings it to **103**.
 
 1. **New migration `20261028090600_sec01_listings_drop_unscoped_uniques.sql`.**
    - Drops every unique constraint or index on `listings` that lacks `chain_id`, which today means `listings_collection_address_token_id_key` and `unique_tx_token`.
@@ -140,6 +144,20 @@ No environment-difference failures. The tests create their own users through GoT
 3. **Vitest fixtures:** add an `ensureNfts(collection, chainId, tokenIds, owner)` helper used by the three listing-RPC tests, and clean up `nfts`/`collections` in `afterAll`. No assertion changes.
 4. **Product decision (open):** because of `listings_nft_fk`, the optimistic listing RPC fails with 23503 for any NFT the indexer has not indexed yet, and `createBatch` surfaces this as "Failed to save listings". Either keep the FK and handle it in the UI, or have the RPC tolerate a missing `nfts` row.
 5. **Minor:** `packages/database/scripts/run-rls-tests.mjs` spawns a global `supabase` binary. Use `npx supabase` or the documented `psql -f` path.
+
+### 3.8 Full re-run with fixes (2026-11-07, cycle 2)
+
+Fresh local DB (`supabase db reset`) → adapted baseline (byte-identical to cycle 1) → 090000–090600 → committed test files. **No ad-hoc rows**: the only rows come from the committed fixtures, and every table was at 0 rows after each suite.
+
+| Step | Result |
+| --- | --- |
+| 090000–090500 | exit 0 each; same notices and the one 090400 warning as §3.3 |
+| Negative control: pgTAP after 090500, before 090600 | new #86 **not ok**; aborts at the cross-chain RPC test with 23505 `listings_collection_address_token_id_key`, as expected |
+| 090600 | exit 0; NOTICE drops `listings_collection_address_token_id_key` and `unique_tx_token`. A second apply is a clean no-op. Remaining: `listings_pkey`, `sec01_listings_chain_identity_key`. |
+| pgTAP via `psql -f` | **103/103 ok, 0 not ok** |
+| pgTAP via `supabase test db` (pg_prove 3.36, `--workdir` = scratch project) | `Files=1, Tests=103, Result: PASS` |
+| Vitest `rls.integration.test.ts` | **22/22 passed** (real `listings_nft_fk` in place) |
+| `pnpm --filter @marketplace/database test:rls` | The CLI now resolves through `npx`, but run from `packages/database` it looks for Docker network `supabase_network_database` (project id taken from the cwd) and fails with exit 125. It needs a way to pass `--workdir`, or to run from the project directory (follow-up). |
 
 ## 4. Missing (not implemented anywhere)
 

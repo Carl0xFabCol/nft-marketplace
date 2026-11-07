@@ -33,8 +33,8 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 | validate (c) CHAIN_ID required | `apps/indexer/src/config/env.ts:71` silently defaults to 11155111 | Phase 3 (ADDR-3) |
 | validate (f) default chain id consistent | indexer 11155111 vs shared/contracts 99801 | Phase 3 (ADDR-3) |
 | `@marketplace/database` typecheck | supabase-js generic type error in `src/client.ts` (2 errors). Phase 1 fixed the missing `@marketplace/shared` dependency, which took it from 6 errors to 2. | cleanup (`packages/database/src/repositories/*` is slated for deletion) |
-| web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, 2026-11-07: **19 pass, 3 fail** (`23503 listings_nft_fk`, a fixture problem) | proposed fixture patch (SEC01_STATUS §3.7) |
-| pgTAP `sec01_rls_privileges.test.sql` | Not in CI. Locally, 2026-11-07: **86 ok, #87 not ok, aborts at #88** (fixtures). With fixtures it aborts at **#90**, a real bug: a non-chain-scoped unique survives 090500. | proposed 090600 + fixture patch (SEC01_STATUS §3.7) |
+| web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, after the fixes: **22/22** | n/a (passes locally) |
+| pgTAP `sec01_rls_privileges.test.sql` (103) | Not in CI. Locally, after 090600 and the fixtures: **103/103** | n/a (passes locally) |
 
 `(b)` handler/config bijection **passes** today, because `ContractAuthorizedHandler` exists and matches the stale config. It will catch the Phase 3 change if handlers and config are not updated together.
 
@@ -87,7 +87,13 @@ Branch `chore/production-readiness-phase1`. It is **not merged to main** and mus
     - main's `updatePrice`/`deactivate` by `listing_id` silently update 0 rows;
     - the branch paths work, except a cross-chain listing (same bug).
   - `.gitignore` pointed at `packages/contracts/database/baseline/`, so the baseline was **not** ignored. Fixed in its own commit.
-- [ ] Apply the SEC01_STATUS §3.7 fixes after approval: the 090600 migration (finishes M-3), the pgTAP and vitest fixtures, and the decision on `listings_nft_fk` vs optimistic listings. Then re-run both suites locally.
+- [x] Apply the SEC01_STATUS §3.7 fixes (approved 2026-11-07), one commit per fix:
+  - new migration 090600 (finishes M-3), plus a pgTAP assertion for it, which brings the suite to 103;
+  - pgTAP fixtures and vitest `ensureNfts` setup. The diffs add only fixture/setup lines; no assertion or `expect` changed;
+  - `run-rls-tests.mjs` now uses `npx`;
+  - keep `listings_nft_fk`, and handle 23503 in Phase 4.
+  - Full local re-run, cycle 2: fresh DB → baseline → 090000–090600 gives **pgTAP 103/103** and **vitest 22/22**, with no ad-hoc rows (SEC01_STATUS §3.8).
+- [ ] Follow-up: `pnpm test:rls` run from `packages/database` fails to find the stack's Docker network (it derives the project id from the cwd). Let it forward `--workdir` (or extra args).
 - Test results on the branch:
   - typecheck (excluding database): green.
   - turbo test: shared 8, database 2, indexer 31 (28 before), contracts 72, web 40 passed / 22 skipped.
