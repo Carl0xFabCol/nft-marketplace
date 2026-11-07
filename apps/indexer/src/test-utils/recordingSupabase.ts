@@ -74,3 +74,31 @@ export function createRecordingSupabase(responder: Responder = () => ({ data: nu
 export function hasOp(query: RecordedQuery, method: string): boolean {
   return query.ops.some((o) => o.method === method)
 }
+
+/**
+ * Responder that models the activity unique key (tx_hash, log_index): an
+ * activity upsert returns the inserted row the first time and nothing on a
+ * duplicate, exactly like ON CONFLICT DO NOTHING RETURNING. A delete on
+ * activity removes the key again.
+ */
+export function activityUniqueResponder(): Responder {
+  const seen = new Set<string>()
+  return (q) => {
+    if (q.table !== "activity") return { data: null, error: null }
+    const upsert = q.ops.find((o) => o.method === "upsert")
+    if (upsert) {
+      const row = upsert.args[0] as { tx_hash: string; log_index: number }
+      const key = `${row.tx_hash}:${row.log_index}`
+      if (seen.has(key)) return { data: [], error: null }
+      seen.add(key)
+      return { data: [{ id: key }], error: null }
+    }
+    if (q.ops.some((o) => o.method === "delete")) {
+      const eqs = q.ops.filter((o) => o.method === "eq")
+      const tx = eqs.find((o) => o.args[0] === "tx_hash")?.args[1]
+      const li = eqs.find((o) => o.args[0] === "log_index")?.args[1]
+      seen.delete(`${tx}:${li}`)
+    }
+    return { data: null, error: null }
+  }
+}

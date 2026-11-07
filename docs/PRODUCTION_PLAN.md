@@ -230,6 +230,18 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
   - A source guard fails if `Number(<price|amount|volume|wei>)` or `/ 1e18` reappears in handlers or repos.
   - `quantity` (uint32) and `expiresAt` (uint64 seconds) intentionally stay `Number`.
   - **Open (Phase 4):** PostgREST returns `numeric` columns as JSON numbers. A web read of `listings.price` can still round unless it selects `price::text`. The write side is exact now.
+- [x] 3. IDX-1: `Sale` is the only source of `total_volume`/`total_sales`.
+  - `incrementStats` is removed from `TokenBidAcceptedHandler` and `CollectionBidAcceptedHandler`. Their activity rows, bid deactivation and quantity updates, listing deactivation and owner updates are unchanged.
+  - Replay safety (decision 2026-11-07):
+    - `ActivityRepository.insert` now returns whether the `(tx_hash, log_index)` row was freshly inserted (`ON CONFLICT DO NOTHING RETURNING` via `.select("id")`).
+    - `SaleHandler` increments stats only for a fresh row.
+    - If the increment fails, `deleteByTxLog` removes the fresh row and the error is rethrown, so the retry counts the Sale once.
+    - **Residual gap:** a crash between the two writes, or a failed compensating delete, undercounts by one Sale. Closing it needs an atomic sale+stats RPC (3B). Phase 7 reconciliation would detect it.
+  - Tests (`handlers/BidAcceptance.test.ts`, real registry/handlers/repos):
+    - Sale + TokenBidAccepted → exactly 1 increment;
+    - a collection bid with 3 tokenIds (3 Sales + 1 CollectionBidAccepted) → 3 increments totalling `3 × price`, not 6;
+    - a replayed Sale → no second increment;
+    - a failed increment → compensating delete + rethrow, and the retry counts it once.
 
 ## Phase 4: Frontend
 

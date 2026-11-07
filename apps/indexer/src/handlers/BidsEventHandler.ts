@@ -53,8 +53,8 @@ abstract class BaseBidsHandler<TArgs = Record<string, unknown>> implements IEven
     createdAt: Date
     logIndex: number
     sourceContract: string
-  }): Promise<void> {
-    await this.activityRepo.insert(params)
+  }): Promise<boolean> {
+    return await this.activityRepo.insert(params)
   }
 
   /**
@@ -223,8 +223,9 @@ export class CollectionBidAcceptedHandler extends BaseBidsHandler<CollectionBidA
       sourceContract: this.contractName,
     })
 
-    // Update collection stats
-    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), totalPrice, tokenIds.length)
+    // IDX-1: no stats here. Core emits one Sale per tokenId inside this same
+    // acceptance (executeSaleFromBid), and SaleHandler is the only source of
+    // collection volume/sales.
   }
 }
 
@@ -365,8 +366,9 @@ export class TokenBidAcceptedHandler extends BaseBidsHandler<TokenBidAcceptedArg
       sourceContract: this.contractName,
     })
 
-    // Update collection stats
-    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), price, 1)
+    // IDX-1: no stats here. Core emits Sale in this same acceptance
+    // (executeSaleFromBid), and SaleHandler is the only source of collection
+    // volume/sales.
   }
 }
 

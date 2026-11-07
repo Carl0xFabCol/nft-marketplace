@@ -51,8 +51,8 @@ abstract class BaseCoreHandler<TArgs = Record<string, unknown>> implements IEven
     createdAt: Date
     logIndex: number
     sourceContract: string
-  }): Promise<void> {
-    await this.activityRepo.insert(params)
+  }): Promise<boolean> {
+    return await this.activityRepo.insert(params)
   }
 
   /**
@@ -345,8 +345,9 @@ export class SaleHandler extends BaseCoreHandler<SaleArgs> {
     // Update NFT owner
     await this.updateNFTOwner(String(collection).toLowerCase(), tokenId.toString(), String(buyer).toLowerCase(), event.blockTimestamp)
 
-    // Insert activity
-    await this.insertActivity({
+    // Insert activity. `fresh` is false when this log was already recorded,
+    // i.e. the event is being replayed.
+    const fresh = await this.insertActivity({
       event: "SALE",
       collectionAddress: String(collection).toLowerCase(),
       tokenId: tokenId.toString(),
@@ -359,8 +360,23 @@ export class SaleHandler extends BaseCoreHandler<SaleArgs> {
       sourceContract: this.contractName,
     })
 
-    // Update collection stats via repository
-    await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), price, 1)
+    // IDX-1: Sale is the single source of collection volume/sales. It is
+    // emitted on every value transfer: buy, buyBatch, and once per tokenId on
+    // token- and collection-bid acceptance (Core.executeSaleFromBid).
+    //
+    // increment_collection_stats is additive, so it runs only for a freshly
+    // inserted activity row: a replay never double-counts. If it fails, the
+    // fresh activity row is removed so the retry treats the Sale as new.
+    // Residual gap (until an atomic RPC in Phase 3B): a crash between the two
+    // writes, or a failed compensating delete, undercounts by this Sale.
+    if (fresh) {
+      try {
+        await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), price, 1)
+      } catch (error) {
+        await this.activityRepo.deleteByTxLog(String(event.transactionHash), event.logIndex)
+        throw error
+      }
+    }
   }
 }
 
