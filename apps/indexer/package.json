@@ -9,7 +9,8 @@
     "backfill": "tsx src/scripts/backfill-nfts.ts",
     "backfill:image-urls": "tsx src/scripts/backfill-image-urls.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:localdb": "vitest run --config vitest.localdb.config.ts"
   },
   "keywords": [],
   "author": "",

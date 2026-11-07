@@ -5,7 +5,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     // *.integration.test.ts encode known defects and run only via
     // `pnpm validate:integration` (continue-on-error CI job).
-    exclude: ["**/node_modules/**", "**/*.integration.test.ts"],
+    exclude: ["**/node_modules/**", "**/*.integration.test.ts", "**/*.localdb.test.ts"],
     environment: "node",
   },
 })
