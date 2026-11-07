@@ -14,6 +14,31 @@ begin;
 
 select no_plan();
 
+-- Fixtures. The baseline is schema-only, so the uniqueness and RPC checks
+-- below need their pre-existing rows created here. All of it is rolled back.
+--   * auth user 1111... with a user_wallets mapping (duplicate supabase_user_id test)
+--   * collection 0x...10 and nfts parents required by listings_nft_fk
+--   * another seller's active listing on 99801 / 0x...10 / token 1 (overwrite test)
+insert into auth.users (id, aud, role, email)
+values ('11111111-1111-4111-8111-111111111111', 'authenticated', 'authenticated', 'fixture-user@example.invalid');
+insert into public.user_wallets (wallet_address, supabase_user_id, email, supabase_password)
+values ('0x0000000000000000000000000000000000000005', '11111111-1111-4111-8111-111111111111',
+        'fixture-user@example.invalid', 'fixture');
+insert into public.collections (contract_address, chain_id)
+values ('0x0000000000000000000000000000000000000010', 99801);
+insert into public.nfts (collection_address, token_id, owner_wallet, chain_id) values
+  ('0x0000000000000000000000000000000000000010', '50', '0x14730853915f8c5cf9c647dbc3ee7ebb9fe67294', 99801),
+  ('0x0000000000000000000000000000000000000010', '51', '0x14730853915f8c5cf9c647dbc3ee7ebb9fe67294', 99801),
+  ('0x0000000000000000000000000000000000000010', '52', '0x0000000000000000000000000000000000000002', 99801),
+  ('0x0000000000000000000000000000000000000010', '1',  '0x0000000000000000000000000000000000000003', 99801),
+  ('0x0000000000000000000000000000000000000010', '50', '0x14730853915f8c5cf9c647dbc3ee7ebb9fe67294', 11155111),
+  ('0x0000000000000000000000000000000000000010', '50', '0x0000000000000000000000000000000000000002', 1);
+insert into public.listings (listing_id, chain_id, collection_address, token_id, seller_wallet, price, tx_hash, is_active)
+values ('99801:0x0000000000000000000000000000000000000010-1', 99801,
+        '0x0000000000000000000000000000000000000010', '1',
+        '0x0000000000000000000000000000000000000003', 10,
+        '0x9999999999999999999999999999999999999999999999999999999999999999', true);
+
 select ok(
   (select c.relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'public' and c.relname = 'profiles'),
