@@ -21,6 +21,7 @@ docs/*
 !docs/PRODUCTION_PLAN.md
 !docs/INTEGRATION_AUDIT.md
 !docs/SEC01_STATUS.md
+!docs/PHASE2_RUNBOOK.md
 
 packages/contracts/foundry/out
 packages/contracts/foundry/cache
