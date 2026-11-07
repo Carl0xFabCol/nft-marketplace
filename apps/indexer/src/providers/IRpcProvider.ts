@@ -26,6 +26,9 @@ export interface IRpcProvider {
    */
   getBlockTimestamp(blockNumber: bigint): Promise<bigint>
 
+  /** Hash (0x-prefixed, lower-case) of a block, via eth_getBlockByNumber. Used for reorg detection (IDX-3). */
+  getBlockHash(blockNumber: bigint): Promise<string>
+
   /** Get the chain id reported by the RPC endpoint (used to reject misconfigured URLs) */
   getChainId(): Promise<number>
 

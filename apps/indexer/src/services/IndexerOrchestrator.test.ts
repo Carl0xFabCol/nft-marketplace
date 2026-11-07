@@ -38,13 +38,23 @@ interface Setup {
   batchSize?: number
   /** Any fetched chunk containing this block throws (RPC failure). */
   fetchFailsAt?: bigint
+  /** Stored hash of the cursor block (indexer_state.last_block_hash). */
+  lastHash?: string | null
+  /** Canonical hash per block; defaults to hashOf(block). */
+  chainHash?: (block: bigint) => string
 }
 
+/** Deterministic canonical block hash for the fakes. */
+const hashOf = (block: bigint, fork = 0) => `0x${(block * 16n + BigInt(fork)).toString(16).padStart(64, "0")}`
+
 function setup(s: Setup) {
-  const state = { last_block: s.last }
+  const state: { last_block: number; last_block_hash: string | null } = { last_block: s.last, last_block_hash: s.lastHash ?? null }
   const heads = Array.isArray(s.head) ? [...s.head] : [s.head]
-  const provider = { getBlockNumber: vi.fn(async () => (heads.length > 1 ? heads.shift()! : heads[0])) }
-  const providerPool = { executeWithFallback: vi.fn(async (op: (p: typeof provider) => Promise<bigint>) => op(provider)) }
+  const provider = {
+    getBlockNumber: vi.fn(async () => (heads.length > 1 ? heads.shift()! : heads[0])),
+    getBlockHash: vi.fn(async (block: bigint) => (s.chainHash ?? hashOf)(block)),
+  }
+  const providerPool = { executeWithFallback: vi.fn(async <T,>(op: (p: typeof provider) => Promise<T>) => op(provider)) }
 
   // One chunk [from, to]; honors each request's own fromBlock (per contract
   // address), like the real fetcher. calls[] records the order of fetches.
@@ -69,11 +79,12 @@ function setup(s: Setup) {
     }),
   }
 
-  const updateLastBlock = vi.fn(async (_chainId: number, block: number) => {
+  const updateLastBlock = vi.fn(async (_chainId: number, block: number, hash: string) => {
     calls.push(`checkpoint ${block}`)
     state.last_block = block
+    state.last_block_hash = hash
   })
-  const stateRepo = { getState: vi.fn(async () => ({ chain_id: CHAIN, last_block: state.last_block })), updateLastBlock }
+  const stateRepo = { getState: vi.fn(async () => ({ chain_id: CHAIN, ...state })), updateLastBlock }
 
   const collectionState: Record<string, number> = { ...(s.collectionState ?? {}) }
   const contractStateRepo = {
@@ -96,7 +107,7 @@ function setup(s: Setup) {
     [CORE],
     { pollingIntervalMs: 0, batchSize: s.batchSize ?? 1000, chainId: CHAIN, confirmations: s.confirmations ?? 0 },
   )
-  return { orchestrator, state, collectionState, fetchChunk, calls, dispatched, updateLastBlock, contractStateRepo }
+  return { orchestrator, state, collectionState, fetchChunk, calls, dispatched, updateLastBlock, contractStateRepo, provider }
 }
 
 describe("IndexerOrchestrator cursor (IDX-2 / IDX-3)", () => {
@@ -116,7 +127,7 @@ describe("IndexerOrchestrator cursor (IDX-2 / IDX-3)", () => {
     })
     await t.orchestrator.runOnce()
     expect(t.updateLastBlock).toHaveBeenCalledTimes(1)
-    expect(t.updateLastBlock).toHaveBeenCalledWith(CHAIN, 104)
+    expect(t.updateLastBlock).toHaveBeenCalledWith(CHAIN, 104, hashOf(104n))
     expect(t.state.last_block).toBe(104)
     // Block 110 was never run, so the retry does not replay it a second time.
     expect(t.dispatched.map((e) => `${e.blockNumber}:${e.logIndex}`)).toEqual(["103:0", "105:0"])
@@ -204,11 +215,11 @@ describe("IndexerOrchestrator cursor (IDX-2 / IDX-3)", () => {
 describe("IndexerStateRepository.updateLastBlock (IDX-3 DB-side guard)", () => {
   it("only matches rows whose last_block is lower or NULL", async () => {
     const sb = createRecordingSupabase()
-    await new IndexerStateRepository(sb.client).updateLastBlock(CHAIN, 104)
+    await new IndexerStateRepository(sb.client).updateLastBlock(CHAIN, 104, "0xABC")
     const [q] = sb.queries
     expect(q.table).toBe("indexer_state")
     expect(q.ops).toEqual([
-      { method: "update", args: [{ last_block: 104 }] },
+      { method: "update", args: [{ last_block: 104, last_block_hash: "0xabc" }] },
       { method: "eq", args: ["chain_id", CHAIN] },
       { method: "or", args: ["last_block.is.null,last_block.lt.104"] },
     ])
@@ -269,5 +280,57 @@ describe("IndexerOrchestrator per-chunk streaming (IDX-8)", () => {
     await t.orchestrator.runOnce()
     expect(t.fetchChunk).toHaveBeenCalledTimes(1)
     expect(t.state.last_block).toBe(110)
+  })
+})
+
+describe("IndexerOrchestrator reorg detection (IDX-3, last_block_hash)", () => {
+  it("stores the hash of every checkpointed block together with the block", async () => {
+    const t = setup({ last: 100, head: 130n, batchSize: 10, events: [] })
+    await t.orchestrator.runOnce()
+    expect(t.updateLastBlock.mock.calls.map((c) => [c[1], c[2]])).toEqual([
+      [110, hashOf(110n)],
+      [120, hashOf(120n)],
+      [130, hashOf(130n)],
+    ])
+  })
+
+  it("a matching stored hash lets the run proceed", async () => {
+    const t = setup({ last: 100, lastHash: hashOf(100n), head: 120n, events: [ev(105n)] })
+    await t.orchestrator.runOnce()
+    expect(t.provider.getBlockHash).toHaveBeenCalledWith(100n)
+    expect(t.dispatched).toHaveLength(1)
+    expect(t.state).toEqual({ last_block: 120, last_block_hash: hashOf(120n) })
+  })
+
+  it("the stored hash is compared case-insensitively", async () => {
+    const t = setup({ last: 100, lastHash: hashOf(100n).toUpperCase().replace("0X", "0x"), head: 120n, events: [] })
+    await t.orchestrator.runOnce()
+    expect(t.state.last_block).toBe(120)
+  })
+
+  it("a mismatching hash (reorg below the cursor) halts: nothing fetched, dispatched or written, on every run", async () => {
+    const t = setup({ last: 100, lastHash: hashOf(100n, 1), head: 120n, events: [ev(105n)] })
+    await t.orchestrator.runOnce()
+    await t.orchestrator.runOnce()
+    expect(t.fetchChunk).not.toHaveBeenCalled()
+    expect(t.dispatched).toEqual([])
+    expect(t.updateLastBlock).not.toHaveBeenCalled()
+    expect(t.contractStateRepo.upsertContractState).not.toHaveBeenCalled()
+    expect(t.state).toEqual({ last_block: 100, last_block_hash: hashOf(100n, 1) })
+  })
+
+  it("a NULL stored hash (legacy row or prepare-deployment) is accepted and filled by the next checkpoint", async () => {
+    const t = setup({ last: 100, lastHash: null, head: 110n, events: [] })
+    await t.orchestrator.runOnce()
+    expect(t.provider.getBlockHash).not.toHaveBeenCalledWith(100n)
+    expect(t.state).toEqual({ last_block: 110, last_block_hash: hashOf(110n) })
+  })
+
+  it("a failing hash read at checkpoint time fails the run without moving the cursor", async () => {
+    const t = setup({ last: 100, head: 110n, events: [], chainHash: () => {
+      throw new Error("rpc down")
+    } })
+    await expect(t.orchestrator.runOnce()).rejects.toThrow("rpc down")
+    expect(t.state.last_block).toBe(100)
   })
 })

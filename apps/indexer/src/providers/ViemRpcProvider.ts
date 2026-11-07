@@ -54,6 +54,12 @@ export class ViemRpcProvider implements IRpcProvider {
     return block.timestamp
   }
 
+  async getBlockHash(blockNumber: bigint): Promise<string> {
+    const block = await this.client.getBlock({ blockNumber })
+    if (!block.hash) throw new Error(`block ${blockNumber} has no hash (pending?)`)
+    return block.hash.toLowerCase()
+  }
+
   async getChainId(): Promise<number> {
     return await this.client.getChainId()
   }

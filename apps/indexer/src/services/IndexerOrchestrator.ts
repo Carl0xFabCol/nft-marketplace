@@ -138,8 +138,8 @@ export class IndexerOrchestrator {
    *   failure below an already-written cursor, never rewinds them
    *   (IndexerStateRepository also guards this in the UPDATE itself).
    * - Replay window on retry: the events of block B that ran before the
-   *   failing one. Activity and stats are idempotent on (tx_hash, log_index);
-   *   bid inserts are not yet (IDX-7, Phase 3B).
+   *   failing one. Activity, stats and bids are idempotent on the event's
+   *   (tx_hash, log_index) (Phase 3B).
    *
    * Streaming (IDX-8): [minFromBlock, safeHead] is split into batchSize
    * chunks. Each chunk is fetched, processed and checkpointed before the next
@@ -147,8 +147,13 @@ export class IndexerOrchestrator {
    * fails and never holds more than one chunk of events in memory. A fetch
    * error ends the run; chunks before it stay checkpointed.
    *
-   * Not handled here: reorgs deeper than the confirmation lag (no
-   * last_block_hash yet; Phase 3B).
+   * Reorg detection (IDX-3, Phase 3B): every global checkpoint stores the
+   * hash of its block. Each run first compares that hash with the chain's
+   * current hash at the same height; on a mismatch (a reorg deeper than the
+   * confirmation lag) it logs REORG_DETECTED, writes nothing and indexes
+   * nothing until an operator rewinds the cursor (docs/REORG_ROLLBACK_DESIGN.md).
+   * A NULL hash (legacy row, prepare-deployment) is accepted and filled by
+   * the next checkpoint. Automatic rollback is NOT implemented.
    */
   private async runSingleIteration(): Promise<void> {
     this.currentRun++
@@ -237,6 +242,30 @@ export class IndexerOrchestrator {
     }
     const globalLast = BigInt(state.last_block)
 
+    if (state.last_block_hash) {
+      const canonical = await this.providerPool.executeWithFallback(async (provider) => provider.getBlockHash(globalLast))
+      if (!canonical) {
+        logger.error({ block: globalLast.toString() }, "❌ Could not read the hash of the cursor block; not indexing this run")
+        return null
+      }
+      if (canonical.toLowerCase() !== state.last_block_hash.toLowerCase()) {
+        this.consecutiveFailedRuns++
+        logger.fatal(
+          {
+            alert: "REORG_DETECTED",
+            chainId: this.config.chainId,
+            block: globalLast.toString(),
+            storedHash: state.last_block_hash,
+            canonicalHash: canonical,
+            confirmations: this.config.confirmations,
+            consecutiveFailedRuns: this.consecutiveFailedRuns,
+          },
+          "🛑 REORG_DETECTED: the indexed cursor block is no longer canonical; indexing halted, nothing written (see docs/REORG_ROLLBACK_DESIGN.md)",
+        )
+        return null
+      }
+    }
+
     // Static contracts use the global cursor.
     const fetchRequests: ContractFetchRequest[] = this.contracts.map((contract) => ({ contract, fromBlock: globalLast + 1n }))
 
@@ -317,7 +346,9 @@ export class IndexerOrchestrator {
    */
   private async checkpoint(plan: IterationPlan, target: bigint): Promise<void> {
     if (target > plan.globalLast) {
-      await this.stateRepo.updateLastBlock(this.config.chainId, Number(target))
+      const hash = await this.providerPool.executeWithFallback(async (provider) => provider.getBlockHash(target))
+      if (!hash) throw new Error(`could not read the hash of block ${target} for the checkpoint`)
+      await this.stateRepo.updateLastBlock(this.config.chainId, Number(target), hash)
       plan.globalLast = target
     }
     for (const cursor of plan.collectionCursors) {

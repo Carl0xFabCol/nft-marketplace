@@ -22,6 +22,8 @@ docs/*
 !docs/INTEGRATION_AUDIT.md
 !docs/SEC01_STATUS.md
 !docs/PHASE2_RUNBOOK.md
+!docs/PHASE3B_RUNBOOK.md
+!docs/REORG_ROLLBACK_DESIGN.md
 
 packages/contracts/foundry/out
 packages/contracts/foundry/cache

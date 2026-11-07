@@ -70,12 +70,14 @@ export class IndexerStateRepository {
    *
    * IDX-3: the UPDATE only matches while the stored value is lower (or NULL),
    * so a stale or concurrent writer can never move the cursor backwards. A
-   * non-advancing call is a silent no-op.
+   * non-advancing call is a silent no-op. The hash of `lastBlock` is written
+   * in the same UPDATE (migration 20261028091500), so the stored pair is
+   * always consistent.
    */
-  async updateLastBlock(chainId: number, lastBlock: number): Promise<void> {
+  async updateLastBlock(chainId: number, lastBlock: number, lastBlockHash: string): Promise<void> {
     const { error } = await this.supabase
       .from("indexer_state")
-      .update({ last_block: lastBlock })
+      .update({ last_block: lastBlock, last_block_hash: lastBlockHash.toLowerCase() })
       .eq("chain_id", chainId)
       .or(`last_block.is.null,last_block.lt.${lastBlock}`)
 
