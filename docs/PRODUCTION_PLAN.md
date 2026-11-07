@@ -34,7 +34,8 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 | validate (f) default chain id consistent | indexer 11155111 vs shared/contracts 99801 | Phase 3 (ADDR-3) |
 | `@marketplace/database` typecheck | supabase-js generic type error in `src/client.ts` (2 errors). Phase 1 fixed the missing `@marketplace/shared` dependency, which took it from 6 errors to 2. | cleanup (`packages/database/src/repositories/*` is slated for deletion) |
 | web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, after the fixes: **22/22** | n/a (passes locally) |
-| pgTAP `sec01_rls_privileges.test.sql` (103) | Not in CI. Locally, after 090600 and the fixtures: **103/103** | n/a (passes locally) |
+| pgTAP `sec01_rls_privileges.test.sql` (103) | Not in CI. Locally, after 090600 and the fixtures: **103/103**. After 090000–091100 (Phase 2 fixture): 103/103. | n/a (passes locally) |
+| pgTAP `phase2_migrations.test.sql` (56) and `tests-realdata/phase2_roundtrip.test.sql` (19) | Not in CI; they need a local stack (the round-trip also needs the restored backup). Locally: 56/56 and 19/19 (SEC01_STATUS §3.9). | n/a (passes locally) |
 
 `(b)` handler/config bijection **passes** today, because `ContractAuthorizedHandler` exists and matches the stale config. It will catch the Phase 3 change if handlers and config are not updated together.
 
@@ -122,24 +123,74 @@ Branch `chore/production-readiness-phase1`. It is **not merged to main** and mus
 
 ## Phase 2: Database migrations (while there are only ~46 rows)
 
-- ➕ Make a full backup before starting.
-- **Cutover hazard.**
-  - The recovered code needs SEC-01 migrations 090000–090500: the `(chain_id, collection_address, token_id)` conflict target and the `sec01_save_listing_batch` RPC.
-  - Current `main` (`onConflict: "listing_id"`) breaks once 090500 drops that unique (42P10, verified locally).
-  - Apply the seven SEC-01 migrations (090000–090600) and deploy the Phase 1 branch together, in that order. The SEC-01 migrations cover M-3, so they sit between M-2 and M-4 in the order below.
-- **Runbook: indexer during the cutover.**
-  1. **Stop the indexer before applying 090500/090600.** Note its last processed block (`indexer_state`).
-  2. Apply 090000–090600.
-  3. Deploy the recovered indexer (`ListingsRepository` keyed by `chain_id, collection_address, token_id`) and web code.
-  4. **Restart the indexer only with the recovered code.** It resumes from the saved cursor.
-  - Why: 090500 rewrites `listing_id` to `<chain>:<addr>-<token>`. The old indexer's `updatePrice`/`deactivate` (`.eq("listing_id", "<addr>-<token>")`) then **update 0 rows without any error**, so sales and cancels are silently lost and listings stay active. The old upsert fails loudly with 42P10, but the updates do not. Verified locally on 2026-11-07 (SEC01_STATUS §3.6).
-  - Do not restart the old indexer as a "rollback". Rolling back means restoring the backup and the old code together.
-- M-7 must be written here: the indexer upsert and the `sec01_save_listing_batch` `ON CONFLICT` must set `buyer_wallet = NULL`. It is not on the branch.
-- Before applying, test the SEC-01 migrations, the pgTAP suite and the 22 RLS integration tests on a local Supabase stack (see Phase 1).
-- Apply in this order, with human approval: M-1 (`chain_id` in bids), M-2 (composite identity for collections), M-3 (listings), M-4 (`activity.chain_id` to integer), M-6 (unique on `indexer_state`), M-7 (`buyer_wallet` in relist).
-- Run tests 18, 19, and 20 (constraints, cross-chain uniqueness, round-trip over snapshot).
-- Leave M-5 (RPCs with `p_chain_id`) for phase 3.
-- ➕ Version the schema in the repository. Today there is no `.sql` file in `main`.
+Branch `chore/production-readiness-phase2`, created from `chore/production-readiness-phase1`. Neither branch is merged to main. **Nothing has been applied to production.** Applying it is your manual step: follow `docs/PHASE2_RUNBOOK.md`. Full results are in `docs/SEC01_STATUS.md` §3.9.
+
+**Cutover hazard** (Phase 1 finding, widened in Phase 2).
+- The branch code and migrations 090000–091100 must go live together, in this order: stop the indexer → apply the migrations → deploy indexer + web → restart the indexer.
+- Main's code breaks against the new schema:
+  - listings upsert → 42P10 after 090500;
+  - `updatePrice`/`deactivate` by `listing_id` → **silent 0 rows** after 090500;
+  - bid inserts → 23502 after 090700;
+  - collections upsert → 42P10 after 090800.
+- The branch code breaks against the old schema.
+- Rollback means restoring the backup and the old code together (runbook §R). Never run the old indexer against the new schema.
+
+- [x] Make a full backup before starting. The rehearsal used `marketplace_pre_phase2.dump` (pg_dump -Fc, public only, outside the repo). The runbook takes a fresh backup inside the window, after stopping the indexer, and verifies it.
+- [x] Rehearse on **real data** (2026-11-07, local stack only):
+  - restored the dump: 1 restore error, `profiles_id_fkey`, because the dump has no `auth.users`; handled locally with 8 placeholder auth users, details in SEC01_STATUS §3.9;
+  - applied 090000–091100: **no preflight failure**;
+  - counts are identical before and after, and every chain_id = 99801. Counts: activity 32, collection_bids 2, collections 1, contract_indexer_state 1, indexer_state 1, listings 1, nfts 7, nonces 158, profiles 8, token_bids 7, user_wallets 8.
+  - The restored schema's catalog fingerprint is byte-identical to the committed baseline: no constraint-name drift.
+- [x] Write M-1, M-2, M-4, M-6, M-7 as **new** files after 090600. Each is transactional (`lock_timeout` 5s), with a preflight that aborts without changing data, a postcondition, and a header. Each is re-runnable, and a re-run is a verified no-op.
+  - `20261028090700_m1_bids_chain_id.sql` (208 lines). Includes the chain-scoped replacement of the two active-bid partial uniques (approved scope extension).
+  - `20261028090800_m2_collections_chain_identity.sql` (270)
+  - `20261028090900_m4_activity_chain_id_integer.sql` (127)
+  - `20261028091000_m6_indexer_state_chain_unique.sql` (84)
+  - `20261028091100_m7_relist_clears_buyer.sql` (259)
+- [x] M-7 written here. RPC: `buyer_wallet = null` in `ON CONFLICT`. Indexer: `ListingsRepository.upsert` sends `buyer_wallet: null`.
+- [x] Code that must ship in the **same deploy** (minimal; IDX-6 bid filters stay in Phase 3):
+  - `apps/indexer/.../CollectionsRepository.ts` and `packages/database/.../collections.repo.ts`: `onConflict: "chain_id,contract_address"`;
+  - `BidsRepository.insertCollectionBid/insertTokenBid`: `chain_id: env.chainId`;
+  - `ListingsRepository.upsert`: `buyer_wallet: null`;
+  - new mocked tests `BidsRepository.test.ts`, `CollectionsRepository.test.ts`.
+- [x] Tests 18, 19 and 20:
+  - `packages/database/tests/phase2_migrations.test.sql` (56) covers #18 and #19;
+  - `packages/database/tests-realdata/phase2_roundtrip.test.sql` (19) covers #20, using `scripts/rehearsal/capture_counts.sql`;
+  - the SEC-01 pgTAP suite needed a fixture-only change (`collections` parents on 2 more chains).
+- [x] Full cycles:
+  - empty baseline: pg_prove `Files=2, Tests=159, PASS`, vitest 22/22, 0 rows left;
+  - real data: 159 PASS, round-trip 19 PASS, vitest 22/22.
+- [x] Negative preflight tests: 10 cases, each aborts with no schema or data change.
+- [x] Cutover probes on the migrated real-data DB: 18/18 as predicted.
+  - Phase 1+2 indexer/web paths work, including the `collections!inner` embeds over the composite FK.
+  - Main fails loudly: 42P10 on the collections and listings upserts, 23502 on bid inserts.
+  - Main also has the known silent 0-row `updatePrice`.
+- [x] Runbook `docs/PHASE2_RUNBOOK.md`: go/no-go, read-only pre-check (`phase2_precheck_readonly.sql`), backup and verification, indexer stop, per-file command, expected notices and verification query, fingerprint diff, deploy, restart, post-checks, failure handling, a **rehearsed** rollback, a staging dry-run checklist, measured locks and duration.
+- [ ] **Apply to production** (you, by hand, after the staging dry run).
+- [x] Leave M-5 (RPCs with `p_chain_id`) for Phase 3.
+- [x] Version the schema in the repository, partially.
+  - The migrations and `scripts/rehearsal/catalog_fingerprint.{before,after}.txt` are tracked. The fingerprints describe the full public-schema catalog before and after.
+  - `packages/database/baseline/` (the full DDL dump) is still gitignored.
+- Typecheck and tests on the branch:
+  - turbo typecheck (excluding database): green;
+  - turbo test: shared 8, contracts 72, web 40 passed / 22 skipped, database 2, indexer 34 (31 before);
+  - `validate:integration`: unchanged ((a), (c), (f) and #8 ×2 fail as known; (b) passes).
+  - A direct `tsc` on the indexer (it has no typecheck script) shows the same pre-existing errors before and after the change, none in the edited files.
+
+### Audit vs. code discrepancies found in Phase 2
+
+- **Order.** Audit §8.1 says M-1 → M-2 → M-3 → M-4 → M-6 → M-7. As requested, the new files come after 090600, so the applied order is SEC-01 (incl. M-3) → M-1 → M-2 → M-4 → M-6 → M-7. M-1 and M-2 don't depend on SEC-01. This exact order is what was rehearsed.
+- **collections has two address-only uniques**, the constraint `collections_contract_address_unique` *and* the standalone unique index `collections_contract_address_idx`. M-2 drops both, discovered from the catalog.
+- **The nfts → collections FK is `ON UPDATE CASCADE ON DELETE SET DEFAULT`**, not mentioned in the audit. On a composite FK, `SET DEFAULT` would null `chain_id`, so M-2 recreates it as `ON DELETE SET DEFAULT (collection_address)` (PG15+), which preserves today's behavior.
+- **The bid tables have chain-less partial uniques** (`idx_token_bids_unique_active`, `idx_collection_bids_unique_active`), not covered by M-1 in the audit. Without a fix, audit test #19 fails for the same bidder on two chains. Fixed in M-1 (approved).
+- **Live bid counts:** the audit says "~5 bids / ≥3 token bids". The backup has 7 token bids and 2 collection bids. Audit test #19 says it "fails today for three of them", and that matches.
+- **"Every one of these is safely reversible today" (§7) is not true as a plain restore.** `pg_restore --clean` cannot undo M-2. Rollback needs `scripts/rollback/phase2_rollback_prepare.sql` first (rehearsed). Rollback also drops realtime publication membership, which the runbook re-adds from the pre-check.
+- **Floor-price triggers and the stats RPCs match collections by address only.** Once M-2 allows one address on two chains, they would update both chains' rows. This is M-5 (Phase 3); harmless while all data is on 99801.
+- **`nfts_market_view`** still joins listings and bids without `chain_id` (the view part of DB-1). Not in any M-item; Phase 3/4.
+- **`indexer_state.chain_id` stays `numeric`.** M-6 only adds the unique; converting it to integer is a possible follow-up.
+- **CRLF in function bodies.** With `core.autocrlf=true` and no attribute, migrations checked out on Windows created functions whose bodies contain carriage returns. `.gitattributes` now pins migrations to LF; repository content is unchanged.
+- **The backup is pg_dump 18.0** (archive 1.16), while the server is 17.6. pg_restore 17.11 read it in the rehearsal; the runbook asks for a client ≥ 17, and ≥ 18 is safer.
+- **The indexer env default 11155111 (ADDR-3) is now a hard failure mode, not only a mislabel.** With the composite FKs, writes with the wrong chain fail with 23503. The runbook requires `CHAIN_ID=99801` explicitly; the fix is Phase 3.
 
 ## Phase 3: Indexer
 
