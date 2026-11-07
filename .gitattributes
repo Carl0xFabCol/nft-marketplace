@@ -4,3 +4,6 @@
 # Expected psql outputs compared byte-for-byte by the Phase 2 runbook.
 packages/database/scripts/rehearsal/*.txt text eol=lf
 packages/database/migrations/*.sql text eol=lf
+# Rollback/rehearsal SQL: phase3b_down.sql rebuilds CRLF function bodies from LF text.
+packages/database/scripts/rollback/*.sql text eol=lf
+packages/database/scripts/rehearsal/*.sql text eol=lf

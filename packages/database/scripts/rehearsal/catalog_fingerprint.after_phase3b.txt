@@ -1,0 +1,347 @@
+acl | activity {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=r/postgres}
+acl | collection_bid_fills {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+acl | collection_bids {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=r/postgres}
+acl | collections {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=r/postgres}
+acl | contract_indexer_state {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+acl | indexer_state {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+acl | indexer_state_id_seq {postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}
+acl | listings {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=r/postgres}
+acl | nfts {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=r/postgres}
+acl | nfts_market_view {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=r/postgres}
+acl | nonces {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+acl | profiles {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+acl | token_bids {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,anon=r/postgres,authenticated=r/postgres}
+acl | user_wallets {postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+col | activity.chain_id integer nn=true def=
+col | activity.collection_address text nn=false def=
+col | activity.created_at timestamp with time zone nn=false def=
+col | activity.event text nn=false def=
+col | activity.from text nn=false def=
+col | activity.id uuid nn=true def=gen_random_uuid()
+col | activity.log_index numeric nn=false def=
+col | activity.owner_wallet text nn=false def=
+col | activity.price text nn=false def=
+col | activity.quantity bigint nn=false def=
+col | activity.source_contract text nn=false def=
+col | activity.to text nn=false def=
+col | activity.token_id text nn=false def=
+col | activity.tx_hash text nn=true def=
+col | collection_bid_fills.bid_id uuid nn=true def=
+col | collection_bid_fills.block_number bigint nn=true def=
+col | collection_bid_fills.chain_id integer nn=true def=
+col | collection_bid_fills.created_at timestamp with time zone nn=true def=
+col | collection_bid_fills.log_index integer nn=true def=
+col | collection_bid_fills.token_count integer nn=true def=
+col | collection_bid_fills.tx_hash text nn=true def=
+col | collection_bids.bidder_wallet text nn=true def=
+col | collection_bids.block_number bigint nn=false def=
+col | collection_bids.chain_id integer nn=true def=
+col | collection_bids.collection_address text nn=false def=
+col | collection_bids.created_at timestamp with time zone nn=true def=
+col | collection_bids.expires_at timestamp with time zone nn=false def=
+col | collection_bids.id uuid nn=true def=gen_random_uuid()
+col | collection_bids.is_active boolean nn=false def=
+col | collection_bids.log_index integer nn=false def=
+col | collection_bids.placed_quantity bigint nn=false def=
+col | collection_bids.price numeric(78,0) nn=false def=
+col | collection_bids.quantity bigint nn=false def=
+col | collection_bids.seller_wallet text nn=false def=
+col | collection_bids.tx_hash text nn=false def=
+col | collection_bids.updated_at timestamp with time zone nn=false def=
+col | collections.banner_url text nn=false def=
+col | collections.chain_id integer nn=true def=
+col | collections.contract_address text nn=true def=
+col | collections.created_at timestamp with time zone nn=false def=
+col | collections.creator_wallet text nn=false def=
+col | collections.deployed_at bigint nn=false def=
+col | collections.description text nn=false def=
+col | collections.floor_price numeric(78,0) nn=false def=
+col | collections.id uuid nn=true def=gen_random_uuid()
+col | collections.image_url text nn=false def=
+col | collections.indexer_block bigint nn=false def=
+col | collections.is_verified boolean nn=false def=
+col | collections.name text nn=false def=
+col | collections.royalty_fee smallint nn=false def=
+col | collections.symbol text nn=false def=
+col | collections.total_sales numeric nn=false def=
+col | collections.total_volume numeric nn=false def=
+col | collections.updated_at timestamp without time zone nn=false def=
+col | contract_indexer_state.chain_id integer nn=true def=
+col | contract_indexer_state.contract_address text nn=true def=
+col | contract_indexer_state.contract_name text nn=false def=
+col | contract_indexer_state.last_block integer nn=true def=0
+col | contract_indexer_state.updated_at timestamp with time zone nn=false def=now()
+col | indexer_state.chain_id integer nn=true def=
+col | indexer_state.id bigint nn=true def=
+col | indexer_state.last_block integer nn=false def=
+col | indexer_state.last_block_hash text nn=false def=
+col | listings.buyer_wallet text nn=false def=
+col | listings.chain_id integer nn=true def=
+col | listings.collection_address text nn=true def=
+col | listings.created_at timestamp with time zone nn=true def=now()
+col | listings.expires_at timestamp with time zone nn=false def=
+col | listings.id uuid nn=true def=gen_random_uuid()
+col | listings.is_active boolean nn=true def=true
+col | listings.listed_at timestamp with time zone nn=false def=
+col | listings.listing_id text nn=false def=
+col | listings.price numeric(78,0) nn=true def=
+col | listings.seller_wallet text nn=false def=
+col | listings.source text nn=false def=
+col | listings.status text nn=false def=
+col | listings.token_id text nn=true def=
+col | listings.tx_hash text nn=true def=
+col | listings.updated_at timestamp with time zone nn=false def=
+col | nfts.chain_id integer nn=true def=
+col | nfts.collection_address text nn=true def=
+col | nfts.description text nn=false def=
+col | nfts.id uuid nn=true def=gen_random_uuid()
+col | nfts.image_url text nn=false def=
+col | nfts.last_synced timestamp with time zone nn=false def=now()
+col | nfts.metadata jsonb nn=false def=
+col | nfts.minted_at timestamp with time zone nn=false def=
+col | nfts.name text nn=false def=
+col | nfts.owner_wallet text nn=true def=
+col | nfts.symbol text nn=false def=
+col | nfts.token_id text nn=true def=
+col | nfts.token_uri text nn=false def=
+col | nfts_market_view.best_collection_bid numeric(78,0) nn=false def=
+col | nfts_market_view.best_token_bid numeric(78,0) nn=false def=
+col | nfts_market_view.best_token_bidder text nn=false def=
+col | nfts_market_view.chain_id integer nn=false def=
+col | nfts_market_view.collection_address text nn=false def=
+col | nfts_market_view.id uuid nn=false def=
+col | nfts_market_view.image_url text nn=false def=
+col | nfts_market_view.listing_expires_at timestamp with time zone nn=false def=
+col | nfts_market_view.listing_id text nn=false def=
+col | nfts_market_view.listing_price numeric(78,0) nn=false def=
+col | nfts_market_view.listing_seller text nn=false def=
+col | nfts_market_view.metadata jsonb nn=false def=
+col | nfts_market_view.name text nn=false def=
+col | nfts_market_view.owner_wallet text nn=false def=
+col | nfts_market_view.token_id text nn=false def=
+col | nonces.created_at timestamp with time zone nn=true def=now()
+col | nonces.nonce text nn=true def=
+col | nonces.used boolean nn=true def=false
+col | profiles.avatar_url text nn=false def=
+col | profiles.bio text nn=false def=
+col | profiles.created_at timestamp with time zone nn=false def=now()
+col | profiles.id uuid nn=true def=
+col | profiles.username text nn=false def=
+col | profiles.wallet text nn=true def=
+col | token_bids.bidder_wallet text nn=false def=
+col | token_bids.block_number bigint nn=false def=
+col | token_bids.chain_id integer nn=true def=
+col | token_bids.collection_address text nn=false def=
+col | token_bids.created_at timestamp with time zone nn=true def=
+col | token_bids.expires_at timestamp with time zone nn=false def=
+col | token_bids.id uuid nn=true def=gen_random_uuid()
+col | token_bids.is_active boolean nn=false def=true
+col | token_bids.log_index integer nn=false def=
+col | token_bids.price numeric(78,0) nn=false def=
+col | token_bids.seller_wallet text nn=false def=
+col | token_bids.token_id text nn=false def=
+col | token_bids.tx_hash text nn=false def=
+col | token_bids.updated_at timestamp with time zone nn=false def=
+col | user_wallets.created_at timestamp with time zone nn=false def=now()
+col | user_wallets.email text nn=true def=
+col | user_wallets.id uuid nn=true def=gen_random_uuid()
+col | user_wallets.supabase_password text nn=true def=
+col | user_wallets.supabase_user_id uuid nn=true def=
+col | user_wallets.wallet_address text nn=true def=
+con | activity actions_pkey PRIMARY KEY (id)
+con | activity activity_chain_id_positive CHECK ((chain_id > 0))
+con | collection_bid_fills collection_bid_fills_bid_id_fkey FOREIGN KEY (bid_id) REFERENCES collection_bids(id) ON DELETE CASCADE
+con | collection_bid_fills collection_bid_fills_chain_id_positive CHECK ((chain_id > 0))
+con | collection_bid_fills collection_bid_fills_pkey PRIMARY KEY (chain_id, tx_hash, log_index)
+con | collection_bid_fills collection_bid_fills_token_count_positive CHECK ((token_count > 0))
+con | collection_bid_fills collection_bid_fills_tx_hash_canonical CHECK (((tx_hash ~ '^0x[0-9a-f]{64}$'::text) AND (log_index >= 0) AND (block_number >= 0)))
+con | collection_bids collection_bids_chain_collection_fkey FOREIGN KEY (chain_id, collection_address) REFERENCES collections(chain_id, contract_address)
+con | collection_bids collection_bids_chain_event_key UNIQUE (chain_id, tx_hash, log_index)
+con | collection_bids collection_bids_chain_id_positive CHECK ((chain_id > 0))
+con | collection_bids collection_bids_event_identity_complete CHECK ((num_nulls(tx_hash, log_index, block_number) = ANY (ARRAY[0, 3])))
+con | collection_bids collection_bids_pkey PRIMARY KEY (id)
+con | collection_bids collection_bids_tx_hash_canonical CHECK (((tx_hash IS NULL) OR ((tx_hash ~ '^0x[0-9a-f]{64}$'::text) AND (log_index >= 0) AND (block_number >= 0))))
+con | collections collections_chain_contract_key UNIQUE (chain_id, contract_address)
+con | collections collections_pkey PRIMARY KEY (id)
+con | contract_indexer_state contract_indexer_state_chain_id_positive CHECK ((chain_id > 0))
+con | contract_indexer_state contract_indexer_state_pkey PRIMARY KEY (chain_id, contract_address)
+con | indexer_state indexer_state_chain_id_key UNIQUE (chain_id)
+con | indexer_state indexer_state_chain_id_positive CHECK ((chain_id > 0))
+con | indexer_state indexer_state_last_block_hash_canonical CHECK (((last_block_hash IS NULL) OR (last_block_hash ~ '^0x[0-9a-f]{64}$'::text)))
+con | indexer_state indexer_state_pkey PRIMARY KEY (id)
+con | listings listings_nft_fk FOREIGN KEY (collection_address, token_id, chain_id) REFERENCES nfts(collection_address, token_id, chain_id) ON DELETE CASCADE
+con | listings listings_pkey PRIMARY KEY (id)
+con | listings sec01_listings_chain_id_positive CHECK ((chain_id > 0))
+con | listings sec01_listings_chain_identity_key UNIQUE (chain_id, collection_address, token_id)
+con | listings sec01_listings_collection_canonical CHECK (((collection_address = lower(collection_address)) AND (collection_address ~ '^0x[0-9a-f]{40}$'::text)))
+con | listings sec01_listings_token_canonical CHECK ((token_id ~ '^(0|[1-9][0-9]{0,77})$'::text))
+con | nfts nfts_chain_collection_fkey FOREIGN KEY (chain_id, collection_address) REFERENCES collections(chain_id, contract_address) ON UPDATE CASCADE ON DELETE SET DEFAULT (collection_address)
+con | nfts nfts_collection_token_chain_unique UNIQUE (collection_address, token_id, chain_id)
+con | nfts nfts_collection_token_unique UNIQUE (collection_address, token_id, chain_id)
+con | nfts nfts_pkey PRIMARY KEY (id)
+con | nonces nonces_pkey PRIMARY KEY (nonce)
+con | profiles profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+con | profiles profiles_pkey PRIMARY KEY (id)
+con | profiles profiles_username_key UNIQUE (username)
+con | profiles profiles_wallet_key UNIQUE (wallet)
+con | profiles sec01_profiles_wallet_lowercase CHECK (((wallet IS NULL) OR (wallet = lower(wallet))))
+con | token_bids token_bids_chain_collection_fkey FOREIGN KEY (chain_id, collection_address) REFERENCES collections(chain_id, contract_address)
+con | token_bids token_bids_chain_event_key UNIQUE (chain_id, tx_hash, log_index)
+con | token_bids token_bids_chain_id_positive CHECK ((chain_id > 0))
+con | token_bids token_bids_event_identity_complete CHECK ((num_nulls(tx_hash, log_index, block_number) = ANY (ARRAY[0, 3])))
+con | token_bids token_bids_pkey PRIMARY KEY (id)
+con | token_bids token_bids_tx_hash_canonical CHECK (((tx_hash IS NULL) OR ((tx_hash ~ '^0x[0-9a-f]{64}$'::text) AND (log_index >= 0) AND (block_number >= 0))))
+con | user_wallets sec01_user_wallets_address_lowercase CHECK (((wallet_address IS NULL) OR (wallet_address = lower(wallet_address))))
+con | user_wallets sec01_user_wallets_supabase_user_id_key UNIQUE (supabase_user_id)
+con | user_wallets user_wallets_pkey PRIMARY KEY (id)
+con | user_wallets user_wallets_wallet_address_key UNIQUE (wallet_address)
+facl | cleanup_expired_collection_bids(integer) {postgres=X/postgres,service_role=X/postgres}
+facl | cleanup_expired_listings(integer) {postgres=X/postgres,service_role=X/postgres}
+facl | cleanup_expired_token_bids(integer) {postgres=X/postgres,service_role=X/postgres}
+facl | expire_stale_records() {postgres=X/postgres,service_role=X/postgres}
+facl | get_activity_by_source() {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+facl | get_collection_nft_stats(text,integer) {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+facl | get_collection_stats(integer,text) {postgres=X/postgres,service_role=X/postgres}
+facl | get_collections_by_holders(integer,integer) {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+facl | get_top_collections(integer,integer,text) {postgres=X/postgres,service_role=X/postgres}
+facl | get_top_collections_volume_24h() {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+facl | get_user_activity(text,integer) {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+facl | increment_collection_stats(integer,text,numeric,integer) {postgres=X/postgres,service_role=X/postgres}
+facl | indexer_apply_collection_bid_event(text,integer,text,text,bigint,integer,text,timestamp with time zone,text,bigint,timestamp with time zone,integer) {postgres=X/postgres,service_role=X/postgres}
+facl | indexer_apply_token_bid_event(text,integer,text,text,text,bigint,integer,text,timestamp with time zone,text,timestamp with time zone) {postgres=X/postgres,service_role=X/postgres}
+facl | indexer_record_sale(integer,text,text,text,text,text,text,integer,timestamp with time zone,text) {postgres=X/postgres,service_role=X/postgres}
+facl | sec01_enforce_listing_tx_seller() {postgres=X/postgres,service_role=X/postgres}
+facl | sec01_save_listing_batch(text,text,integer,jsonb) {postgres=X/postgres,service_role=X/postgres}
+facl | trigger_update_floor_price() {postgres=X/postgres,service_role=X/postgres}
+facl | update_collection_floor_price(integer,text) {postgres=X/postgres,service_role=X/postgres}
+facl | update_floor_price() {postgres=X/postgres,service_role=X/postgres}
+fn | cleanup_expired_collection_bids(integer) secdef=false cfg={"search_path=public, pg_temp"} md5=0061b1a5bb61d78c36a73b77ab0d05c3
+fn | cleanup_expired_listings(integer) secdef=false cfg={"search_path=public, pg_temp"} md5=b6715ff229192e8b7ed744787d94ee5d
+fn | cleanup_expired_token_bids(integer) secdef=false cfg={"search_path=public, pg_temp"} md5=25927025af53cf463fb07b069bc825f5
+fn | expire_stale_records() secdef=false cfg= md5=8c247451e568e45d3d0df91b99fe861d
+fn | get_activity_by_source() secdef=false cfg= md5=b764b22c800845fce7c7d6d099ffff46
+fn | get_collection_nft_stats(text,integer) secdef=false cfg= md5=6193a480b9f99e314ea0e736b9a680fb
+fn | get_collection_stats(integer,text) secdef=false cfg={"search_path=public, pg_temp"} md5=c7cf84950b97d40882d2fcea89821515
+fn | get_collections_by_holders(integer,integer) secdef=false cfg= md5=67595afe8ddf39caae221bb85dbfdfee
+fn | get_top_collections(integer,integer,text) secdef=false cfg={"search_path=public, pg_temp"} md5=a1a2e3df872fa0c2486b90696009a6c3
+fn | get_top_collections_volume_24h() secdef=false cfg= md5=7f02a4ce91ec37946ce9bb3ce103113a
+fn | get_user_activity(text,integer) secdef=false cfg= md5=de70405d066a08e2d39cac947aa74716
+fn | increment_collection_stats(integer,text,numeric,integer) secdef=false cfg={"search_path=public, pg_temp"} md5=5036682754004fb8c25bf1889221696e
+fn | indexer_apply_collection_bid_event(text,integer,text,text,bigint,integer,text,timestamp with time zone,text,bigint,timestamp with time zone,integer) secdef=false cfg={"search_path=public, pg_temp"} md5=1846a96c53879afc0aac711dce3c936c
+fn | indexer_apply_token_bid_event(text,integer,text,text,text,bigint,integer,text,timestamp with time zone,text,timestamp with time zone) secdef=false cfg={"search_path=public, pg_temp"} md5=7381876c7398268a1393b1f67be8c6ed
+fn | indexer_record_sale(integer,text,text,text,text,text,text,integer,timestamp with time zone,text) secdef=true cfg={"search_path=public, pg_temp"} md5=a8ac113c88793a5f3e0b5516d0ee00aa
+fn | sec01_enforce_listing_tx_seller() secdef=false cfg={"search_path=public, pg_temp"} md5=cbfe052e4f84931d02be4643ffde8716
+fn | sec01_save_listing_batch(text,text,integer,jsonb) secdef=true cfg={"search_path=public, pg_temp"} md5=0d2f0f36f92fbb902ccc567b48537aa8
+fn | trigger_update_floor_price() secdef=false cfg={"search_path=public, pg_temp"} md5=3ce0c91ed3c82e0ca905208a56792b66
+fn | update_collection_floor_price(integer,text) secdef=false cfg={"search_path=public, pg_temp"} md5=7ea4313881b68ff683853dde5e29535f
+fn | update_floor_price() secdef=false cfg={"search_path=public, pg_temp"} md5=97532ca77e2d18d0ff1083e3b369dbcb
+idx | actions_pkey CREATE UNIQUE INDEX actions_pkey ON public.activity USING btree (id)
+idx | activity_unique_event CREATE UNIQUE INDEX activity_unique_event ON public.activity USING btree (tx_hash, log_index)
+idx | collection_bid_fills_pkey CREATE UNIQUE INDEX collection_bid_fills_pkey ON public.collection_bid_fills USING btree (chain_id, tx_hash, log_index)
+idx | collection_bids_chain_event_key CREATE UNIQUE INDEX collection_bids_chain_event_key ON public.collection_bids USING btree (chain_id, tx_hash, log_index)
+idx | collection_bids_pkey CREATE UNIQUE INDEX collection_bids_pkey ON public.collection_bids USING btree (id)
+idx | collections_chain_contract_key CREATE UNIQUE INDEX collections_chain_contract_key ON public.collections USING btree (chain_id, contract_address)
+idx | collections_pkey CREATE UNIQUE INDEX collections_pkey ON public.collections USING btree (id)
+idx | contract_indexer_state_pkey CREATE UNIQUE INDEX contract_indexer_state_pkey ON public.contract_indexer_state USING btree (chain_id, contract_address)
+idx | idx_activity_collection CREATE INDEX idx_activity_collection ON public.activity USING btree (collection_address)
+idx | idx_activity_collection_created CREATE INDEX idx_activity_collection_created ON public.activity USING btree (collection_address, created_at DESC)
+idx | idx_activity_created_at CREATE INDEX idx_activity_created_at ON public.activity USING btree (created_at DESC)
+idx | idx_activity_event CREATE INDEX idx_activity_event ON public.activity USING btree (event)
+idx | idx_activity_from CREATE INDEX idx_activity_from ON public.activity USING btree ("from")
+idx | idx_activity_source_contract CREATE INDEX idx_activity_source_contract ON public.activity USING btree (source_contract)
+idx | idx_activity_to CREATE INDEX idx_activity_to ON public.activity USING btree ("to")
+idx | idx_activity_unique_event CREATE UNIQUE INDEX idx_activity_unique_event ON public.activity USING btree (tx_hash, log_index, event)
+idx | idx_collection_bid_fills_bid CREATE INDEX idx_collection_bid_fills_bid ON public.collection_bid_fills USING btree (bid_id)
+idx | idx_collection_bids_active CREATE INDEX idx_collection_bids_active ON public.collection_bids USING btree (collection_address) WHERE (is_active = true)
+idx | idx_collection_bids_bidder CREATE INDEX idx_collection_bids_bidder ON public.collection_bids USING btree (bidder_wallet, is_active)
+idx | idx_collection_bids_expires_at CREATE INDEX idx_collection_bids_expires_at ON public.collection_bids USING btree (expires_at) WHERE (expires_at IS NOT NULL)
+idx | idx_collection_bids_unique_active_chain CREATE UNIQUE INDEX idx_collection_bids_unique_active_chain ON public.collection_bids USING btree (chain_id, collection_address, bidder_wallet) WHERE (is_active = true)
+idx | idx_collections_floor_price CREATE INDEX idx_collections_floor_price ON public.collections USING btree (floor_price) WHERE (floor_price IS NOT NULL)
+idx | idx_collections_sales CREATE INDEX idx_collections_sales ON public.collections USING btree (total_sales DESC NULLS LAST)
+idx | idx_collections_verified CREATE INDEX idx_collections_verified ON public.collections USING btree (is_verified) WHERE (is_verified = true)
+idx | idx_collections_volume CREATE INDEX idx_collections_volume ON public.collections USING btree (total_volume DESC NULLS LAST)
+idx | idx_listings_active_collection CREATE INDEX idx_listings_active_collection ON public.listings USING btree (collection_address, is_active) WHERE (is_active = true)
+idx | idx_listings_collection_active CREATE INDEX idx_listings_collection_active ON public.listings USING btree (collection_address) WHERE (is_active = true)
+idx | idx_listings_expires_at CREATE INDEX idx_listings_expires_at ON public.listings USING btree (expires_at) WHERE (expires_at IS NOT NULL)
+idx | idx_listings_price CREATE INDEX idx_listings_price ON public.listings USING btree (price) WHERE (is_active = true)
+idx | idx_listings_seller CREATE INDEX idx_listings_seller ON public.listings USING btree (seller_wallet)
+idx | idx_listings_token CREATE INDEX idx_listings_token ON public.listings USING btree (collection_address, token_id, is_active)
+idx | idx_nfts_collection CREATE INDEX idx_nfts_collection ON public.nfts USING btree (collection_address)
+idx | idx_nfts_owner CREATE INDEX idx_nfts_owner ON public.nfts USING btree (owner_wallet)
+idx | idx_token_bids_active CREATE INDEX idx_token_bids_active ON public.token_bids USING btree (collection_address, token_id) WHERE (is_active = true)
+idx | idx_token_bids_bidder CREATE INDEX idx_token_bids_bidder ON public.token_bids USING btree (bidder_wallet, is_active)
+idx | idx_token_bids_expires_at CREATE INDEX idx_token_bids_expires_at ON public.token_bids USING btree (expires_at) WHERE (expires_at IS NOT NULL)
+idx | idx_token_bids_unique_active_chain CREATE UNIQUE INDEX idx_token_bids_unique_active_chain ON public.token_bids USING btree (chain_id, collection_address, token_id, bidder_wallet) WHERE (is_active = true)
+idx | indexer_state_chain_id_key CREATE UNIQUE INDEX indexer_state_chain_id_key ON public.indexer_state USING btree (chain_id)
+idx | indexer_state_pkey CREATE UNIQUE INDEX indexer_state_pkey ON public.indexer_state USING btree (id)
+idx | listings_pkey CREATE UNIQUE INDEX listings_pkey ON public.listings USING btree (id)
+idx | nfts_collection_token_chain_unique CREATE UNIQUE INDEX nfts_collection_token_chain_unique ON public.nfts USING btree (collection_address, token_id, chain_id)
+idx | nfts_collection_token_unique CREATE UNIQUE INDEX nfts_collection_token_unique ON public.nfts USING btree (collection_address, token_id, chain_id)
+idx | nfts_pkey CREATE UNIQUE INDEX nfts_pkey ON public.nfts USING btree (id)
+idx | nfts_unique CREATE UNIQUE INDEX nfts_unique ON public.nfts USING btree (collection_address, token_id, chain_id)
+idx | nonces_pkey CREATE UNIQUE INDEX nonces_pkey ON public.nonces USING btree (nonce)
+idx | profiles_pkey CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)
+idx | profiles_username_key CREATE UNIQUE INDEX profiles_username_key ON public.profiles USING btree (username)
+idx | profiles_wallet_key CREATE UNIQUE INDEX profiles_wallet_key ON public.profiles USING btree (wallet)
+idx | sec01_listings_chain_identity_key CREATE UNIQUE INDEX sec01_listings_chain_identity_key ON public.listings USING btree (chain_id, collection_address, token_id)
+idx | sec01_user_wallets_supabase_user_id_key CREATE UNIQUE INDEX sec01_user_wallets_supabase_user_id_key ON public.user_wallets USING btree (supabase_user_id)
+idx | token_bids_chain_event_key CREATE UNIQUE INDEX token_bids_chain_event_key ON public.token_bids USING btree (chain_id, tx_hash, log_index)
+idx | token_bids_pkey CREATE UNIQUE INDEX token_bids_pkey ON public.token_bids USING btree (id)
+idx | user_wallets_pkey CREATE UNIQUE INDEX user_wallets_pkey ON public.user_wallets USING btree (id)
+idx | user_wallets_wallet_address_idx CREATE INDEX user_wallets_wallet_address_idx ON public.user_wallets USING btree (wallet_address)
+idx | user_wallets_wallet_address_key CREATE UNIQUE INDEX user_wallets_wallet_address_key ON public.user_wallets USING btree (wallet_address)
+owner | activity postgres
+owner | collection_bid_fills postgres
+owner | collection_bids postgres
+owner | collections postgres
+owner | contract_indexer_state postgres
+owner | indexer_state postgres
+owner | indexer_state_id_seq postgres
+owner | listings postgres
+owner | nfts postgres
+owner | nfts_market_view postgres
+owner | nonces postgres
+owner | profiles postgres
+owner | token_bids postgres
+owner | user_wallets postgres
+pol | activity public read activity SELECT {public} true 
+pol | activity sec01_public_read SELECT {anon,authenticated} true 
+pol | collection_bids public read SELECT {public} true 
+pol | collection_bids sec01_public_read SELECT {anon,authenticated} true 
+pol | collections Public collections SELECT {public} true 
+pol | collections sec01_public_read SELECT {anon,authenticated} true 
+pol | listings Public listings SELECT {public} true 
+pol | listings Users can only create optimistic listings for their own wallet INSERT {authenticated}  (seller_wallet = ( SELECT profiles.wallet
+   FROM profiles
+  WHERE (profiles.id = auth.uid())))
+pol | listings Users can update own listings UPDATE {authenticated} (seller_wallet = ( SELECT profiles.wallet
+   FROM profiles
+  WHERE (profiles.id = auth.uid()))) (seller_wallet = ( SELECT profiles.wallet
+   FROM profiles
+  WHERE (profiles.id = auth.uid())))
+pol | listings sec01_public_read SELECT {anon,authenticated} true 
+pol | nfts Public nfts SELECT {public} true 
+pol | nfts sec01_public_read SELECT {anon,authenticated} true 
+pol | nonces Allow public nonce consumption UPDATE {anon} (used = false) (used = true)
+pol | nonces Allow public nonce insertion INSERT {anon}  ((used = false) AND (created_at >= (now() - '00:01:00'::interval)))
+pol | nonces Allow public nonce lookups SELECT {anon} (used = false) 
+pol | profiles sec01_profiles_owner_update UPDATE {authenticated} (( SELECT auth.uid() AS uid) = id) (( SELECT auth.uid() AS uid) = id)
+pol | profiles sec01_profiles_public_read SELECT {anon,authenticated} true 
+pol | token_bids Public read SELECT {anon,authenticated} true 
+pol | token_bids sec01_public_read SELECT {anon,authenticated} true 
+rls | activity true false
+rls | collection_bid_fills true false
+rls | collection_bids true false
+rls | collections true false
+rls | contract_indexer_state true false
+rls | indexer_state true false
+rls | listings true false
+rls | nfts true false
+rls | nonces true false
+rls | profiles true false
+rls | token_bids true false
+rls | user_wallets true false
+trg | listings CREATE TRIGGER auto_update_floor_price AFTER INSERT OR UPDATE ON public.listings FOR EACH ROW EXECUTE FUNCTION trigger_update_floor_price()
+trg | listings CREATE TRIGGER sec01_listings_tx_seller BEFORE INSERT OR UPDATE OF tx_hash, seller_wallet, chain_id ON public.listings FOR EACH ROW EXECUTE FUNCTION sec01_enforce_listing_tx_seller()
+trg | listings CREATE TRIGGER trg_update_floor_price AFTER INSERT OR UPDATE OF is_active, price ON public.listings FOR EACH ROW EXECUTE FUNCTION update_floor_price()
+view | nfts_market_view md5=e5a2841a6e33cd35c6c45f9844242012

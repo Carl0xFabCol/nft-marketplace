@@ -6,6 +6,7 @@
 -- Then compare:
 --   before the migrations: diff with catalog_fingerprint.before.txt
 --   after 090000..091100:  diff with catalog_fingerprint.after.txt
+--   after 090000..091600:  diff with catalog_fingerprint.after_phase3b.txt (Phase 3B)
 -- Both expected files were produced on the local rehearsal stack. "before"
 -- is byte-identical for the committed baseline and for the restored
 -- production backup.
