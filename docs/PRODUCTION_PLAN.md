@@ -320,6 +320,20 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
     - stop between chunks;
     - `fetchChunk` does not re-chunk and sorts;
     - `BATCH_SIZE` 0/-5/abc rejected.
+- [x] 9. Test #11, replay idempotency at handler level (`handlers/ReplayIdempotency.test.ts`).
+  - Setup: the real registry, handlers and repos over `test-utils/memoryDb.ts`, an in-memory model of the Phase 1+2 unique keys and the additive `increment_collection_stats`.
+  - One realistic range is run twice. It contains:
+    - registration and mints;
+    - list, update, cancel;
+    - a buy;
+    - a token-bid accept (Sale + TokenBidAccepted);
+    - a 2-token collection-bid accept;
+    - verify, unverify, royalty, override cleared, launchpad, 2 withdrawals.
+  - **Proven:** `activity`, `listings`, `nfts` and `collections` are byte-identical after a full replay and after a partial replay (from block B, the task-4 retry case). `total_sales = 4` and `total_volume` is the exact wei sum.
+  - **Deferred to 3B, encoded as `it.fails` markers.** They pass today *because* the defect exists, and will flip red when 3B fixes it. A plain precondition test pins the state they start from.
+    - `token_bids`/`collection_bids` grow on replay (plain inserts, no on-chain identity unique: IDX-7).
+    - Test #14: replaying a `CollectionBidAccepted` decrements the remaining quantity again, because it is derived from the DB row (IDX-7).
+    - Test #15 (cross-chain bid isolation, IDX-6) is an `it.todo`.
 
 ## Phase 4: Frontend
 

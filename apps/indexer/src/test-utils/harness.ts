@@ -28,7 +28,11 @@ export const stubMetadataFetcher = {
 }
 
 export function buildHarness(responder?: Responder) {
-  const sb = createRecordingSupabase(responder)
+  return wireHarness(createRecordingSupabase(responder))
+}
+
+/** Same wiring over an existing recording client (e.g. createMemoryDb().sb). */
+export function wireHarness(sb: ReturnType<typeof createRecordingSupabase>) {
   const activityRepo = new ActivityRepository(sb.client)
   const collectionsRepo = new CollectionsRepository(sb.client)
   const listingsRepo = new ListingsRepository(sb.client)
