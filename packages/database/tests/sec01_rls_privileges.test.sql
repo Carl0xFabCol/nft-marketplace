@@ -581,6 +581,36 @@ select ok(
   'listings.listing_id is not a single-column uniqueness boundary'
 );
 select ok(
+  not exists (
+    select 1
+    from pg_index i
+    where i.indrelid = 'public.listings'::regclass
+      and i.indisunique
+      and not i.indisprimary
+      and not exists (
+        select 1
+        from pg_attribute a
+        where a.attrelid = i.indrelid
+          and a.attnum = any (i.indkey::int2[])
+          and a.attname = 'chain_id'
+      )
+  )
+  and not exists (
+    select 1
+    from pg_constraint c
+    where c.conrelid = 'public.listings'::regclass
+      and c.contype = 'u'
+      and not exists (
+        select 1
+        from pg_attribute a
+        where a.attrelid = c.conrelid
+          and a.attnum = any (c.conkey)
+          and a.attname = 'chain_id'
+      )
+  ),
+  'every unique constraint and unique index on listings includes chain_id'
+);
+select ok(
   exists (
     select 1
     from pg_trigger
