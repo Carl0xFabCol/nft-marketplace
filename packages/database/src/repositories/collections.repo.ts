@@ -121,15 +121,26 @@ export class CollectionsRepository {
     if (error) throw error;
   }
 
+  /**
+   * M-5: increment_collection_stats is chain-scoped (p_chain_id first) and
+   * service_role-only. `volume` is an exact ether decimal string (e.g.
+   * "1.234567890123456789"), never a JS number. The indexer records sales
+   * through indexer_record_sale instead; this is for manual reconciliation.
+   */
   async incrementStats(
+    chainId: number,
     contractAddress: string,
-    volume: number,
+    volume: string,
     sales: number,
   ): Promise<void> {
-    await this.supabase.rpc("increment_collection_stats", {
+    const { error } = await this.supabase.rpc("increment_collection_stats", {
+      p_chain_id: chainId,
       p_collection_address: contractAddress.toLowerCase(),
       p_volume: volume,
       p_sales: sales,
     });
+
+    if (error) throw error;
   }
+
 }

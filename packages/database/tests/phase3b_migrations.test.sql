@@ -78,6 +78,87 @@ select throws_ok(
   '091200 negative: chain_id 0 is rejected'
 );
 
+-- ─── 091300: M-5 chain-scoped RPCs ──────────────────────────────────────────
+
+insert into p3b_fn values
+  ('public.increment_collection_stats(integer, text, numeric, integer)'),
+  ('public.get_collection_stats(integer, text)'),
+  ('public.update_collection_floor_price(integer, text)'),
+  ('public.get_top_collections(integer, integer, text)'),
+  ('public.cleanup_expired_listings(integer)'),
+  ('public.cleanup_expired_token_bids(integer)'),
+  ('public.cleanup_expired_collection_bids(integer)'),
+  ('public.trigger_update_floor_price()'),
+  ('public.update_floor_price()');
+
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname in ('increment_collection_stats', 'get_collection_stats', 'update_collection_floor_price',
+                       'get_top_collections', 'cleanup_expired_listings', 'cleanup_expired_token_bids',
+                       'cleanup_expired_collection_bids')),
+  7, '091300 one overload per M-5 function'
+);
+select hasnt_function('public', 'increment_collection_stats', array['text', 'numeric', 'integer'],
+  '091300 negative: chain-less increment_collection_stats is gone');
+select hasnt_function('public', 'get_collection_stats', array['text'], '091300 negative: chain-less get_collection_stats is gone');
+select hasnt_function('public', 'update_collection_floor_price', array['text'], '091300 negative: chain-less update_collection_floor_price is gone');
+select hasnt_function('public', 'get_top_collections', array['integer', 'text'], '091300 negative: chain-less get_top_collections is gone');
+select hasnt_function('public', 'cleanup_expired_listings', array[]::text[], '091300 negative: zero-arg cleanup_expired_listings is gone');
+select hasnt_function('public', 'cleanup_expired_token_bids', array[]::text[], '091300 negative: zero-arg cleanup_expired_token_bids is gone');
+select hasnt_function('public', 'cleanup_expired_collection_bids', array[]::text[], '091300 negative: zero-arg cleanup_expired_collection_bids is gone');
+select ok(
+  not exists (select 1 from p3b_fn f join pg_proc p on p.oid = f.sig::regprocedure
+              where p.proname <> 'indexer_record_sale' and p.prosecdef),
+  '091300 the M-5 and trigger functions stay SECURITY INVOKER'
+);
+
+-- Fixtures: an nft and an active listing on 99801 only (same address exists on 11155111).
+insert into public.nfts (collection_address, token_id, owner_wallet, chain_id) values
+  ('0x00000000000000000000000000000000000000c1', '1', '0x00000000000000000000000000000000000000d1', 99801),
+  ('0x00000000000000000000000000000000000000c1', '1', '0x00000000000000000000000000000000000000d1', 11155111);
+insert into public.listings (collection_address, token_id, chain_id, price, tx_hash, seller_wallet, listing_id, is_active) values
+  ('0x00000000000000000000000000000000000000c1', '1', 99801, 1234567890123456789, '0x01',
+   '0x00000000000000000000000000000000000000d1', '99801:0x00000000000000000000000000000000000000c1-1', true);
+
+select is(
+  (select floor_price::text from public.collections where chain_id = 99801 and contract_address = '0x00000000000000000000000000000000000000c1'),
+  '1234567890123456789', '091300 the floor trigger sets the floor on the listing''s chain'
+);
+select is(
+  (select floor_price from public.collections where chain_id = 11155111 and contract_address = '0x00000000000000000000000000000000000000c1'),
+  null, '091300 negative: the floor trigger leaves the same address on another chain alone'
+);
+select is(
+  (select floor_price || '/' || listed_count || '/' || items_count
+   from public.get_collection_stats(99801, '0x00000000000000000000000000000000000000C1')),
+  '1234567890123456789/1/1', '091300 get_collection_stats runs (no 42804) and is chain-scoped'
+);
+select is(
+  (select count(*)::int from public.get_top_collections(11155111)
+   where contract_address = '0x00000000000000000000000000000000000000c1' and floor_price is null),
+  1, '091300 get_top_collections is chain-scoped'
+);
+select lives_ok(
+  $$select public.increment_collection_stats(11155111, '0x00000000000000000000000000000000000000c1', 2, 3)$$,
+  '091300 increment_collection_stats(chain, ...) runs'
+);
+select is(
+  (select string_agg(chain_id || ':' || total_volume::text || '/' || total_sales::text, ',' order by chain_id)
+   from public.collections where contract_address = '0x00000000000000000000000000000000000000c1'),
+  '99801:1.449567890123456789/7,11155111:2/3',
+  '091300 increment_collection_stats touches only its chain'
+);
+
+update public.listings set expires_at = now() - interval '1 day'
+ where collection_address = '0x00000000000000000000000000000000000000c1';
+select is(public.cleanup_expired_listings(11155111), 0, '091300 negative: cleanup on another chain expires nothing');
+select is(public.cleanup_expired_listings(99801), 1, '091300 cleanup_expired_listings(99801) expires the 99801 listing');
+select is(
+  (select floor_price from public.collections where chain_id = 99801 and contract_address = '0x00000000000000000000000000000000000000c1'),
+  null, '091300 the floor is cleared once no active listing remains'
+);
+
 -- ─── Privileges: every new or changed function ──────────────────────────────
 
 select ok(

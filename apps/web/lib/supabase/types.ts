@@ -454,9 +454,10 @@ export type Database = {
       }
     }
     Functions: {
-      cleanup_expired_collection_bids: { Args: never; Returns: number }
-      cleanup_expired_listings: { Args: never; Returns: number }
-      cleanup_expired_token_bids: { Args: never; Returns: number }
+      // M-5 (20261028091300): chain-scoped, service_role only.
+      cleanup_expired_collection_bids: { Args: { p_chain_id: number }; Returns: number }
+      cleanup_expired_listings: { Args: { p_chain_id: number }; Returns: number }
+      cleanup_expired_token_bids: { Args: { p_chain_id: number }; Returns: number }
       expire_stale_records: { Args: never; Returns: undefined }
       get_activity_by_source: {
         Args: never
@@ -470,14 +471,14 @@ export type Database = {
         Returns: Json
       }
       get_collection_stats: {
-        Args: { p_collection_address: string }
+        Args: { p_chain_id: number; p_collection_address: string }
         Returns: {
-          floor_price: string
+          floor_price: string | null
           items_count: number
           listed_count: number
           owners_count: number
-          total_sales: number
-          total_volume: number
+          total_sales: number | null
+          total_volume: number | null
         }[]
       }
       get_collections_by_holders: {
@@ -488,15 +489,15 @@ export type Database = {
         }[]
       }
       get_top_collections: {
-        Args: { p_limit?: number; p_order_by?: string }
+        Args: { p_chain_id: number; p_limit?: number; p_order_by?: string }
         Returns: {
           contract_address: string
-          floor_price: string
-          is_verified: boolean
-          name: string
-          symbol: string
-          total_sales: number
-          total_volume: number
+          floor_price: string | null
+          is_verified: boolean | null
+          name: string | null
+          symbol: string | null
+          total_sales: number | null
+          total_volume: number | null
         }[]
       }
       get_top_collections_volume_24h: {
@@ -521,6 +522,7 @@ export type Database = {
       }
       increment_collection_stats: {
         Args: {
+          p_chain_id: number
           p_collection_address: string
           p_sales: number
           p_volume: number
@@ -528,7 +530,7 @@ export type Database = {
         Returns: undefined
       }
       update_collection_floor_price: {
-        Args: { p_collection_address: string }
+        Args: { p_chain_id: number; p_collection_address: string }
         Returns: undefined
       }
     }
