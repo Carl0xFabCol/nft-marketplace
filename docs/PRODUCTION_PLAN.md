@@ -335,6 +335,45 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
     - Test #14: replaying a `CollectionBidAccepted` decrements the remaining quantity again, because it is derived from the DB row (IDX-7).
     - Test #15 (cross-chain bid isolation, IDX-6) is an `it.todo`.
 
+**Phase 3A results (2026-11-07, local only).**
+- Typecheck: `turbo run typecheck` (all 5 packages, no exclusions) is green.
+- Tests:
+  - shared 8, contracts 72, web 40 passed / 22 skipped, database 2;
+  - **indexer 95 passed + 1 todo** (34 before).
+- `validate:integration --chain-id 99801`:
+  - indexer suite 5 passed, 1 skipped (live (d));
+  - call-shape 36/38. The only failures are #8 `acceptTokenBid`/`acceptCollectionBid` (Phase 4).
+- `generate:abis:check` is up to date. `forge test` 336/336.
+- Known-failing table delta:
+  - **turned green:** (a) ContractAuthorized, (c) CHAIN_ID required, (f) defaults agree, and `@marketplace/database` typecheck;
+  - **still failing:** #8 ×2 (ABI-1, Phase 4).
+  - The `integration-contract-tests` CI job stays `continue-on-error` because of #8.
+
+### Audit vs. code discrepancies found in Phase 3A
+
+- **IDX-5 is more than "five new handler classes" (§5 verdict).** The indexer decoded with the hand-pasted `MarketplaceCoreABI`, which has no `CollectionUnverified`, `RoyaltyOverrideCleared`, `RoyaltySourceUsed`, `CollectionRegistrationExecuted`, `RouterUpdated` or `BidsContractUpdated`. `BatchEventFetcher` silently skips logs it cannot decode, so new handlers would never have fired. The indexer had to switch to the generated events ABIs (task 5).
+- **ADDR-3 missed a third Sepolia fallback:** `ViemRpcProvider.ts:26` `config.chainId ?? 11155111`. `.env.example` also shipped `CHAIN_ID=11155111`.
+- **"No indexer_state row → logs and returns forever" (§8) is wrong.** `getState` uses `.single()`, which errors, so every iteration throws and logs a fatal loop error. Behavior is unchanged in 3A; seeding is prepare-deployment (3B).
+- **`collections` verification updates were chain-less** (`updateVerificationStatus` filtered by address only), even though collections are `(chain_id, contract_address)` since M-2. Fixed for verify, unverify and the new royalty update. `updateIndexerBlock` is also chain-less, but it is unused.
+- **The indexer was never typechecked** (18 errors, see task 1). Phase 0 had noted the missing script but not the count.
+- **The Dockerfile is broken.** It runs `pnpm --filter … build` for contracts/shared/database/indexer, but none of them has a `build` script, and the indexer runs through tsx. Not fixed (not in 3A scope).
+- **IDX-1 line numbers:** the Sale increment is at `CoreEventHandler.ts:362`, not :363. The other two are as stated.
+- **Activity is used for replay gating.** The audit treats activity idempotency as a given (§5.2). 3A now relies on it for stats too, via `ON CONFLICT DO NOTHING RETURNING`.
+- **`BATCH_SIZE=0` looped forever** in `BlockRangeUtil.chunk`. Not in the audit; now validated.
+
+### Handed to Phase 3B (schema-coupled; not done in 3A)
+
+- IDX-6: chain_id in bid filters, and getActiveCollectionBid that does not throw across chains. Test #15.
+- IDX-7: a unique constraint on the on-chain bid identity, idempotent bid writes, and remaining quantity not derived from DB state. Test #14. Flip the `it.fails` markers in `ReplayIdempotency.test.ts`.
+- M-5: `p_chain_id` on the stats, floor and cleanup RPCs, together with the repository change. Ideally also an **atomic sale+stats RPC keyed on (tx_hash, log_index)**, to close the at-most-once gap from task 3.
+- IDX-3 remainder: `last_block_hash` and reorg rollback.
+- prepare-deployment / DB-7: seed `indexer_state` at `deployBlock - 1`.
+- `contract_indexer_state.chain_id NOT NULL`.
+- `indexer_state.chain_id` numeric → integer.
+- `nfts_market_view` chain join.
+- Columns IDX-5 handlers would need (not invented in 3A): `collections.royalty_overridden` and `collections.royalty_receiver`, written by `CollectionRoyaltyUpdated` / `RoyaltyOverrideCleared`.
+- Phase 4 (read side): select `price::text` (PostgREST returns `numeric` as a JSON number).
+
 ## Phase 4: Frontend
 
 - Regenerate the ABIs and replace the hand-pasted ones.

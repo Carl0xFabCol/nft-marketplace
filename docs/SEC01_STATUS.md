@@ -20,6 +20,7 @@ Status vocabulary:
 | Same chain scoping in the shared repository | `packages/database/src/repositories/listings.repo.ts` | typecheck only |
 | Wallet ownership resolved from the service-role-only `user_wallets` mapping, not `profiles.wallet` | `apps/web/lib/supabase/auth.ts` | `auth.test.ts` (mocked) |
 | Phase 2 writes required by the new schema:<br>- collections upsert `onConflict: "chain_id,contract_address"` (M-2);<br>- bid inserts carry `chain_id = env.chainId` (M-1; bid *filters* stay chain-less until IDX-6);<br>- listings upsert sends `buyer_wallet: null` (M-7). | `apps/indexer/src/persistence/{CollectionsRepository,BidsRepository,ListingsRepository}.ts`, `packages/database/src/repositories/collections.repo.ts` | `CollectionsRepository.test.ts`, `BidsRepository.test.ts`, `ListingsRepository.test.ts` (mocked); cutover probes §3.9 (real local DB) |
+| **Phase 3A (indexer, code only, no schema change):**<br>- IDX-4: wei is sent as exact decimal strings into `numeric(78,0)`; stats get an exact ether decimal;<br>- IDX-1: `Sale` is the only stats source, gated on a fresh activity row;<br>- IDX-2/3: the cursor never passes a failed event; monotonic; `CONFIRMATIONS` lag;<br>- IDX-5: unverify, royalty, launchpad and withdrawal listeners; decoding uses the generated ABIs;<br>- IDX-9: no 1970 timestamps;<br>- ADDR-3: `CHAIN_ID` is required;<br>- IDX-8: per-chunk checkpointing.<br>Collection verification and royalty updates are chain-scoped. | `apps/indexer/src/**` | Indexer unit tests (95 + 1 todo), all mocked or in-memory:<br>- audit tests #9, #10, #11 (handler level), #12, #13, #16;<br>- `validate:integration` (a)(b)(c)(f). |
 | Optimistic batch listings go through the `sec01_save_listing_batch` RPC with the service role. Wei stays a decimal string. Duplicate and canonical-form checks happen client-side too. | `apps/web/actions/listings/createBatch.ts` | `createBatch.test.ts` (mocked RPC) |
 | `failListingsByTxHash` scoped by chain and by the authenticated caller's wallet | `apps/web/actions/listings/failBatch.ts` | `failBatch.test.ts` (mocked) |
 | Login mapping lookup uses `maybeSingle` with an explicit error | `apps/web/app/api/auth/login/route.ts` | none |
@@ -261,9 +262,17 @@ Each file takes ≤ 0.33 s wall time locally, including `docker exec`.
 
 ## 4. Missing (not implemented anywhere)
 
-- **IDX-4 wei precision in the indexer.** `Number(price)` and `Number(newPrice)` are still used in `CoreEventHandler` and `BidsEventHandler`, and `ListingsRepository`/`BidsRepository` take `price: number`. Planned for Phase 3, with audit test #12.
+- ~~IDX-4 wei precision in the indexer.~~ **Done in Phase 3A** (writes are exact, test #12).
+  - **Still open on the read side (Phase 4):** PostgREST serializes `numeric` as a JSON number. Web reads of `listings.price` and `*_bids.price` can round unless they select `price::text`.
+- **Phase 3A deploy note.** It does not change the Phase 2 cutover order.
+  - The indexer now **refuses to start without `CHAIN_ID`**: set `CHAIN_ID=99801`, which the runbook already requires.
+  - It indexes up to `head - CONFIRMATIONS` (default 12).
+  - A persistently failing event now **halts the cursor** instead of being skipped. Watch the "Run stopped at a failed event" log and its `consecutiveFailedRuns` counter.
+- **Sale stats are at-most-once, not exactly-once.** A crash between the activity insert and `increment_collection_stats`, or a failed compensating delete, undercounts one Sale. The fix is an atomic sale+stats RPC (Phase 3B, with M-5).
 - **M-5** (`p_chain_id` on `increment_collection_stats`, `get_collection_stats`, `update_collection_floor_price`, `get_top_collections`, `cleanup_expired_*`). Phase 3, with the indexer. Until then, the floor-price triggers and stats RPCs match collections by address only. Once one address exists on two chains (now allowed by M-2), they update both chains' rows.
-- **Bids are not chain-scoped in code** (IDX-6). Since M-1, rows carry `chain_id`, but the indexer's bid update/select filters and the web's bid reads do not filter by it. `nfts_market_view` still joins listings and bids without `chain_id` (the view part of DB-1). Collections and activity reads are only partially chain-filtered. Phases 3–4.
+- **Bids are not chain-scoped in code, and bid writes are not replay-safe** (IDX-6, IDX-7, Phase 3B).
+  - Since M-1, rows carry `chain_id`, but the indexer's bid update/select filters and the web's bid reads do not filter by it.
+  - Replaying a block range duplicates bid rows, and a replayed collection-bid acceptance decrements the quantity twice. Both are encoded as `it.fails` markers in `ReplayIdempotency.test.ts`. `nfts_market_view` still joins listings and bids without `chain_id` (the view part of DB-1). Collections and activity reads are only partially chain-filtered. Phases 3–4.
 - **`indexer_state.chain_id` is still `numeric`.** M-6 adds the unique; the type is unchanged (not in the audit's M-6).
 - **Phase 2 is not applied to production.** Applying it is human-gated; see `docs/PHASE2_RUNBOOK.md`.
 - **Default privileges.** New tables will still receive Supabase's default `anon`/`authenticated` grants.
