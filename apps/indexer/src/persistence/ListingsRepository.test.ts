@@ -71,6 +71,7 @@ describe("ListingsRepository.upsert", () => {
         collection_address: collectionAddress.toLowerCase(),
         token_id: "1",
         seller_wallet: sellerWallet.toLowerCase(),
+        buyer_wallet: null,
         tx_hash: `0x${"a".repeat(64)}`,
       }),
       { onConflict: "chain_id,collection_address,token_id", ignoreDuplicates: false },

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { env } from "../config/env"
 import { logger } from "../utils/logger"
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -49,6 +50,8 @@ export class BidsRepository {
    */
   async insertCollectionBid(params: { collectionAddress: string; bidderWallet: string; price: number; quantity: number; expiresAt: Date | null; isActive: boolean; createdAt: Date }): Promise<void> {
     const { error } = await this.supabase.from("collection_bids").insert({
+      // M-1: chain_id is NOT NULL with no default. Filters stay chain-less until IDX-6 (Phase 3).
+      chain_id: env.chainId,
       collection_address: params.collectionAddress.toLowerCase(),
       bidder_wallet: params.bidderWallet.toLowerCase(),
       price: params.price,
@@ -153,6 +156,8 @@ export class BidsRepository {
    */
   async insertTokenBid(params: { collectionAddress: string; tokenId: string; bidderWallet: string; price: number; expiresAt: Date | null; isActive: boolean; createdAt: Date }): Promise<void> {
     const { error } = await this.supabase.from("token_bids").insert({
+      // M-1: chain_id is NOT NULL with no default. Filters stay chain-less until IDX-6 (Phase 3).
+      chain_id: env.chainId,
       collection_address: params.collectionAddress.toLowerCase(),
       token_id: params.tokenId,
       bidder_wallet: params.bidderWallet.toLowerCase(),

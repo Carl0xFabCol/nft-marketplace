@@ -103,7 +103,8 @@ export class CollectionsRepository {
   ): Promise<void> {
     const { error } = await this.supabase
       .from("collections")
-      .upsert(collection, { onConflict: "contract_address" });
+      // M-2: identity is (chain_id, contract_address); callers must pass chain_id.
+      .upsert(collection, { onConflict: "chain_id,contract_address" });
 
     if (error) throw error;
   }

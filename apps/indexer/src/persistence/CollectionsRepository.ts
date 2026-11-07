@@ -43,7 +43,9 @@ export class CollectionsRepository {
         created_at: params.createdAt,
         updated_at: params.updatedAt,
       },
-      { onConflict: "contract_address" },
+      // M-2: collections identity is (chain_id, contract_address). The
+      // address-only unique is gone, so "contract_address" would be 42P10.
+      { onConflict: "chain_id,contract_address" },
     )
 
     if (error) {

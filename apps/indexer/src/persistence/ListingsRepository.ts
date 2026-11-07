@@ -41,6 +41,8 @@ export class ListingsRepository {
         collection_address: collectionAddress,
         token_id: tokenId,
         seller_wallet: params.sellerWallet.toLowerCase(),
+        // M-7: a (re)listing reuses the row of an earlier sale; clear the old buyer.
+        buyer_wallet: null,
         price: params.price,
         expires_at: params.expiresAt,
         is_active: params.isActive,
