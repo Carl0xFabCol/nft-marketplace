@@ -33,8 +33,8 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 | validate (c) CHAIN_ID required | `apps/indexer/src/config/env.ts:71` silently defaults to 11155111 | Phase 3 (ADDR-3) |
 | validate (f) default chain id consistent | indexer 11155111 vs shared/contracts 99801 | Phase 3 (ADDR-3) |
 | `@marketplace/database` typecheck | supabase-js generic type error in `src/client.ts` (2 errors). Phase 1 fixed the missing `@marketplace/shared` dependency, which took it from 6 errors to 2. | cleanup (`packages/database/src/repositories/*` is slated for deletion) |
-| web `rls.integration.test.ts` (22 tests) | **skipped**: needs a local Supabase stack (`SEC01_TEST_SUPABASE_*`) | when a local Supabase env exists (Docker + Supabase CLI) |
-| pgTAP `sec01_rls_privileges.test.sql` | **not run**: no disposable Postgres with pgTAP | same env. Not in CI. |
+| web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, 2026-11-07: **19 pass, 3 fail** (`23503 listings_nft_fk`, a fixture problem) | proposed fixture patch (SEC01_STATUS §3.7) |
+| pgTAP `sec01_rls_privileges.test.sql` | Not in CI. Locally, 2026-11-07: **86 ok, #87 not ok, aborts at #88** (fixtures). With fixtures it aborts at **#90**, a real bug: a non-chain-scoped unique survives 090500. | proposed 090600 + fixture patch (SEC01_STATUS §3.7) |
 
 `(b)` handler/config bijection **passes** today, because `ContractAuthorizedHandler` exists and matches the stale config. It will catch the Phase 3 change if handlers and config are not updated together.
 
@@ -70,11 +70,24 @@ Branch `chore/production-readiness-phase1`. It is **not merged to main** and mus
   - 5 `src` + 6 `script` files. Their branch changes are `forge fmt` plus a pragma pin `^0.8.24`→`0.8.24`, with no logic change.
   - `git diff main -- packages/contracts/foundry` is empty. `forge test` passes 336/336, and `generate:abis:check` is up to date.
 - [x] Fix `docs/SEC01_STATUS.md`. Rewritten from scratch (tracked via a `.gitignore` exception). It now separates in-repo code, unapplied migrations, unverified suites, and what is missing.
-- [ ] Make the pgTAP RLS suite run against a disposable Postgres, and run the 22 skipped tests. **Blocked: no environment.**
-  - The baseline dump is now present at `packages/database/baseline/` (untracked).
-  - Docker, the Supabase CLI and pgTAP are not installed. The user chose to stop before DB work.
-  - The 22 skips are in `apps/web/lib/supabase/rls.integration.test.ts` and need GoTrue + PostgREST, i.e. `supabase start`. Plain Postgres is not enough.
-  - Expect 2 pgTAP failures on a schema-only baseline: the duplicate `supabase_user_id = 1111…` test and the other seller's active listing on `0x…10` token 1 both rely on pre-existing rows. Report them; do not re-skip.
+- [x] Make the pgTAP RLS suite run against a disposable Postgres, and run the 22 skipped tests. Done 2026-11-07 on a **local** stack; full results are in `docs/SEC01_STATUS.md` §3.
+  - **DB test environment:**
+    - Supabase CLI 2.119.0 via `npx` from `packages/database`, with `--workdir` pointing to a scratch dir outside the repo. Postgres image 17.11.0.002, pgTAP 1.3.3.
+    - Only db, auth, rest and kong were enabled.
+    - The SQL was applied with `docker exec -i supabase_db_<id> psql -U postgres -v ON_ERROR_STOP=1`.
+    - Vitest env vars came from `supabase status -o env` inside the same shell command and were never written out.
+  - **Baseline adaptations (scratch copy only):**
+    - dropped `CREATE SCHEMA public;`;
+    - ran the 12 `FOR ROLE supabase_admin` default-privilege lines as `supabase_admin`.
+  - **Migrations:** 090000–090500 all applied cleanly, one at a time. 090400 touched only `sec01_save_listing_batch`, because the baseline has no SECURITY DEFINER functions.
+  - **pgTAP:** 86/102 ok. #87 is a fixture problem, and the run aborts at #88 (fixture: `listings_nft_fk`). With fixtures it aborts at #90 on a **real bug**: `listings_collection_address_token_id_key` and `unique_tx_token` are not chain-scoped and survive 090500. With fixtures plus the proposed 090600 the result is 102/102.
+  - **Vitest:** 19/22. The 3 listing-RPC tests fail with `23503 listings_nft_fk` (fixture). The proposed fixture patch gives 22/22.
+  - **Cutover:**
+    - main's `onConflict: "listing_id"` fails with 42P10 after 090500;
+    - main's `updatePrice`/`deactivate` by `listing_id` silently update 0 rows;
+    - the branch paths work, except a cross-chain listing (same bug).
+  - `.gitignore` pointed at `packages/contracts/database/baseline/`, so the baseline was **not** ignored. Fixed in its own commit.
+- [ ] Apply the SEC01_STATUS §3.7 fixes after approval: the 090600 migration (finishes M-3), the pgTAP and vitest fixtures, and the decision on `listings_nft_fk` vs optimistic listings. Then re-run both suites locally.
 - Test results on the branch:
   - typecheck (excluding database): green.
   - turbo test: shared 8, database 2, indexer 31 (28 before), contracts 72, web 40 passed / 22 skipped.
@@ -93,6 +106,10 @@ Branch `chore/production-readiness-phase1`. It is **not merged to main** and mus
 - **SQL line counts.** The six migrations total 1,800 lines, not the 2,254 stated in the audit header. The individual file sizes match §6.3.
 - **M-7 is not covered by the branch** (§7 implies it was verified there). Neither the indexer upsert nor the RPC conflict path resets `buyer_wallet`. `apps/web/lib/listingMerge.ts:93` then hides a relisted token's active listing.
 - **090400 revokes too broadly and pins `search_path` blind.** It revokes EXECUTE on *every* SECURITY DEFINER function and pins `search_path` without inspecting bodies. Review the functions in the baseline before applying it.
+  - Resolved 2026-11-07: the live baseline has **zero** SECURITY DEFINER functions (all 15 are invoker), so this risk does not materialize. The audit's assumption that the read RPCs are definer functions is wrong for this schema.
+- **M-3 is not complete in 090500.** The baseline has `UNIQUE (collection_address, token_id)` and `UNIQUE (tx_hash, collection_address, token_id)`, which neither the audit nor the migrations mention. Both block cross-chain listings.
+- **`listings_nft_fk`** (`listings` → `nfts` → `collections`) is not mentioned in the audit. It makes optimistic listings depend on the indexer having already written the `nfts` row.
+- **The cutover hazard is wider than the audit's 42P10.** Main's `updatePrice`/`deactivate` by `listing_id` silently no-op after the `listing_id` rewrite.
 
 ## Phase 2: Database migrations (while there are only ~46 rows)
 
