@@ -280,6 +280,16 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
     - config ↔ generated ABI.
   - `validate:integration` (a) and (b), i.e. test #7, are **green**.
   - New columns these handlers would need are **not invented**; they are handed to 3B: `collections.royalty_overridden`, `collections.royalty_receiver`.
+- [x] 6. IDX-9: a missing `blockTimestamp` no longer becomes 0, i.e. 1970.
+  - **Chosen fallback:** `IRpcProvider.getBlockTimestamp(blockNumber)` (viem `getBlock`), in a bounded per-block cache (1024 entries). It throws if that also fails or returns 0.
+  - **Why not just throw:** with task 4's cursor semantics, an RPC that never includes the field would halt the indexer forever. The canonical value is one cached `eth_getBlockByNumber` per distinct block away.
+  - The log's own non-zero `blockTimestamp` is still preferred, at zero extra cost on Elysium.
+  - A throw fails the fetch, so the cursor does not move and the next run retries.
+  - Test #13 (`fetchers/BlockTimestamp.test.ts`):
+    - the log value is used when present;
+    - the fallback makes 1 call per distinct block;
+    - an RPC error throws;
+    - a 0 timestamp throws.
 
 ## Phase 4: Frontend
 

@@ -48,6 +48,11 @@ export class ViemRpcProvider implements IRpcProvider {
     }
   }
 
+  async getBlockTimestamp(blockNumber: bigint): Promise<bigint> {
+    const block = await this.client.getBlock({ blockNumber })
+    return block.timestamp
+  }
+
   async getChainId(): Promise<number> {
     return await this.client.getChainId()
   }

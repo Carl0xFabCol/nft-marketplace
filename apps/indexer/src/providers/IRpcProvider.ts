@@ -20,6 +20,12 @@ export interface IRpcProvider {
   /** Get the latest block number */
   getBlockNumber(): Promise<bigint>
 
+  /**
+   * Timestamp (unix seconds) of a block, via eth_getBlockByNumber. Used when a
+   * log arrives without blockTimestamp, which eth_getLogs does not guarantee (IDX-9).
+   */
+  getBlockTimestamp(blockNumber: bigint): Promise<bigint>
+
   /** Get the chain id reported by the RPC endpoint (used to reject misconfigured URLs) */
   getChainId(): Promise<number>
 

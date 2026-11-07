@@ -21,10 +21,14 @@ import { env } from "../config/env"
  * - Sorts events chronologically (by block number and log index)
  * - Structured logging with performance metrics
  */
+/** Max distinct blocks whose timestamps are kept for the getBlock fallback (IDX-9). */
+const BLOCK_TIMESTAMP_CACHE_SIZE = 1024
+
 export class BatchEventFetcher implements IEventFetcher {
   private provider: IRpcProvider
   private batchSize: number
   private maxParallelRequests: number
+  private blockTimestamps = new Map<bigint, number>()
 
   constructor(provider: IRpcProvider, batchSize?: number, maxParallelRequests?: number) {
     this.provider = provider
@@ -193,7 +197,7 @@ export class BatchEventFetcher implements IEventFetcher {
       // Filter to only the events we care about (declared in contract.events)
       const targetEvents = new Set(contract.events || [])
 
-      const parsedEvents = rawEvents
+      const decodedEvents = rawEvents
         .map((rawEvent) => {
           try {
             const decoded = decodeEventLog({
@@ -213,7 +217,7 @@ export class BatchEventFetcher implements IEventFetcher {
               eventName: decoded.eventName,
               args: decoded.args as Record<string, unknown>,
               blockNumber: rawEvent.blockNumber,
-              blockTimestamp: Number(rawEvent.blockTimestamp || 0),
+              blockTimestamp: 0, // resolved below; never left at 0 (IDX-9)
               transactionHash: rawEvent.transactionHash,
               logIndex: rawEvent.logIndex,
               raw: rawEvent,
@@ -233,6 +237,13 @@ export class BatchEventFetcher implements IEventFetcher {
           }
         })
         .filter((event): event is ParsedEvent => event !== null)
+
+      // IDX-9: eth_getLogs does not guarantee blockTimestamp. Elysium returns
+      // it, but on an RPC that omits it the old `|| 0` silently wrote 1970.
+      const parsedEvents: ParsedEvent[] = []
+      for (const event of decodedEvents) {
+        parsedEvents.push({ ...event, blockTimestamp: await this.resolveBlockTimestamp(event.raw) })
+      }
 
       logger.debug(
         {
@@ -264,6 +275,34 @@ export class BatchEventFetcher implements IEventFetcher {
       // Re-throw to allow upper layers to handle (e.g., provider fallback)
       throw error
     }
+  }
+
+  /**
+   * The log's own blockTimestamp when present and non-zero; otherwise the
+   * block's timestamp from the RPC, cached per block number. Throws if neither
+   * yields a positive value, so the chunk fails and is retried rather than
+   * written with a 1970 date.
+   */
+  private async resolveBlockTimestamp(raw: RawContractEvent): Promise<number> {
+    if (raw.blockTimestamp !== undefined && raw.blockTimestamp !== null) {
+      const fromLog = Number(raw.blockTimestamp)
+      if (Number.isFinite(fromLog) && fromLog > 0) return fromLog
+    }
+
+    const cached = this.blockTimestamps.get(raw.blockNumber)
+    if (cached !== undefined) return cached
+
+    const fromBlock = Number(await this.provider.getBlockTimestamp(raw.blockNumber))
+    if (!Number.isFinite(fromBlock) || fromBlock <= 0) {
+      throw new Error(`No valid timestamp for block ${raw.blockNumber} (log ${raw.transactionHash}:${raw.logIndex}); refusing to index it with timestamp 0`)
+    }
+
+    if (this.blockTimestamps.size >= BLOCK_TIMESTAMP_CACHE_SIZE) {
+      const oldest = this.blockTimestamps.keys().next().value
+      if (oldest !== undefined) this.blockTimestamps.delete(oldest)
+    }
+    this.blockTimestamps.set(raw.blockNumber, fromBlock)
+    return fromBlock
   }
 
   /**
