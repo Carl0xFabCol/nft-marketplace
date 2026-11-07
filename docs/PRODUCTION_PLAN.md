@@ -93,7 +93,10 @@ Branch `chore/production-readiness-phase1`. It is **not merged to main** and mus
   - `run-rls-tests.mjs` now uses `npx`;
   - keep `listings_nft_fk`, and handle 23503 in Phase 4.
   - Full local re-run, cycle 2: fresh DB → baseline → 090000–090600 gives **pgTAP 103/103** and **vitest 22/22**, with no ad-hoc rows (SEC01_STATUS §3.8).
-- [ ] Follow-up: `pnpm test:rls` run from `packages/database` fails to find the stack's Docker network (it derives the project id from the cwd). Let it forward `--workdir` (or extra args).
+- [x] Follow-up: `pnpm test:rls` now forwards extra args. Usage: `SEC01_TEST_DB_URL=<local db url> pnpm --filter @marketplace/database test:rls -- --workdir <dir holding the local supabase/ project>`. Verified locally: `Files=1, Tests=103, Result: PASS`.
+  - Pre-commit dependency check for 090600: nothing in `apps/`, `packages/` or the migrations references `listings_collection_address_token_id_key` or `unique_tx_token`.
+  - Every listings `onConflict` targets `chain_id,collection_address,token_id`.
+  - Every single-row listings read is chain-scoped.
 - Test results on the branch:
   - typecheck (excluding database): green.
   - turbo test: shared 8, database 2, indexer 31 (28 before), contracts 72, web 40 passed / 22 skipped.

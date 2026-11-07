@@ -157,7 +157,7 @@ Fresh local DB (`supabase db reset`) → adapted baseline (byte-identical to cyc
 | pgTAP via `psql -f` | **103/103 ok, 0 not ok** |
 | pgTAP via `supabase test db` (pg_prove 3.36, `--workdir` = scratch project) | `Files=1, Tests=103, Result: PASS` |
 | Vitest `rls.integration.test.ts` | **22/22 passed** (real `listings_nft_fk` in place) |
-| `pnpm --filter @marketplace/database test:rls` | The CLI now resolves through `npx`, but run from `packages/database` it looks for Docker network `supabase_network_database` (project id taken from the cwd) and fails with exit 125. It needs a way to pass `--workdir`, or to run from the project directory (follow-up). |
+| `pnpm --filter @marketplace/database test:rls` | The first attempt failed: without `--workdir`, pg_prove looked for Docker network `supabase_network_database`. Fixed by forwarding extra args. `pnpm test:rls -- --workdir <local project>` now gives `Files=1, Tests=103, Result: PASS`. |
 
 ## 4. Missing (not implemented anywhere)
 
