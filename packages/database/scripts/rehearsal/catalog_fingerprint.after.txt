@@ -195,7 +195,7 @@ fn | get_top_collections(integer,text) secdef=false cfg= md5=56ecc83f066123c2ea0
 fn | get_top_collections_volume_24h() secdef=false cfg= md5=7f02a4ce91ec37946ce9bb3ce103113a
 fn | get_user_activity(text,integer) secdef=false cfg= md5=de70405d066a08e2d39cac947aa74716
 fn | increment_collection_stats(text,numeric,integer) secdef=false cfg= md5=7ed05633df9a132f87b55a5753c8336d
-fn | sec01_enforce_listing_tx_seller() secdef=false cfg={"search_path=public, pg_temp"} md5=13d6d444dc9e3e9519a598523d6afe24
+fn | sec01_enforce_listing_tx_seller() secdef=false cfg={"search_path=public, pg_temp"} md5=cbfe052e4f84931d02be4643ffde8716
 fn | sec01_save_listing_batch(text,text,integer,jsonb) secdef=true cfg={"search_path=public, pg_temp"} md5=0d2f0f36f92fbb902ccc567b48537aa8
 fn | trigger_update_floor_price() secdef=false cfg= md5=eede6d03359a6bf7a72c71716db5b855
 fn | update_collection_floor_price(text) secdef=false cfg= md5=fbe41d15b8b87a8af34e464e7da5cbf7

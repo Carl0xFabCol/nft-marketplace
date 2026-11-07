@@ -3,3 +3,4 @@
 
 # Expected psql outputs compared byte-for-byte by the Phase 2 runbook.
 packages/database/scripts/rehearsal/*.txt text eol=lf
+packages/database/migrations/*.sql text eol=lf
