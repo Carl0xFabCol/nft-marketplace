@@ -7,7 +7,7 @@ import { toWeiString } from "../utils/wei"
 import { getContractAddresses } from "@marketplace/contracts"
 import { env } from "../config/env"
 import type { ActivityRepository } from "../persistence/ActivityRepository"
-import type { BidsRepository } from "../persistence/BidsRepository"
+import type { BidEventPosition, BidsRepository } from "../persistence/BidsRepository"
 import type { CollectionsRepository } from "../persistence/CollectionsRepository"
 import type { ListingsRepository } from "../persistence/ListingsRepository"
 import type { NFTRepository } from "../persistence/NFTRepository"
@@ -37,6 +37,11 @@ abstract class BaseBidsHandler<TArgs = Record<string, unknown>> implements IEven
   ) {}
 
   abstract handle(event: ParsedEvent<TArgs>): Promise<void>
+
+  /** The log that caused this bid change: orders bid events and keys their idempotency (IDX-7). */
+  protected position(event: ParsedEvent<TArgs>): BidEventPosition {
+    return { blockNumber: event.blockNumber, logIndex: event.logIndex, txHash: String(event.transactionHash) }
+  }
 
   /**
    * Helper: Insert activity record via repository
@@ -135,18 +140,18 @@ export class CollectionBidPlacedHandler extends BaseBidsHandler<CollectionBidPla
       "💰 Handling CollectionBidPlaced",
     )
 
-    // Cancel previous active bids for this bidder on this collection
-    await this.bidsRepo.cancelActiveCollectionBids(String(collection).toLowerCase(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
-    // Insert new collection bid
-    await this.bidsRepo.insertCollectionBid({
-      collectionAddress: String(collection).toLowerCase(),
-      bidderWallet: String(bidder).toLowerCase(),
-      price: toWeiString(pricePerItem),
-      quantity: Number(quantity),
-      expiresAt: expiresAt && Number(expiresAt) > 0 ? new Date(Number(expiresAt) * 1000) : null,
-      isActive: true,
-      createdAt: new Date(event.blockTimestamp * 1000),
-    })
+    // The new placement overwrites the on-chain slot: earlier bids of this
+    // (collection, bidder) close and this one is recorded, once (IDX-7).
+    await this.bidsRepo.placeCollectionBid(
+      { collectionAddress: String(collection), bidderWallet: String(bidder) },
+      this.position(event),
+      new Date(event.blockTimestamp * 1000),
+      {
+        price: toWeiString(pricePerItem),
+        quantity: Number(quantity),
+        expiresAt: expiresAt && Number(expiresAt) > 0 ? new Date(Number(expiresAt) * 1000) : null,
+      },
+    )
 
     await this.insertActivity({
       event: "COLLECTION_BID_PLACED",
@@ -188,20 +193,15 @@ export class CollectionBidAcceptedHandler extends BaseBidsHandler<CollectionBidA
       "✅ Handling CollectionBidAccepted",
     )
 
-    // Get existing bid to check remaining quantity
-    const existingBid = await this.bidsRepo.getActiveCollectionBid(String(collection).toLowerCase(), String(bidder).toLowerCase())
-
-    if (existingBid) {
-      const remainingQuantity = existingBid.quantity - tokenIds.length
-
-      if (remainingQuantity <= 0) {
-        // Fully filled - deactivate the bid
-        await this.bidsRepo.deactivateCollectionBid(String(collection).toLowerCase(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
-      } else {
-        // Partially filled - update quantity
-        await this.bidsRepo.updateCollectionBidQuantity(String(collection).toLowerCase(), String(bidder).toLowerCase(), remainingQuantity, new Date(event.blockTimestamp * 1000))
-      }
-    }
+    // IDX-7: record this fill once (keyed on the event); the remaining
+    // quantity is placed_quantity minus the recorded fills, not the previous
+    // DB value minus tokenIds.length, so a replay cannot decrement twice.
+    await this.bidsRepo.fillCollectionBid(
+      { collectionAddress: String(collection), bidderWallet: String(bidder) },
+      this.position(event),
+      new Date(event.blockTimestamp * 1000),
+      tokenIds.length,
+    )
 
     // Update NFT owners for all tokens
     for (const tokenId of tokenIds) {
@@ -249,7 +249,11 @@ export class CollectionBidCancelledHandler extends BaseBidsHandler<CollectionBid
       "❌ Handling CollectionBidCancelled",
     )
 
-    await this.bidsRepo.deactivateCollectionBid(String(collection).toLowerCase(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
+    await this.bidsRepo.cancelCollectionBid(
+      { collectionAddress: String(collection), bidderWallet: String(bidder) },
+      this.position(event),
+      new Date(event.blockTimestamp * 1000),
+    )
 
     await this.insertActivity({
       event: "COLLECTION_BID_CANCELLED",
@@ -292,18 +296,17 @@ export class TokenBidPlacedHandler extends BaseBidsHandler<TokenBidPlacedArgs> {
       "💎 Handling TokenBidPlaced",
     )
 
-    // Cancel previous active bids for this bidder on this token
-    await this.bidsRepo.cancelActiveTokenBids(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
-    // Insert new token bid
-    await this.bidsRepo.insertTokenBid({
-      collectionAddress: String(collection).toLowerCase(),
-      tokenId: tokenId.toString(),
-      bidderWallet: String(bidder).toLowerCase(),
-      price: toWeiString(price),
-      expiresAt: expiresAt && Number(expiresAt) > 0 ? new Date(Number(expiresAt) * 1000) : null,
-      isActive: true,
-      createdAt: new Date(event.blockTimestamp * 1000),
-    })
+    // The new placement overwrites the on-chain slot: earlier bids of this
+    // (collection, tokenId, bidder) close and this one is recorded, once (IDX-7).
+    await this.bidsRepo.placeTokenBid(
+      { collectionAddress: String(collection), tokenId: tokenId.toString(), bidderWallet: String(bidder) },
+      this.position(event),
+      new Date(event.blockTimestamp * 1000),
+      {
+        price: toWeiString(price),
+        expiresAt: expiresAt && Number(expiresAt) > 0 ? new Date(Number(expiresAt) * 1000) : null,
+      },
+    )
 
     await this.insertActivity({
       event: "TOKEN_BID_PLACED",
@@ -345,8 +348,12 @@ export class TokenBidAcceptedHandler extends BaseBidsHandler<TokenBidAcceptedArg
       "✅ Handling TokenBidAccepted",
     )
 
-    // Deactivate the accepted bid
-    await this.bidsRepo.deactivateTokenBid(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
+    // Close the accepted bid (only bids placed before this event)
+    await this.bidsRepo.closeTokenBid(
+      { collectionAddress: String(collection), tokenId: tokenId.toString(), bidderWallet: String(bidder) },
+      this.position(event),
+      new Date(event.blockTimestamp * 1000),
+    )
 
     // Cancel any active listing for this token
     await this.listingsRepo.deactivate(String(collection).toLowerCase(), tokenId.toString(), new Date(event.blockTimestamp * 1000))
@@ -394,7 +401,11 @@ export class TokenBidCancelledHandler extends BaseBidsHandler<TokenBidCancelledA
       "❌ Handling TokenBidCancelled",
     )
 
-    await this.bidsRepo.deactivateTokenBid(String(collection).toLowerCase(), tokenId.toString(), String(bidder).toLowerCase(), new Date(event.blockTimestamp * 1000))
+    await this.bidsRepo.closeTokenBid(
+      { collectionAddress: String(collection), tokenId: tokenId.toString(), bidderWallet: String(bidder) },
+      this.position(event),
+      new Date(event.blockTimestamp * 1000),
+    )
 
     await this.insertActivity({
       event: "TOKEN_BID_CANCELLED",

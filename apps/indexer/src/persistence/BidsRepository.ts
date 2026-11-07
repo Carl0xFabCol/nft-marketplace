@@ -6,190 +6,140 @@ import { logger } from "../utils/logger"
 // BIDS REPOSITORY
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/** The on-chain log that caused a bid state change. Orders events and keys idempotency. */
+export interface BidEventPosition {
+  blockNumber: bigint
+  logIndex: number
+  txHash: string
+}
+
+interface BidSlot {
+  collectionAddress: string
+  bidderWallet: string
+}
+
 /**
  * Repository for collection and token bids.
- * Handles all database operations related to marketplace bidding.
+ *
+ * IDX-6 / IDX-7 (migration 20261028091400): every bid state change goes
+ * through one of two RPCs, scoped by chain_id and keyed on the event that
+ * caused it:
+ *   - a placement row is identified by (chain_id, tx_hash, log_index), so a
+ *     replayed placement is a no-op;
+ *   - closing a slot (new placement, cancel, acceptance) only touches bids
+ *     placed BEFORE the event, so a replayed old event never closes a newer bid;
+ *   - a collection bid's remaining quantity is placed_quantity minus the
+ *     recorded fills (collection_bid_fills, keyed on the acceptance event),
+ *     never "previous quantity - n".
  */
 export class BidsRepository {
-  constructor(private supabase: SupabaseClient) {}
+  constructor(
+    private supabase: SupabaseClient,
+    private chainId: number = env.chainId,
+  ) {}
 
   // ───────────────────────────────────────────────────────────────────────────
   // COLLECTION BIDS
   // ───────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Cancel all active collection bids for a bidder on a collection.
-   */
-  async cancelActiveCollectionBids(collectionAddress: string, bidderWallet: string, updatedAt: Date): Promise<void> {
-    const { error } = await this.supabase
-      .from("collection_bids")
-      .update({
-        is_active: false,
-        updated_at: updatedAt,
-      })
-      .eq("collection_address", collectionAddress.toLowerCase())
-      .eq("bidder_wallet", bidderWallet.toLowerCase())
-      .eq("is_active", true)
-
-    if (error) {
-      logger.error(
-        {
-          error,
-          collectionAddress,
-          bidderWallet,
-        },
-        "❌ Failed to cancel previous collection bid",
-      )
-
-      throw error
-    }
-  }
-
-  /**
-   * Insert a new collection bid.
-   */
-  async insertCollectionBid(params: { collectionAddress: string; bidderWallet: string; price: string; quantity: number; expiresAt: Date | null; isActive: boolean; createdAt: Date }): Promise<void> {
-    const { error } = await this.supabase.from("collection_bids").insert({
-      // M-1: chain_id is NOT NULL with no default. Filters stay chain-less until IDX-6 (Phase 3).
-      chain_id: env.chainId,
-      collection_address: params.collectionAddress.toLowerCase(),
-      bidder_wallet: params.bidderWallet.toLowerCase(),
-      price: params.price,
-      quantity: params.quantity,
-      expires_at: params.expiresAt,
-      is_active: params.isActive,
-      created_at: params.createdAt,
+  /** CollectionBidPlaced: closes earlier bids of the slot and records this one. */
+  async placeCollectionBid(
+    slot: BidSlot,
+    position: BidEventPosition,
+    at: Date,
+    bid: { price: string; quantity: number; expiresAt: Date | null },
+  ): Promise<number> {
+    return this.applyCollectionBidEvent("placed", slot, position, at, {
+      p_price_wei: bid.price,
+      p_quantity: bid.quantity,
+      p_expires_at: bid.expiresAt?.toISOString() ?? null,
     })
-
-    if (error) {
-      logger.error({ error, params }, "❌ Failed to insert collection bid")
-      throw error
-    }
   }
 
-  /**
-   * Get an active collection bid.
-   */
-  async getActiveCollectionBid(collectionAddress: string, bidderWallet: string): Promise<{ quantity: number } | null> {
-    const { data, error } = await this.supabase
-      .from("collection_bids")
-      .select("quantity")
-      .eq("collection_address", collectionAddress.toLowerCase())
-      .eq("bidder_wallet", bidderWallet.toLowerCase())
-      .eq("is_active", true)
-      .single()
-
-    if (error) {
-      logger.debug({ error, collectionAddress, bidderWallet }, "⚠️  No active collection bid found")
-      return null
-    }
-
-    return data
+  /** CollectionBidCancelled: closes the slot's bids placed before the event. */
+  async cancelCollectionBid(slot: BidSlot, position: BidEventPosition, at: Date): Promise<number> {
+    return this.applyCollectionBidEvent("cancelled", slot, position, at, {})
   }
 
-  /**
-   * Deactivate a collection bid.
-   */
-  async deactivateCollectionBid(collectionAddress: string, bidderWallet: string, updatedAt: Date): Promise<void> {
-    const { error } = await this.supabase
-      .from("collection_bids")
-      .update({
-        is_active: false,
-        updated_at: updatedAt,
-      })
-      .eq("collection_address", collectionAddress.toLowerCase())
-      .eq("bidder_wallet", bidderWallet.toLowerCase())
-
-    if (error) {
-      logger.error({ error, collectionAddress, bidderWallet }, "❌ Failed to deactivate collection bid")
-      throw error
-    }
+  /** CollectionBidAccepted: records the fill once; remaining = placed - Σ fills. */
+  async fillCollectionBid(slot: BidSlot, position: BidEventPosition, at: Date, tokenCount: number): Promise<number> {
+    return this.applyCollectionBidEvent("filled", slot, position, at, { p_token_count: tokenCount })
   }
 
-  /**
-   * Update collection bid quantity (partial fill).
-   */
-  async updateCollectionBidQuantity(collectionAddress: string, bidderWallet: string, newQuantity: number, updatedAt: Date): Promise<void> {
-    const { error } = await this.supabase
-      .from("collection_bids")
-      .update({
-        quantity: newQuantity,
-        updated_at: updatedAt,
-      })
-      .eq("collection_address", collectionAddress.toLowerCase())
-      .eq("bidder_wallet", bidderWallet.toLowerCase())
+  private async applyCollectionBidEvent(
+    kind: "placed" | "cancelled" | "filled",
+    slot: BidSlot,
+    position: BidEventPosition,
+    at: Date,
+    extra: Record<string, unknown>,
+  ): Promise<number> {
+    const args = {
+      p_kind: kind,
+      p_chain_id: this.chainId,
+      p_collection_address: slot.collectionAddress.toLowerCase(),
+      p_bidder_wallet: slot.bidderWallet.toLowerCase(),
+      p_block_number: position.blockNumber.toString(),
+      p_log_index: position.logIndex,
+      p_tx_hash: position.txHash.toLowerCase(),
+      p_at: at.toISOString(),
+      ...extra,
+    }
+    const { data, error } = await this.supabase.rpc("indexer_apply_collection_bid_event", args)
 
     if (error) {
-      logger.error({ error, collectionAddress, bidderWallet, newQuantity }, "❌ Failed to update collection bid quantity")
+      logger.error({ error, args }, `❌ Failed to apply collection bid event (${kind})`)
       throw error
     }
+    return Number(data ?? 0)
   }
 
   // ───────────────────────────────────────────────────────────────────────────
   // TOKEN BIDS
   // ───────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Cancel all active token bids for a bidder on a specific token.
-   */
-  async cancelActiveTokenBids(collectionAddress: string, tokenId: string, bidderWallet: string, updatedAt: Date): Promise<void> {
-    const { error } = await this.supabase
-      .from("token_bids")
-      .update({
-        is_active: false,
-        updated_at: updatedAt,
-      })
-      .eq("collection_address", collectionAddress.toLowerCase())
-      .eq("token_id", tokenId)
-      .eq("bidder_wallet", bidderWallet.toLowerCase())
-      .eq("is_active", true)
-
-    if (error) {
-      logger.error({ error, collectionAddress, tokenId, bidderWallet }, "❌ Failed to cancel previous token bid")
-
-      throw error
-    }
-  }
-
-  /**
-   * Insert a new token bid.
-   */
-  async insertTokenBid(params: { collectionAddress: string; tokenId: string; bidderWallet: string; price: string; expiresAt: Date | null; isActive: boolean; createdAt: Date }): Promise<void> {
-    const { error } = await this.supabase.from("token_bids").insert({
-      // M-1: chain_id is NOT NULL with no default. Filters stay chain-less until IDX-6 (Phase 3).
-      chain_id: env.chainId,
-      collection_address: params.collectionAddress.toLowerCase(),
-      token_id: params.tokenId,
-      bidder_wallet: params.bidderWallet.toLowerCase(),
-      price: params.price,
-      expires_at: params.expiresAt,
-      is_active: params.isActive,
-      created_at: params.createdAt,
+  /** TokenBidPlaced: closes earlier bids of the slot and records this one. */
+  async placeTokenBid(
+    slot: BidSlot & { tokenId: string },
+    position: BidEventPosition,
+    at: Date,
+    bid: { price: string; expiresAt: Date | null },
+  ): Promise<number> {
+    return this.applyTokenBidEvent("placed", slot, position, at, {
+      p_price_wei: bid.price,
+      p_expires_at: bid.expiresAt?.toISOString() ?? null,
     })
-
-    if (error) {
-      logger.error({ error, params }, "❌ Failed to insert token bid")
-      throw error
-    }
   }
 
-  /**
-   * Deactivate a token bid.
-   */
-  async deactivateTokenBid(collectionAddress: string, tokenId: string, bidderWallet: string, updatedAt: Date): Promise<void> {
-    const { error } = await this.supabase
-      .from("token_bids")
-      .update({
-        is_active: false,
-        updated_at: updatedAt,
-      })
-      .eq("collection_address", collectionAddress.toLowerCase())
-      .eq("token_id", tokenId)
-      .eq("bidder_wallet", bidderWallet.toLowerCase())
+  /** TokenBidAccepted / TokenBidCancelled: closes the slot's bids placed before the event. */
+  async closeTokenBid(slot: BidSlot & { tokenId: string }, position: BidEventPosition, at: Date): Promise<number> {
+    return this.applyTokenBidEvent("closed", slot, position, at, {})
+  }
+
+  private async applyTokenBidEvent(
+    kind: "placed" | "closed",
+    slot: BidSlot & { tokenId: string },
+    position: BidEventPosition,
+    at: Date,
+    extra: Record<string, unknown>,
+  ): Promise<number> {
+    const args = {
+      p_kind: kind,
+      p_chain_id: this.chainId,
+      p_collection_address: slot.collectionAddress.toLowerCase(),
+      p_token_id: slot.tokenId,
+      p_bidder_wallet: slot.bidderWallet.toLowerCase(),
+      p_block_number: position.blockNumber.toString(),
+      p_log_index: position.logIndex,
+      p_tx_hash: position.txHash.toLowerCase(),
+      p_at: at.toISOString(),
+      ...extra,
+    }
+    const { data, error } = await this.supabase.rpc("indexer_apply_token_bid_event", args)
 
     if (error) {
-      logger.error({ error, collectionAddress, tokenId, bidderWallet }, "❌ Failed to deactivate token bid")
-      // Don't throw - bid might not exist
+      logger.error({ error, args }, `❌ Failed to apply token bid event (${kind})`)
+      throw error
     }
+    return Number(data ?? 0)
   }
 }

@@ -159,6 +159,98 @@ select is(
   null, '091300 the floor is cleared once no active listing remains'
 );
 
+-- ─── 091400: IDX-6 / IDX-7 bid event identity ──────────────────────────────
+
+insert into p3b_fn values
+  ('public.indexer_apply_token_bid_event(text, integer, text, text, text, bigint, integer, text, timestamptz, text, timestamptz)'),
+  ('public.indexer_apply_collection_bid_event(text, integer, text, text, bigint, integer, text, timestamptz, text, bigint, timestamptz, integer)');
+
+select is(
+  (select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.token_bids'::regclass and conname = 'token_bids_chain_event_key'),
+  'UNIQUE (chain_id, tx_hash, log_index)', '091400 token_bids UNIQUE (chain_id, tx_hash, log_index)'
+);
+select is(
+  (select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.collection_bids'::regclass and conname = 'collection_bids_chain_event_key'),
+  'UNIQUE (chain_id, tx_hash, log_index)', '091400 collection_bids UNIQUE (chain_id, tx_hash, log_index)'
+);
+select has_column('public', 'collection_bids', 'placed_quantity', '091400 collection_bids.placed_quantity exists');
+select col_is_pk('public', 'collection_bid_fills', array['chain_id', 'tx_hash', 'log_index'], '091400 collection_bid_fills PK (chain_id, tx_hash, log_index)');
+select fk_ok('public', 'collection_bid_fills', 'bid_id', 'public', 'collection_bids', 'id', '091400 collection_bid_fills.bid_id -> collection_bids.id');
+select ok((select relrowsecurity from pg_class where oid = 'public.collection_bid_fills'::regclass), '091400 RLS is enabled on collection_bid_fills');
+select ok(
+  not has_table_privilege('anon', 'public.collection_bid_fills', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+  and not has_table_privilege('authenticated', 'public.collection_bid_fills', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER'),
+  '091400 anon/authenticated have no privilege on collection_bid_fills'
+);
+select ok(
+  not exists (select 1 from p3b_fn f join pg_proc p on p.oid = f.sig::regprocedure
+              where p.proname like 'indexer_apply_%' and p.prosecdef),
+  '091400 the bid RPCs are SECURITY INVOKER'
+);
+
+select throws_ok(
+  $$insert into public.token_bids (chain_id, collection_address, token_id, bidder_wallet, price, is_active, created_at, tx_hash, log_index, block_number)
+    values (99801, '0x00000000000000000000000000000000000000c1', '1', '0x00000000000000000000000000000000000000d1', 1, false, now(), '0x' || repeat('e1', 32), 0, 1),
+           (99801, '0x00000000000000000000000000000000000000c1', '2', '0x00000000000000000000000000000000000000d1', 1, false, now(), '0x' || repeat('e1', 32), 0, 1)$$,
+  '23505', null, '091400 negative: a duplicate placement event on one chain is rejected'
+);
+select lives_ok(
+  $$insert into public.token_bids (chain_id, collection_address, token_id, bidder_wallet, price, is_active, created_at, tx_hash, log_index, block_number)
+    values (99801, '0x00000000000000000000000000000000000000c1', '1', '0x00000000000000000000000000000000000000d1', 1, false, now(), '0x' || repeat('e1', 32), 0, 1),
+           (11155111, '0x00000000000000000000000000000000000000c1', '1', '0x00000000000000000000000000000000000000d1', 1, false, now(), '0x' || repeat('e1', 32), 0, 1)$$,
+  '091400 the same event identity may exist on two chains'
+);
+select throws_ok(
+  $$insert into public.token_bids (chain_id, collection_address, token_id, bidder_wallet, price, is_active, created_at, tx_hash)
+    values (99801, '0x00000000000000000000000000000000000000c1', '1', '0x00000000000000000000000000000000000000d1', 1, false, now(), '0x' || repeat('e2', 32))$$,
+  '23514', null, '091400 negative: a partial event identity is rejected'
+);
+select throws_ok(
+  $$insert into public.collection_bids (chain_id, collection_address, bidder_wallet, price, quantity, is_active, created_at, tx_hash, log_index, block_number)
+    values (99801, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d1', 1, 1, false, now(), '0xABC', 0, 1)$$,
+  '23514', null, '091400 negative: a non-canonical tx_hash is rejected'
+);
+
+-- Event sequence on 99801, plus a bid by the same bidder on 11155111.
+select is(public.indexer_apply_collection_bid_event('placed', 11155111, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d2',
+  5, 0, '0x' || repeat('f0', 32), now(), '7', 9), 1, '091400 placed on 11155111');
+select is(public.indexer_apply_collection_bid_event('placed', 99801, '0x00000000000000000000000000000000000000C1', '0x00000000000000000000000000000000000000D2',
+  10, 1, '0x' || repeat('f1', 32), now(), '100', 5), 1, '091400 placed on 99801 (mixed-case input)');
+select is(public.indexer_apply_collection_bid_event('placed', 99801, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d2',
+  10, 1, '0x' || repeat('f1', 32), now(), '100', 5), 0, '091400 negative: a replayed placement inserts nothing');
+select is(public.indexer_apply_collection_bid_event('filled', 99801, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d2',
+  11, 0, '0x' || repeat('f2', 32), now(), p_token_count => 2), 1, '091400 a fill is recorded');
+select is(public.indexer_apply_collection_bid_event('filled', 99801, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d2',
+  11, 0, '0x' || repeat('f2', 32), now(), p_token_count => 2), 0, '091400 negative: a replayed fill changes nothing');
+select is(
+  (select quantity || '/' || placed_quantity || '/' || is_active from public.collection_bids
+   where chain_id = 99801 and bidder_wallet = '0x00000000000000000000000000000000000000d2'),
+  '3/5/true', '091400 remaining = placed - sum(fills), counted once (#14)'
+);
+select is(public.indexer_apply_collection_bid_event('cancelled', 99801, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d2',
+  12, 0, '0x' || repeat('f3', 32), now()), 1, '091400 cancel closes the bid');
+select is(public.indexer_apply_collection_bid_event('placed', 99801, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d2',
+  13, 0, '0x' || repeat('f4', 32), now(), '200', 4), 1, '091400 a new placement after the cancel');
+select is(public.indexer_apply_collection_bid_event('cancelled', 99801, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d2',
+  12, 0, '0x' || repeat('f3', 32), now()), 0, '091400 negative: a replayed cancel does not close the later placement');
+select is(
+  (select string_agg(chain_id || ':' || coalesce(block_number::text, '-') || ':' || is_active, ',' order by chain_id, block_number)
+   from public.collection_bids where bidder_wallet = '0x00000000000000000000000000000000000000d2'),
+  '99801:10:false,99801:13:true,11155111:5:true',
+  '091400 final state; the 11155111 bid is untouched (#15)'
+);
+select throws_ok(
+  $$select public.indexer_apply_collection_bid_event('bogus', 99801, '0x00000000000000000000000000000000000000c1', '0x00000000000000000000000000000000000000d2',
+      1, 0, '0x' || repeat('f5', 32), now())$$,
+  '22023', null, '091400 negative: an unknown kind is rejected'
+);
+select is(public.indexer_apply_token_bid_event('placed', 99801, '0x00000000000000000000000000000000000000c1', '5', '0x00000000000000000000000000000000000000d2',
+  20, 0, '0x' || repeat('f6', 32), now(), '5'), 1, '091400 token bid placed');
+select is(public.indexer_apply_token_bid_event('closed', 99801, '0x00000000000000000000000000000000000000c1', '5', '0x00000000000000000000000000000000000000d2',
+  19, 0, '0x' || repeat('f7', 32), now()), 0, '091400 negative: a close older than the placement leaves it active');
+select is(public.indexer_apply_token_bid_event('closed', 99801, '0x00000000000000000000000000000000000000c1', '5', '0x00000000000000000000000000000000000000d2',
+  21, 0, '0x' || repeat('f8', 32), now()), 1, '091400 a later close deactivates it');
+
 -- ─── Privileges: every new or changed function ──────────────────────────────
 
 select ok(

@@ -30,16 +30,15 @@ describe("test #12: wei precision round-trip (IDX-4)", () => {
     for (const a of sb.payloads("activity", "upsert")) expect(BigInt(a.price as string) - WEI <= 1n).toBe(true)
   })
 
-  it("TokenBidPlaced / CollectionBidPlaced send the exact decimal string to *_bids.price", async () => {
+  it("TokenBidPlaced / CollectionBidPlaced send the exact decimal string to the bid RPCs", async () => {
     const { sb, registry } = buildHarness()
     await registry.dispatch(makeEvent("bids", "TokenBidPlaced", { collection: COLLECTION, tokenId: 7n, bidder: BUYER, price: WEI, expiresAt: 0n }))
     await registry.dispatch(makeEvent("bids", "CollectionBidPlaced", { collection: COLLECTION, bidder: BUYER, pricePerItem: WEI, quantity: 3n, expiresAt: 0n }))
 
-    const [tokenBid] = sb.payloads("token_bids", "insert")
-    expect(tokenBid.price).toBe("1234567890123456789")
-    const [collectionBid] = sb.payloads("collection_bids", "insert")
-    expect(collectionBid.price).toBe("1234567890123456789")
-    expect(collectionBid.quantity).toBe(3)
+    const [tokenBid, collectionBid] = sb.rpcs.map((r) => r.args)
+    expect(tokenBid.p_price_wei).toBe("1234567890123456789")
+    expect(collectionBid.p_price_wei).toBe("1234567890123456789")
+    expect(collectionBid.p_quantity).toBe(3)
   })
 
   it("Sale sends the exact wei string to indexer_record_sale (activity price and stats)", async () => {

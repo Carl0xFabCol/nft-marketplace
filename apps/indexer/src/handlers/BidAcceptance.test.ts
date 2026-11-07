@@ -56,12 +56,14 @@ describe("IDX-1: bid acceptance increments stats exactly once per sold token", (
     expect(stats(db, 11155111)).toEqual({ volume: "0", sales: 0 })
     // The bid-lifecycle writes and both activity rows are kept.
     expect(db.tables.activity.map((a) => a.event)).toEqual(["SALE", "TOKEN_BID_ACCEPTED"])
-    expect(sb.payloads("token_bids", "update")).toEqual([expect.objectContaining({ is_active: false })])
+    expect(sb.rpcs.filter((r) => r.fn === "indexer_apply_token_bid_event").map((r) => r.args.p_kind)).toEqual(["closed"])
   })
 
   it("collection bid with N=3 tokenIds: 3 Sales + 1 CollectionBidAccepted -> 3 increments, not 6", async () => {
-    const { db, sb, registry, bidsRepo } = harnessWithCollection()
-    vi.spyOn(bidsRepo, "getActiveCollectionBid").mockResolvedValue({ quantity: 5 })
+    const { db, sb, registry } = harnessWithCollection()
+    await registry.dispatch(
+      makeEvent("bids", "CollectionBidPlaced", { collection: COLLECTION, bidder: BUYER, pricePerItem: PRICE, quantity: 5n, expiresAt: 0n }, { block: 90n, logIndex: 0 }),
+    )
     const tokenIds = [1n, 2n, 3n]
     let logIndex = 10
     for (const id of tokenIds) await registry.dispatch(sale(id, PRICE, logIndex++))
@@ -76,8 +78,8 @@ describe("IDX-1: bid acceptance increments stats exactly once per sold token", (
 
     expect(saleCalls(sb.rpcs)).toHaveLength(3)
     expect(stats(db)).toEqual({ volume: "0.15", sales: 3 })
-    // Partial fill bookkeeping is unchanged: 5 - 3 = 2 remaining.
-    expect(sb.payloads("collection_bids", "update")).toEqual([expect.objectContaining({ quantity: 2 })])
+    // Partial fill: 5 placed - 3 filled = 2 remaining, still active.
+    expect(db.tables.collection_bids.map((b) => [b.quantity, b.is_active])).toEqual([[2, true]])
   })
 
   it("a replayed Sale (activity row already present) does not increment again", async () => {
