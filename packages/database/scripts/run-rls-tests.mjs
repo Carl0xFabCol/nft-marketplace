@@ -7,8 +7,9 @@ if (!dbUrl) {
   process.exit(1)
 }
 
+// Use the package-local Supabase CLI (devDependency) through npx; no global install is assumed.
 const isWindows = process.platform === "win32"
-const result = spawnSync(isWindows ? "supabase.cmd" : "supabase", ["test", "db", "tests", "--db-url", dbUrl], {
+const result = spawnSync(isWindows ? "npx.cmd" : "npx", ["supabase", "test", "db", "tests", "--db-url", dbUrl], {
   stdio: "inherit",
   shell: isWindows,
 })
