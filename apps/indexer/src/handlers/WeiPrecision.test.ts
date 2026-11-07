@@ -42,20 +42,17 @@ describe("test #12: wei precision round-trip (IDX-4)", () => {
     expect(collectionBid.quantity).toBe(3)
   })
 
-  it("Sale sends exact activity price and an exact ether decimal to increment_collection_stats", async () => {
-    const { sb, registry } = buildHarness((q) =>
-      // The activity upsert returns the inserted row (fresh insert).
-      q.table === "activity" ? { data: [{ id: "a1" }], error: null } : { data: null, error: null },
-    )
+  it("Sale sends the exact wei string to indexer_record_sale (activity price and stats)", async () => {
+    const { sb, registry } = buildHarness()
+    sb.setRpcResponder(() => ({ data: true, error: null }))
     await registry.dispatch(
       makeEvent("core", "Sale", { collection: COLLECTION, tokenId: 7n, seller: SELLER, buyer: BUYER, price: WEI, marketplaceFeeAmount: 0n, royaltyAmount: 0n }),
     )
 
-    const [activity] = sb.payloads("activity", "upsert")
-    expect(activity.price).toBe("1234567890123456789")
-    expect(sb.rpcs).toEqual([
-      { fn: "increment_collection_stats", args: { p_collection_address: COLLECTION, p_volume: "1.234567890123456789", p_sales: 1 } },
-    ])
+    expect(sb.rpcs).toHaveLength(1)
+    expect(sb.rpcs[0].fn).toBe("indexer_record_sale")
+    expect(sb.rpcs[0].args).toMatchObject({ p_chain_id: 99801, p_collection_address: COLLECTION, p_price_wei: "1234567890123456789", p_token_id: "7" })
+    expect(BigInt(sb.rpcs[0].args.p_price_wei as string)).toBe(WEI)
   })
 })
 

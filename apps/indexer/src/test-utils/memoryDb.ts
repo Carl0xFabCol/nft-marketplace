@@ -3,7 +3,7 @@
 // by the query chains recorded by createRecordingSupabase. It implements only
 // what the repositories use: upsert(onConflict, ignoreDuplicates), insert with
 // the relevant unique keys, update/delete/select with .eq filters, .single(),
-// and the additive increment_collection_stats RPC.
+// and the indexer_record_sale RPC (atomic, idempotent sale + stats).
 //
 // Unique keys mirror the Phase 1+2 schema:
 //   activity      (tx_hash, log_index)            via upsert onConflict
@@ -85,15 +85,45 @@ export function createMemoryDb() {
     return { data: hit.map(clone), error: null }
   }
 
-  /** increment_collection_stats(text, numeric, integer): additive, matched by address only (like the live RPC). */
+  /** Set to make the next RPC call fail before it changes anything (atomic, like a rolled-back transaction). */
+  let failNextRpc: string | null = null
+
+  /**
+   * indexer_record_sale (migration 20261028091200): inserts the SALE activity
+   * row unless (tx_hash, log_index) exists, and only then adds wei/1e18 to
+   * total_volume and 1 to total_sales of (chain_id, contract_address).
+   */
   function rpcResponder(call: RecordedRpc): { data: unknown; error: unknown } {
-    if (call.fn !== "increment_collection_stats") return { data: null, error: { message: `unknown rpc ${call.fn}` } }
-    for (const c of table("collections").filter((r) => r.contract_address === call.args.p_collection_address)) {
-      const volumeWei = parseEther(String(c.total_volume ?? "0")) + parseEther(String(call.args.p_volume))
-      c.total_volume = formatEther(volumeWei)
-      c.total_sales = Number(c.total_sales ?? 0) + Number(call.args.p_sales)
+    if (failNextRpc) {
+      const message = failNextRpc
+      failNextRpc = null
+      return { data: null, error: { message } }
     }
-    return { data: null, error: null }
+    if (call.fn === "indexer_record_sale") {
+      const a = call.args
+      const activity = table("activity")
+      if (activity.some((r) => r.tx_hash === a.p_tx_hash && r.log_index === a.p_log_index)) return { data: false, error: null }
+      activity.push({
+        event: "SALE",
+        chain_id: a.p_chain_id,
+        collection_address: a.p_collection_address,
+        token_id: a.p_token_id,
+        from: a.p_from,
+        to: a.p_to,
+        price: a.p_price_wei,
+        tx_hash: a.p_tx_hash,
+        created_at: a.p_created_at,
+        log_index: a.p_log_index,
+        source_contract: a.p_source_contract,
+      })
+      for (const c of table("collections").filter((r) => r.chain_id === a.p_chain_id && r.contract_address === a.p_collection_address)) {
+        const volumeWei = parseEther(String(c.total_volume ?? "0")) + BigInt(String(a.p_price_wei))
+        c.total_volume = formatEther(volumeWei)
+        c.total_sales = Number(c.total_sales ?? 0) + 1
+      }
+      return { data: true, error: null }
+    }
+    return { data: null, error: { message: `unknown rpc ${call.fn}` } }
   }
 
   const sb = createRecordingSupabase(responder)
@@ -102,6 +132,10 @@ export function createMemoryDb() {
   return {
     sb,
     tables,
+    /** Make the next RPC call fail with `message`, changing nothing. */
+    failNextRpc(message: string) {
+      failNextRpc = message
+    },
     /** Deterministic JSON snapshot of the given tables (row order preserved). */
     snapshot(names: string[]): string {
       return JSON.stringify(names.map((n) => [n, tables[n] ?? []]))

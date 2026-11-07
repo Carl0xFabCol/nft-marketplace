@@ -423,38 +423,24 @@ export class SaleHandler extends BaseCoreHandler<SaleArgs> {
     // Update NFT owner
     await this.updateNFTOwner(String(collection).toLowerCase(), tokenId.toString(), String(buyer).toLowerCase(), event.blockTimestamp)
 
-    // Insert activity. `fresh` is false when this log was already recorded,
-    // i.e. the event is being replayed.
-    const fresh = await this.insertActivity({
-      event: "SALE",
-      collectionAddress: String(collection).toLowerCase(),
+    // IDX-1: Sale is the single source of collection volume/sales. It is
+    // emitted on every value transfer: buy, buyBatch, and once per tokenId on
+    // token- and collection-bid acceptance (Core.executeSaleFromBid).
+    //
+    // indexer_record_sale writes the SALE activity row and the chain-scoped
+    // stats in one transaction, keyed on (tx_hash, log_index): a replay is a
+    // no-op and a failure leaves neither write behind.
+    await this.activityRepo.recordSale({
+      collectionAddress: String(collection),
       tokenId: tokenId.toString(),
       from: String(seller),
       to: String(buyer),
-      price: price.toString(),
+      priceWei: toWeiString(price),
       txHash: String(event.transactionHash),
       createdAt: new Date(event.blockTimestamp * 1000),
       logIndex: event.logIndex,
       sourceContract: this.contractName,
     })
-
-    // IDX-1: Sale is the single source of collection volume/sales. It is
-    // emitted on every value transfer: buy, buyBatch, and once per tokenId on
-    // token- and collection-bid acceptance (Core.executeSaleFromBid).
-    //
-    // increment_collection_stats is additive, so it runs only for a freshly
-    // inserted activity row: a replay never double-counts. If it fails, the
-    // fresh activity row is removed so the retry treats the Sale as new.
-    // Residual gap (until an atomic RPC in Phase 3B): a crash between the two
-    // writes, or a failed compensating delete, undercounts by this Sale.
-    if (fresh) {
-      try {
-        await this.collectionsRepo.incrementStats(String(collection).toLowerCase(), price, 1)
-      } catch (error) {
-        await this.activityRepo.deleteByTxLog(String(event.transactionHash), event.logIndex)
-        throw error
-      }
-    }
   }
 }
 

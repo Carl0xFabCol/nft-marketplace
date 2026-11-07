@@ -1,5 +1,3 @@
-import { formatEther } from "viem"
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // WEI HELPERS (IDX-4)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -20,11 +18,3 @@ export function toWeiString(value: bigint): string {
   return value.toString()
 }
 
-/**
- * Exact ether-denominated decimal string (e.g. 1234567890123456789n -> "1.234567890123456789"),
- * for the `p_volume numeric` argument of increment_collection_stats, whose
- * unit is ether. viem's formatEther is pure string arithmetic, so no rounding.
- */
-export function weiToEtherDecimal(value: bigint): string {
-  return formatEther(BigInt(toWeiString(value)))
-}

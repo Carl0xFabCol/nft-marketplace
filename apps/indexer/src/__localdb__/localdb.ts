@@ -17,3 +17,9 @@ export function testTxHash(tag: string, n: number): string {
   const hex = Buffer.from(`${tag}:${process.pid}:${n}`).toString("hex").padEnd(64, "0").slice(0, 64)
   return `0x${hex}`
 }
+
+/** A lower-case 20-byte address unique to this run and tag. */
+export function testAddress(tag: string): string {
+  const hex = Buffer.from(`${tag}:${process.pid}`).toString("hex").padEnd(40, "0").slice(0, 40)
+  return `0x${hex}`
+}

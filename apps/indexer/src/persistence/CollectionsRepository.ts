@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Address } from "viem"
 import { logger } from "../utils/logger"
-import { weiToEtherDecimal } from "../utils/wei"
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // COLLECTIONS REPOSITORY
@@ -103,28 +102,6 @@ export class CollectionsRepository {
 
     if (error) {
       logger.error({ error, contractAddress, indexerBlock }, "❌ Failed to update collection indexer block")
-      throw error
-    }
-  }
-
-  /**
-   * Increment collection stats (volume and sales count).
-   *
-   * IDX-4: the volume arrives as exact wei (bigint) and is sent as an exact
-   * ether decimal string (e.g. "1.234567890123456789"). PostgREST casts it into
-   * `p_volume numeric` without passing through a JS double. The RPC signature
-   * (text, numeric, integer) and its ether unit are unchanged.
-   */
-  async incrementStats(contractAddress: string, volumeWei: bigint, salesCount: number): Promise<void> {
-    const volume = weiToEtherDecimal(volumeWei)
-    const { error } = await this.supabase.rpc("increment_collection_stats", {
-      p_collection_address: contractAddress.toLowerCase(),
-      p_volume: volume,
-      p_sales: salesCount,
-    })
-
-    if (error) {
-      logger.error({ error, contractAddress, volume, salesCount }, "❌ Failed to increment collection stats")
       throw error
     }
   }

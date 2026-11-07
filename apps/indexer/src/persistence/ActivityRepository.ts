@@ -19,8 +19,7 @@ export class ActivityRepository {
    * Returns true when this call inserted the row and false when it already
    * existed (a replayed event). PostgREST with ignoreDuplicates is
    * INSERT ... ON CONFLICT DO NOTHING RETURNING, which returns only the rows
-   * actually inserted. SaleHandler uses this to apply additive stats at most
-   * once per on-chain log (IDX-1 / replay safety).
+   * actually inserted (verified on a local PostgREST, Phase 3B task 0).
    */
   async insert(params: {
     event: string
@@ -62,16 +61,45 @@ export class ActivityRepository {
   }
 
   /**
-   * Delete the activity row of one on-chain log. Used only as a compensating
-   * action when a write that must accompany a fresh activity row fails, so the
-   * retry sees the event as new again.
+   * Record a Sale: the SALE activity row and the collection stats, in one
+   * transaction, exactly once per on-chain log (RPC indexer_record_sale,
+   * migration 20261028091200).
+   *
+   * The price is exact wei as a decimal string. The RPC adds wei * 1e-18 to
+   * total_volume and 1 to total_sales of (chain_id, collection) only when the
+   * activity row is new. Returns true for a fresh Sale and false for a replay.
+   * Any error rolls back both writes, so a retry counts the Sale once.
    */
-  async deleteByTxLog(txHash: string, logIndex: number): Promise<void> {
-    const { error } = await this.supabase.from("activity").delete().eq("tx_hash", txHash.toLowerCase()).eq("log_index", logIndex)
+  async recordSale(params: {
+    collectionAddress: string
+    tokenId: string
+    from: string
+    to: string
+    priceWei: string
+    txHash: string
+    createdAt: Date
+    logIndex: number
+    sourceContract: string
+  }): Promise<boolean> {
+    const { data, error } = await this.supabase.rpc("indexer_record_sale", {
+      p_chain_id: env.chainId,
+      p_collection_address: params.collectionAddress.toLowerCase(),
+      p_token_id: params.tokenId,
+      p_from: params.from.toLowerCase(),
+      p_to: params.to.toLowerCase(),
+      p_price_wei: params.priceWei,
+      p_tx_hash: params.txHash.toLowerCase(),
+      p_log_index: params.logIndex,
+      p_created_at: params.createdAt.toISOString(),
+      p_source_contract: params.sourceContract,
+    })
 
     if (error) {
-      logger.error({ error, txHash, logIndex }, "❌ Failed to delete activity (compensation)")
+      logger.error({ error, params }, "❌ Failed to record sale")
       throw error
     }
+
+    return data === true
   }
+
 }

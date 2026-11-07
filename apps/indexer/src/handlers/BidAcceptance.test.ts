@@ -4,13 +4,15 @@
 // then emits TokenBidAccepted in the same tx; acceptCollectionBid calls it once
 // per tokenId (N Sales) and then emits one CollectionBidAccepted with tokenIds[].
 // These tests feed exactly that event shape through the real HandlerRegistry,
-// handlers and repositories and count increment_collection_stats calls.
+// handlers and repositories over the in-memory DB model and check the stats
+// written by the atomic indexer_record_sale RPC.
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("../config/env", () => ({ env: { chainId: 99801 } }))
 
-import { BUYER, COLLECTION, SELLER, buildHarness, makeEvent } from "../test-utils/harness"
-import { activityUniqueResponder } from "../test-utils/recordingSupabase"
+import { BUYER, COLLECTION, SELLER, makeEvent } from "../test-utils/harness"
+import { createMemoryDb } from "../test-utils/memoryDb"
+import { wireHarness } from "../test-utils/harness"
 
 const TX = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const
 const PRICE = 50_000_000_000_000_000n // 0.05 ether
@@ -24,33 +26,41 @@ function sale(tokenId: bigint, price: bigint, logIndex: number) {
   )
 }
 
-function sumVolume(rpcs: { fn: string; args: Record<string, unknown> }[]): { volumeWei: bigint; sales: number } {
-  let volumeWei = 0n
-  let sales = 0
-  for (const r of rpcs.filter((r) => r.fn === "increment_collection_stats")) {
-    const [whole, frac = ""] = String(r.args.p_volume).split(".")
-    volumeWei += BigInt(whole) * 10n ** 18n + BigInt(frac.padEnd(18, "0"))
-    sales += r.args.p_sales as number
-  }
-  return { volumeWei, sales }
+/** Memory DB with one registered collection on 99801 (and the same address on another chain). */
+function harnessWithCollection() {
+  const db = createMemoryDb()
+  db.tables.collections = [
+    { chain_id: 99801, contract_address: COLLECTION, total_volume: "0", total_sales: 0 },
+    { chain_id: 11155111, contract_address: COLLECTION, total_volume: "0", total_sales: 0 },
+  ]
+  return { db, ...wireHarness(db.sb) }
 }
+
+const stats = (db: ReturnType<typeof createMemoryDb>, chainId = 99801) => {
+  const c = db.tables.collections.find((r) => r.chain_id === chainId)!
+  return { volume: c.total_volume, sales: c.total_sales }
+}
+const saleCalls = (rpcs: { fn: string }[]) => rpcs.filter((r) => r.fn === "indexer_record_sale")
 
 describe("IDX-1: bid acceptance increments stats exactly once per sold token", () => {
   it("token bid: Sale + TokenBidAccepted in one tx -> one increment", async () => {
-    const { sb, registry } = buildHarness(activityUniqueResponder())
+    const { db, sb, registry } = harnessWithCollection()
     await registry.dispatch(sale(7n, PRICE, 3))
     await registry.dispatch(
       makeEvent("bids", "TokenBidAccepted", { collection: COLLECTION, tokenId: 7n, bidder: BUYER, seller: SELLER, price: PRICE }, { tx: TX, logIndex: 4 }),
     )
 
-    expect(sb.rpcs).toEqual([{ fn: "increment_collection_stats", args: { p_collection_address: COLLECTION, p_volume: "0.05", p_sales: 1 } }])
+    expect(saleCalls(sb.rpcs)).toHaveLength(1)
+    expect(stats(db)).toEqual({ volume: "0.05", sales: 1 })
+    // Chain-scoped: the same address on another chain is untouched.
+    expect(stats(db, 11155111)).toEqual({ volume: "0", sales: 0 })
     // The bid-lifecycle writes and both activity rows are kept.
-    expect(sb.payloads("activity", "upsert").map((a) => a.event)).toEqual(["SALE", "TOKEN_BID_ACCEPTED"])
+    expect(db.tables.activity.map((a) => a.event)).toEqual(["SALE", "TOKEN_BID_ACCEPTED"])
     expect(sb.payloads("token_bids", "update")).toEqual([expect.objectContaining({ is_active: false })])
   })
 
   it("collection bid with N=3 tokenIds: 3 Sales + 1 CollectionBidAccepted -> 3 increments, not 6", async () => {
-    const { sb, registry, bidsRepo } = buildHarness(activityUniqueResponder())
+    const { db, sb, registry, bidsRepo } = harnessWithCollection()
     vi.spyOn(bidsRepo, "getActiveCollectionBid").mockResolvedValue({ quantity: 5 })
     const tokenIds = [1n, 2n, 3n]
     let logIndex = 10
@@ -64,34 +74,29 @@ describe("IDX-1: bid acceptance increments stats exactly once per sold token", (
       ),
     )
 
-    const increments = sb.rpcs.filter((r) => r.fn === "increment_collection_stats")
-    expect(increments).toHaveLength(3)
-    expect(sumVolume(sb.rpcs)).toEqual({ volumeWei: PRICE * 3n, sales: 3 })
+    expect(saleCalls(sb.rpcs)).toHaveLength(3)
+    expect(stats(db)).toEqual({ volume: "0.15", sales: 3 })
     // Partial fill bookkeeping is unchanged: 5 - 3 = 2 remaining.
     expect(sb.payloads("collection_bids", "update")).toEqual([expect.objectContaining({ quantity: 2 })])
   })
 
   it("a replayed Sale (activity row already present) does not increment again", async () => {
-    const { sb, registry } = buildHarness(activityUniqueResponder())
+    const { db, registry } = harnessWithCollection()
     await registry.dispatch(sale(7n, PRICE, 3))
     await registry.dispatch(sale(7n, PRICE, 3))
-    expect(sb.rpcs.filter((r) => r.fn === "increment_collection_stats")).toHaveLength(1)
+    expect(stats(db)).toEqual({ volume: "0.05", sales: 1 })
+    expect(db.tables.activity).toHaveLength(1)
   })
 
-  it("a failed increment deletes the fresh activity row and rethrows, so the retry counts the Sale once", async () => {
-    const { sb, registry } = buildHarness(activityUniqueResponder())
-    let fail = true
-    sb.setRpcResponder(() => (fail ? { data: null, error: new Error("transient") } : { data: null, error: null }))
+  it("a failed sale RPC changes nothing and rethrows; the retry counts the Sale once", async () => {
+    const { db, registry } = harnessWithCollection()
+    db.failNextRpc("transient")
 
-    await expect(registry.dispatch(sale(7n, PRICE, 3))).rejects.toThrow("transient")
-    const del = sb.queries.find((q) => q.table === "activity" && q.ops.some((o) => o.method === "delete"))
-    expect(del?.ops.filter((o) => o.method === "eq").map((o) => o.args)).toEqual([
-      ["tx_hash", TX],
-      ["log_index", 3],
-    ])
+    await expect(registry.dispatch(sale(7n, PRICE, 3))).rejects.toMatchObject({ message: "transient" })
+    expect(db.tables.activity ?? []).toHaveLength(0)
+    expect(stats(db)).toEqual({ volume: "0", sales: 0 })
 
-    fail = false
     await registry.dispatch(sale(7n, PRICE, 3))
-    expect(sumVolume(sb.rpcs.slice(1))).toEqual({ volumeWei: PRICE, sales: 1 })
+    expect(stats(db)).toEqual({ volume: "0.05", sales: 1 })
   })
 })
