@@ -100,8 +100,8 @@ describe("validate:integration", () => {
     expect(erc721Abi.some((i) => i.type === "event" && i.name === "Transfer")).toBe(true)
   })
 
-  // Test #7, part 1. KNOWN FAILURE: "core:ContractAuthorized" (renamed to
-  // LaunchpadAuthorized on-chain). Fixed in Phase 3 (IDX-5 / ABI-4).
+  // Test #7, part 1. Was the known failure "core:ContractAuthorized" (renamed
+  // to LaunchpadAuthorized on-chain); green since Phase 3A (IDX-5 / ABI-4).
   it("(a) every CONTRACTS_TO_INDEX event exists in the generated events ABI", () => {
     expect(checkEventsExist(indexedContracts(), EVENTS_ABI_BY_CONTRACT)).toEqual([])
   })

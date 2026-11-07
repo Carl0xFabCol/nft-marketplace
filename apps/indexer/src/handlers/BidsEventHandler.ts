@@ -410,6 +410,37 @@ export class TokenBidCancelledHandler extends BaseBidsHandler<TokenBidCancelledA
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
+// PROCEEDS
+// ───────────────────────────────────────────────────────────────────────────────
+
+interface WithdrawalArgs {
+  account: Address
+  amount: bigint
+}
+
+/** Proceeds pulled from the Bids contract. Activity row only (no balances table). */
+export class BidsWithdrawalHandler extends BaseBidsHandler<WithdrawalArgs> {
+  readonly eventName = "Withdrawal"
+
+  async handle(event: ParsedEvent<WithdrawalArgs>): Promise<void> {
+    const { account, amount } = event.args
+
+    logger.info({ account, amount: amount.toString(), blockNumber: event.blockNumber.toString() }, "💸 Handling Bids Withdrawal")
+
+    await this.insertActivity({
+      event: "WITHDRAWAL",
+      collectionAddress: BIDS_CONTRACT_ADDRESS.toLowerCase(),
+      to: String(account).toLowerCase(),
+      price: toWeiString(amount),
+      txHash: String(event.transactionHash).toLowerCase(),
+      createdAt: new Date(event.blockTimestamp * 1000),
+      logIndex: event.logIndex,
+      sourceContract: this.contractName,
+    })
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
 // ADMIN EVENTS
 // ───────────────────────────────────────────────────────────────────────────────
 
@@ -470,6 +501,7 @@ export function createBidsEventHandlers(
     new TokenBidPlacedHandler(activityRepo, bidsRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new TokenBidAcceptedHandler(activityRepo, bidsRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new TokenBidCancelledHandler(activityRepo, bidsRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
+    new BidsWithdrawalHandler(activityRepo, bidsRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new BidsPausedHandler(activityRepo, bidsRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new BidsUnpausedHandler(activityRepo, bidsRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
   ]

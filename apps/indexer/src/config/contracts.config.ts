@@ -1,5 +1,11 @@
 import { Address } from "viem"
-import { getContractAddresses, MarketplaceBidsABI, MarketplaceCoreABI } from "@marketplace/contracts"
+import { getContractAddresses } from "@marketplace/contracts"
+// Decode with the ABIs generated from the compiled contracts, not the
+// hand-pasted ones: the hand-pasted Core ABI lacks CollectionUnverified,
+// RoyaltyOverrideCleared and others, and BatchEventFetcher silently skips logs
+// it cannot decode (Phase 3A, IDX-5). The web still uses the hand-pasted ABIs
+// until Phase 4.
+import { MarketplaceBidsEventsAbi, MarketplaceCoreEventsAbi } from "@marketplace/contracts/abis/generated/events"
 import type { ContractConfig } from "../types/indexer.types"
 import { env } from "./env"
 
@@ -8,7 +14,7 @@ import { env } from "./env"
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Resolve addresses for whichever chain this indexer process is configured for
-// (via CHAIN_ID env var — defaults to Sepolia). This lets the same code index
+// (via the required CHAIN_ID env var). This lets the same code index
 // either Sepolia or Elysium depending on how the process is launched.
 const addresses = getContractAddresses(env.chainId)
 
@@ -20,18 +26,29 @@ export const CONTRACTS_TO_INDEX: ContractConfig[] = [
   {
     name: "core",
     address: addresses.MARKETPLACE_CORE as Address,
-    abi: MarketplaceCoreABI,
+    abi: MarketplaceCoreEventsAbi,
+    // Deliberately NOT indexed (guarded by handlers/EventCoverage.test.ts):
+    // - CollectionRegistrationExecuted: emitted next to CollectionRegistered on
+    //   the router path (MarketplaceCore.sol _registerCollectionFromRouter);
+    //   handling both would double-insert the collection (IDX-12).
+    // - RoyaltySourceUsed: emitted on every royalty computation of a sale;
+    //   per-sale telemetry with no table to land in.
     events: [
       // Collection events
       "CollectionRegistered",
       "CollectionVerified",
-      "ContractAuthorized",
+      "CollectionUnverified",
+      "CollectionRoyaltyUpdated",
+      "RoyaltyOverrideCleared",
+      "LaunchpadAuthorized",
       // Listing events
       "ListingCreated",
       "ListingUpdated",
       "ListingCancelled",
       // Sale events
       "Sale",
+      // Proceeds
+      "Withdrawal",
       // Admin events
       "MarketplaceFeeUpdated",
       "FeeReceiverUpdated",
@@ -43,7 +60,7 @@ export const CONTRACTS_TO_INDEX: ContractConfig[] = [
   {
     name: "bids",
     address: addresses.MARKETPLACE_BIDS as Address,
-    abi: MarketplaceBidsABI,
+    abi: MarketplaceBidsEventsAbi,
     events: [
       // Collection bid events
       "CollectionBidPlaced",
@@ -53,6 +70,8 @@ export const CONTRACTS_TO_INDEX: ContractConfig[] = [
       "TokenBidPlaced",
       "TokenBidAccepted",
       "TokenBidCancelled",
+      // Proceeds
+      "Withdrawal",
       // Admin events
       "Paused",
       "Unpaused",

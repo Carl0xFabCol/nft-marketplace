@@ -56,19 +56,41 @@ export class CollectionsRepository {
   }
 
   /**
-   * Update collection verification status.
+   * Update collection verification status (CollectionVerified / CollectionUnverified).
+   * Chain-scoped: collections are unique on (chain_id, contract_address) since M-2.
    */
-  async updateVerificationStatus(contractAddress: string, isVerified: boolean, updatedAt: Date): Promise<void> {
+  async updateVerificationStatus(contractAddress: string, chainId: number, isVerified: boolean, updatedAt: Date): Promise<void> {
     const { error } = await this.supabase
       .from("collections")
       .update({
         is_verified: isVerified,
         updated_at: updatedAt,
       })
+      .eq("chain_id", chainId)
       .eq("contract_address", contractAddress.toLowerCase())
 
     if (error) {
-      logger.error({ error, contractAddress }, "❌ Failed to update collection verification")
+      logger.error({ error, contractAddress, chainId }, "❌ Failed to update collection verification")
+      throw error
+    }
+  }
+
+  /**
+   * Set the Core-registered royalty fee (CollectionRoyaltyUpdated), in basis points.
+   * The receiver and the "override active" flag have no column yet (Phase 3B).
+   */
+  async updateRoyaltyFee(contractAddress: string, chainId: number, royaltyFee: number, updatedAt: Date): Promise<void> {
+    const { error } = await this.supabase
+      .from("collections")
+      .update({
+        royalty_fee: royaltyFee,
+        updated_at: updatedAt,
+      })
+      .eq("chain_id", chainId)
+      .eq("contract_address", contractAddress.toLowerCase())
+
+    if (error) {
+      logger.error({ error, contractAddress, chainId, royaltyFee }, "❌ Failed to update collection royalty fee")
       throw error
     }
   }

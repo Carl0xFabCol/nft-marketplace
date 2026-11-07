@@ -27,7 +27,7 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 
 | Test / check | Failure today | Fixed in |
 | --- | --- | --- |
-| #7 / validate (a) events exist in generated ABI | `core:ContractAuthorized` is configured, but the event is now `LaunchpadAuthorized` | Phase 3 (IDX-5 / ABI-4) |
+| ~~#7 / validate (a) events exist in generated ABI~~ | **Green since Phase 3A task 5.** It failed because `core:ContractAuthorized` was configured while the event is now `LaunchpadAuthorized`. (b) is still green after the coordinated config and handler change. | Phase 3A |
 | #8 call-shape: `acceptTokenBid` | web passes 3 args, contract takes 5 (`minPrice`, `minSellerProceeds`) | Phase 4 (ABI-1) |
 | #8 call-shape: `acceptCollectionBid` | web passes 3 args, contract takes 5 (`minPricePerItem`, `minSellerProceeds`) | Phase 4 (ABI-1) |
 | validate (c) CHAIN_ID required | `apps/indexer/src/config/env.ts:71` silently defaults to 11155111 | Phase 3 (ADDR-3) |
@@ -258,6 +258,28 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
     - collection cursors clamped (behind, ahead, not-yet-started);
     - the DB-side guard.
   - **Not done (3B):** `last_block_hash` and reorg rollback.
+- [x] 5. IDX-5/ABI-4: new listeners.
+  - **The indexer now decodes with the generated events ABIs** (`@marketplace/contracts/abis/generated/events`), not the hand-pasted ones.
+    - The hand-pasted Core ABI lacks `CollectionUnverified` and `RoyaltyOverrideCleared`, and `BatchEventFetcher` silently skips undecodable logs, so new handlers alone would never fire.
+    - All previously configured event signatures are identical in both ABIs; this was checked before switching.
+    - The web keeps its hand-pasted ABIs until Phase 4.
+  - Config: `ContractAuthorized` → `LaunchpadAuthorized`. Added `CollectionUnverified`, `CollectionRoyaltyUpdated`, `RoyaltyOverrideCleared` and `Withdrawal` (core) and `Withdrawal` (bids). `ContractAuthorizedHandler` is deleted.
+  - Handlers:
+    - `CollectionUnverified`: `is_verified=false` plus activity.
+    - `CollectionRoyaltyUpdated`: `collections.royalty_fee` (bps) plus activity (`to`=receiver).
+    - `RoyaltyOverrideCleared`: **activity only**. On-chain only the override flag flips; `royaltyFee` storage is unchanged.
+    - `LaunchpadAuthorized`: activity `LAUNCHPAD_AUTHORIZED`/`LAUNCHPAD_DEAUTHORIZED`, so the boolean no longer lives in `price`.
+    - `Withdrawal` (Core and Bids): activity `WITHDRAWAL`, with `to`=account and `price`=exact wei.
+  - `CollectionsRepository.updateVerificationStatus` and the new `updateRoyaltyFee` are chain-scoped (`chain_id` + `contract_address`). Before, verification updated by address only.
+  - `CollectionRegistrationExecuted` and `RoyaltySourceUsed` stay unindexed. They are documented in the config and guarded by `handlers/EventCoverage.test.ts`.
+  - Tests:
+    - #16 (verify → unverify, chain-scoped);
+    - each new handler's payload;
+    - a decode test (encoded logs → real `BatchEventFetcher` with the real config → handlers exist);
+    - the IDX-12 guard;
+    - config ↔ generated ABI.
+  - `validate:integration` (a) and (b), i.e. test #7, are **green**.
+  - New columns these handlers would need are **not invented**; they are handed to 3B: `collections.royalty_overridden`, `collections.royalty_receiver`.
 
 ## Phase 4: Frontend
 

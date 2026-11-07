@@ -163,10 +163,88 @@ export class CollectionVerifiedHandler extends BaseCoreHandler<CollectionVerifie
 
     logger.info({ collection, blockNumber: event.blockNumber.toString() }, "✅ Handling CollectionVerified")
 
-    await this.collectionsRepo.updateVerificationStatus(String(collection).toLowerCase(), true, new Date(event.blockTimestamp * 1000))
+    await this.collectionsRepo.updateVerificationStatus(String(collection).toLowerCase(), env.chainId, true, new Date(event.blockTimestamp * 1000))
 
     await this.insertActivity({
       event: "COLLECTION_VERIFIED",
+      collectionAddress: String(collection),
+      txHash: String(event.transactionHash),
+      createdAt: new Date(event.blockTimestamp * 1000),
+      logIndex: event.logIndex,
+      sourceContract: this.contractName,
+    })
+  }
+}
+
+export class CollectionUnverifiedHandler extends BaseCoreHandler<CollectionVerifiedArgs> {
+  readonly eventName = "CollectionUnverified"
+
+  async handle(event: ParsedEvent<CollectionVerifiedArgs>): Promise<void> {
+    const { collection } = event.args
+
+    logger.info({ collection, blockNumber: event.blockNumber.toString() }, "🚫 Handling CollectionUnverified")
+
+    // IDX-5: without this, verification was a one-way latch in the DB.
+    await this.collectionsRepo.updateVerificationStatus(String(collection).toLowerCase(), env.chainId, false, new Date(event.blockTimestamp * 1000))
+
+    await this.insertActivity({
+      event: "COLLECTION_UNVERIFIED",
+      collectionAddress: String(collection),
+      txHash: String(event.transactionHash),
+      createdAt: new Date(event.blockTimestamp * 1000),
+      logIndex: event.logIndex,
+      sourceContract: this.contractName,
+    })
+  }
+}
+
+interface CollectionRoyaltyUpdatedArgs {
+  collection: Address
+  royaltyReceiver: Address
+  royaltyFee: number | bigint
+}
+
+export class CollectionRoyaltyUpdatedHandler extends BaseCoreHandler<CollectionRoyaltyUpdatedArgs> {
+  readonly eventName = "CollectionRoyaltyUpdated"
+
+  async handle(event: ParsedEvent<CollectionRoyaltyUpdatedArgs>): Promise<void> {
+    const { collection, royaltyReceiver, royaltyFee } = event.args
+
+    logger.info(
+      { collection, royaltyReceiver, royaltyFee: Number(royaltyFee), blockNumber: event.blockNumber.toString() },
+      "👑 Handling CollectionRoyaltyUpdated",
+    )
+
+    // royaltyFee is uint16 basis points (<= MAX_ROYALTY_FEE), safe as a number.
+    // On-chain this also sets royaltyOverridden[collection] = true and the
+    // receiver; the DB has no columns for either yet (Phase 3B).
+    await this.collectionsRepo.updateRoyaltyFee(String(collection).toLowerCase(), env.chainId, Number(royaltyFee), new Date(event.blockTimestamp * 1000))
+
+    await this.insertActivity({
+      event: "COLLECTION_ROYALTY_UPDATED",
+      collectionAddress: String(collection),
+      to: String(royaltyReceiver),
+      txHash: String(event.transactionHash),
+      createdAt: new Date(event.blockTimestamp * 1000),
+      logIndex: event.logIndex,
+      sourceContract: this.contractName,
+    })
+  }
+}
+
+export class RoyaltyOverrideClearedHandler extends BaseCoreHandler<CollectionVerifiedArgs> {
+  readonly eventName = "RoyaltyOverrideCleared"
+
+  async handle(event: ParsedEvent<CollectionVerifiedArgs>): Promise<void> {
+    const { collection } = event.args
+
+    logger.info({ collection, blockNumber: event.blockNumber.toString() }, "👑 Handling RoyaltyOverrideCleared")
+
+    // Activity row only. On-chain only royaltyOverridden flips to false (ERC-2981
+    // wins again); the stored royaltyFee is untouched, so collections.royalty_fee
+    // stays as is. Modelling the override flag needs a new column (Phase 3B).
+    await this.insertActivity({
+      event: "ROYALTY_OVERRIDE_CLEARED",
       collectionAddress: String(collection),
       txHash: String(event.transactionHash),
       createdAt: new Date(event.blockTimestamp * 1000),
@@ -479,31 +557,56 @@ export class OwnershipTransferredHandler extends BaseCoreHandler<OwnershipTransf
   }
 }
 
-interface ContractAuthorizedArgs {
-  contractAddr: Address
+interface LaunchpadAuthorizedArgs {
+  launchpad: Address
   authorized: boolean
 }
 
-export class ContractAuthorizedHandler extends BaseCoreHandler<ContractAuthorizedArgs> {
-  readonly eventName = "ContractAuthorized"
+/**
+ * Replaces the stale ContractAuthorizedHandler: the contract event is
+ * LaunchpadAuthorized(address indexed launchpad, bool authorized). The boolean
+ * is encoded in the event name instead of being stored in activity.price.
+ */
+export class LaunchpadAuthorizedHandler extends BaseCoreHandler<LaunchpadAuthorizedArgs> {
+  readonly eventName = "LaunchpadAuthorized"
 
-  async handle(event: ParsedEvent<ContractAuthorizedArgs>): Promise<void> {
-    const { contractAddr, authorized } = event.args
+  async handle(event: ParsedEvent<LaunchpadAuthorizedArgs>): Promise<void> {
+    const { launchpad, authorized } = event.args
 
-    logger.info(
-      {
-        contractAddr,
-        authorized,
-        blockNumber: event.blockNumber.toString(),
-      },
-      "🔐 Handling ContractAuthorized",
-    )
+    logger.info({ launchpad, authorized, blockNumber: event.blockNumber.toString() }, "🔐 Handling LaunchpadAuthorized")
 
     await this.insertActivity({
-      event: "CONTRACT_AUTHORIZED",
+      event: authorized ? "LAUNCHPAD_AUTHORIZED" : "LAUNCHPAD_DEAUTHORIZED",
+      // Admin event: keyed on the Core address like the other admin events (IDX-10 open).
       collectionAddress: CORE_CONTRACT_ADDRESS.toLowerCase(),
-      to: String(contractAddr).toLowerCase(),
-      price: authorized ? "true" : "false",
+      to: String(launchpad).toLowerCase(),
+      txHash: String(event.transactionHash).toLowerCase(),
+      createdAt: new Date(event.blockTimestamp * 1000),
+      logIndex: event.logIndex,
+      sourceContract: this.contractName,
+    })
+  }
+}
+
+interface WithdrawalArgs {
+  account: Address
+  amount: bigint
+}
+
+/** Seller/fee/royalty proceeds pulled from Core. Activity row only (no balances table). */
+export class CoreWithdrawalHandler extends BaseCoreHandler<WithdrawalArgs> {
+  readonly eventName = "Withdrawal"
+
+  async handle(event: ParsedEvent<WithdrawalArgs>): Promise<void> {
+    const { account, amount } = event.args
+
+    logger.info({ account, amount: amount.toString(), blockNumber: event.blockNumber.toString() }, "💸 Handling Core Withdrawal")
+
+    await this.insertActivity({
+      event: "WITHDRAWAL",
+      collectionAddress: CORE_CONTRACT_ADDRESS.toLowerCase(),
+      to: String(account).toLowerCase(),
+      price: toWeiString(amount),
       txHash: String(event.transactionHash).toLowerCase(),
       createdAt: new Date(event.blockTimestamp * 1000),
       logIndex: event.logIndex,
@@ -564,6 +667,9 @@ export function createCoreEventHandlers(
   return [
     new CollectionRegisteredHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new CollectionVerifiedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
+    new CollectionUnverifiedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
+    new CollectionRoyaltyUpdatedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
+    new RoyaltyOverrideClearedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new ListingCreatedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new ListingUpdatedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new ListingCancelledHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
@@ -571,7 +677,8 @@ export function createCoreEventHandlers(
     new MarketplaceFeeUpdatedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new FeeReceiverUpdatedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new OwnershipTransferredHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
-    new ContractAuthorizedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
+    new LaunchpadAuthorizedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
+    new CoreWithdrawalHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new PausedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
     new UnpausedHandler(activityRepo, collectionsRepo, listingsRepo, nftRepo, metadataFetcher),
   ]
