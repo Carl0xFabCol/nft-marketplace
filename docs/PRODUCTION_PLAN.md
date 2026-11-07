@@ -150,6 +150,10 @@ Branch `chore/production-readiness-phase1`. It is **not merged to main** and mus
 - `getContractAddresses` must return `undefined` on unknown chains, and the UI must show "switch network".
 - Regenerate Supabase types in a single place.
 - Map the 27 custom errors to show readable messages to the user.
+- **Optimistic listings vs `listings_nft_fk`** (decision 2026-11-07: keep the FK).
+  - `sec01_save_listing_batch` fails with **23503** when the indexer has not yet written the `nfts` row, for example a freshly minted or just-transferred token.
+  - Today `createBatch` turns this into a generic "Failed to save listings".
+  - The UI must recognize 23503 and say clearly that the listing is on-chain but not yet indexed. It should offer a retry, or poll until the `nfts` row exists, and must not report the listing as failed.
 - Run test 8 (call arity) until it passes.
 
 ## Phase 5: Rehearsal on Anvil
