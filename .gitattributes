@@ -1,2 +1,5 @@
 # Generated files must be byte-identical across OSes so `--check` modes are stable.
 *.generated.ts text eol=lf
+
+# Expected psql outputs compared byte-for-byte by the Phase 2 runbook.
+packages/database/scripts/rehearsal/*.txt text eol=lf
