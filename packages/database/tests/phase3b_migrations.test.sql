@@ -251,6 +251,88 @@ select is(public.indexer_apply_token_bid_event('closed', 99801, '0x0000000000000
 select is(public.indexer_apply_token_bid_event('closed', 99801, '0x00000000000000000000000000000000000000c1', '5', '0x00000000000000000000000000000000000000d2',
   21, 0, '0x' || repeat('f8', 32), now()), 1, '091400 a later close deactivates it');
 
+-- ─── 091500: indexer cursor tables ──────────────────────────────────────────
+
+select col_not_null('public', 'contract_indexer_state', 'chain_id', '091500 contract_indexer_state.chain_id is NOT NULL');
+select col_is_pk('public', 'contract_indexer_state', array['chain_id', 'contract_address'], '091500 contract_indexer_state PK is (chain_id, contract_address)');
+select hasnt_index('public', 'contract_indexer_state', 'contract_indexer_state_contract_chain_unique', '091500 the redundant composite unique is gone');
+select col_type_is('public', 'indexer_state', 'chain_id', 'integer', '091500 indexer_state.chain_id is integer');
+select col_type_is('public', 'indexer_state', 'last_block_hash', 'text', '091500 indexer_state.last_block_hash is text');
+select is(
+  (select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.indexer_state'::regclass and conname = 'indexer_state_chain_id_key'),
+  'UNIQUE (chain_id)', '091500 indexer_state UNIQUE (chain_id) survives the type change'
+);
+
+select lives_ok(
+  $$insert into public.contract_indexer_state (contract_address, chain_id, last_block) values
+      ('0x00000000000000000000000000000000000000c1', 99801, 10),
+      ('0x00000000000000000000000000000000000000c1', 11155111, 20)$$,
+  '091500 the same contract address is tracked on two chains'
+);
+select throws_ok(
+  $$insert into public.contract_indexer_state (contract_address, chain_id, last_block) values ('0x00000000000000000000000000000000000000c1', 99801, 30)$$,
+  '23505', null, '091500 negative: a duplicate (chain_id, contract_address) is rejected'
+);
+select throws_ok(
+  $$insert into public.contract_indexer_state (contract_address, last_block) values ('0x00000000000000000000000000000000000000c2', 1)$$,
+  '23502', null, '091500 negative: a NULL chain_id is rejected'
+);
+select throws_ok(
+  $$insert into public.contract_indexer_state (contract_address, chain_id, last_block) values ('0x00000000000000000000000000000000000000c2', 0, 1)$$,
+  '23514', null, '091500 negative: chain_id 0 is rejected'
+);
+select lives_ok(
+  $$insert into public.contract_indexer_state (contract_address, chain_id, last_block) values ('0x00000000000000000000000000000000000000c1', 99801, 40)
+    on conflict (contract_address, chain_id) do update set last_block = excluded.last_block$$,
+  '091500 the indexer upsert target (contract_address, chain_id) still infers the PK'
+);
+select throws_ok(
+  $$insert into public.indexer_state (chain_id, last_block) values ('1.5', 1)$$,
+  '22P02', null, '091500 negative: a fractional chain_id is rejected'
+);
+select throws_ok(
+  $$insert into public.indexer_state (chain_id, last_block, last_block_hash) values (424242, 1, '0xABC')$$,
+  '23514', null, '091500 negative: a non-canonical last_block_hash is rejected'
+);
+select lives_ok(
+  $$insert into public.indexer_state (chain_id, last_block, last_block_hash) values (424242, 1, '0x' || repeat('ab', 32))$$,
+  '091500 a canonical last_block_hash is accepted'
+);
+
+-- ─── 091600: nfts_market_view chain joins ───────────────────────────────────
+
+select ok(
+  (select 'security_invoker=true' = any (reloptions) or 'security_invoker=on' = any (reloptions)
+   from pg_class where oid = 'public.nfts_market_view'::regclass),
+  '091600 nfts_market_view keeps security_invoker'
+);
+select ok(
+  has_table_privilege('anon', 'public.nfts_market_view', 'SELECT')
+  and not has_table_privilege('anon', 'public.nfts_market_view', 'INSERT, UPDATE, DELETE'),
+  '091600 anon keeps read-only access to nfts_market_view'
+);
+
+-- The 11155111 copy of C1/1 has no listing, no token bid and one collection
+-- bid (price 7, placed in the 091400 section); the 99801 copy gets a token bid
+-- (777), a collection bid (555) and an active listing. Nothing may leak across.
+select public.indexer_apply_token_bid_event('placed', 99801, '0x00000000000000000000000000000000000000c1', '1',
+  '0x00000000000000000000000000000000000000d3', 30, 0, '0x' || repeat('a3', 32), now(), '777');
+select public.indexer_apply_collection_bid_event('placed', 99801, '0x00000000000000000000000000000000000000c1',
+  '0x00000000000000000000000000000000000000d3', 30, 1, '0x' || repeat('a3', 32), now(), '555', 1);
+update public.listings set is_active = true, expires_at = null
+ where chain_id = 99801 and collection_address = '0x00000000000000000000000000000000000000c1' and token_id = '1';
+
+select is(
+  (select coalesce(listing_price::text, '-') || '/' || coalesce(best_token_bid::text, '-') || '/' || coalesce(best_collection_bid::text, '-')
+   from public.nfts_market_view where chain_id = 99801 and collection_address = '0x00000000000000000000000000000000000000c1' and token_id = '1'),
+  '1234567890123456789/777/555', '091600 the 99801 NFT shows its own listing and bids'
+);
+select is(
+  (select coalesce(listing_price::text, '-') || '/' || coalesce(best_token_bid::text, '-') || '/' || coalesce(best_collection_bid::text, '-')
+   from public.nfts_market_view where chain_id = 11155111 and collection_address = '0x00000000000000000000000000000000000000c1' and token_id = '1'),
+  '-/-/7', '091600 negative: the 11155111 NFT shows only its own chain''s collection bid (7), not 99801''s listing or bids'
+);
+
 -- ─── Privileges: every new or changed function ──────────────────────────────
 
 select ok(

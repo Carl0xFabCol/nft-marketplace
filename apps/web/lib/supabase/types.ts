@@ -169,42 +169,50 @@ export type Database = {
         }
         Relationships: []
       }
+      // Phase 3B (20261028091500): PK (chain_id, contract_address); chain_id NOT NULL.
       contract_indexer_state: {
         Row: {
+          chain_id: number
           contract_address: string
-          contract_name: string
+          contract_name: string | null
           last_block: number
-          last_updated: string | null
+          updated_at: string | null
         }
         Insert: {
+          chain_id: number
           contract_address: string
-          contract_name: string
+          contract_name?: string | null
           last_block?: number
-          last_updated?: string | null
+          updated_at?: string | null
         }
         Update: {
+          chain_id?: number
           contract_address?: string
-          contract_name?: string
+          contract_name?: string | null
           last_block?: number
-          last_updated?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
+      // Phase 3B (20261028091500): chain_id integer (was numeric), last_block_hash.
       indexer_state: {
         Row: {
           chain_id: number
           id: number
           last_block: number | null
+          last_block_hash: string | null
         }
         Insert: {
           chain_id: number
           id?: number
           last_block?: number | null
+          last_block_hash?: string | null
         }
         Update: {
           chain_id?: number
           id?: number
           last_block?: number | null
+          last_block_hash?: string | null
         }
         Relationships: []
       }
