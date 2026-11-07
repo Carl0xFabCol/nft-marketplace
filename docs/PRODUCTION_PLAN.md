@@ -30,8 +30,8 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 | ~~#7 / validate (a) events exist in generated ABI~~ | **Green since Phase 3A task 5.** It failed because `core:ContractAuthorized` was configured while the event is now `LaunchpadAuthorized`. (b) is still green after the coordinated config and handler change. | Phase 3A |
 | #8 call-shape: `acceptTokenBid` | web passes 3 args, contract takes 5 (`minPrice`, `minSellerProceeds`) | Phase 4 (ABI-1) |
 | #8 call-shape: `acceptCollectionBid` | web passes 3 args, contract takes 5 (`minPricePerItem`, `minSellerProceeds`) | Phase 4 (ABI-1) |
-| validate (c) CHAIN_ID required | `apps/indexer/src/config/env.ts:71` silently defaults to 11155111 | Phase 3 (ADDR-3) |
-| validate (f) default chain id consistent | indexer 11155111 vs shared/contracts 99801 | Phase 3 (ADDR-3) |
+| ~~validate (c) CHAIN_ID required~~ | **Green since Phase 3A task 7.** It failed because `apps/indexer/src/config/env.ts:71` silently defaulted to 11155111. | Phase 3A |
+| ~~validate (f) default chain id consistent~~ | **Green since Phase 3A task 7.** It failed on indexer 11155111 vs shared/contracts 99801. | Phase 3A |
 | ~~`@marketplace/database` typecheck~~ | **Green since Phase 3A task 1.** It had a supabase-js generic type error in `src/client.ts` (2 errors); the generic was dropped (type-only). It now runs in the main `typescript` job. | Phase 3A |
 | web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, after the fixes: **22/22** | n/a (passes locally) |
 | pgTAP `sec01_rls_privileges.test.sql` (103) | Not in CI. Locally, after 090600 and the fixtures: **103/103**. After 090000–091100 (Phase 2 fixture): 103/103. | n/a (passes locally) |
@@ -290,6 +290,19 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
     - the fallback makes 1 call per distinct block;
     - an RPC error throws;
     - a 0 timestamp throws.
+- [x] 7. ADDR-3: `CHAIN_ID` is required.
+  - `env.ts` now throws when `CHAIN_ID` is missing, empty, non-integer or not in `SUPPORTED_CHAIN_IDS`; the 11155111 default is deleted.
+  - Fallbacks removed:
+    - `chains.ts`: `getViemChain` throws on an unknown id (the `?? sepolia` is deleted);
+    - **a third fallback the audit missed:** `ViemRpcProvider.ts:26` had `config.chainId ?? 11155111`. `chainId` is now a required constructor field, and every caller already passed it.
+  - `.env.example` now shows `CHAIN_ID=99801` with a "required" note; the README env table lists it.
+  - Startup `getChainId()` check in `index.ts`: kept.
+  - DEFAULT_CHAIN_ID: shared and contracts both stay 99801, and the indexer no longer has a default. `@marketplace/contracts` does not depend on `@marketplace/shared`, so no cross-package unit test was added; validate (f) is the guard.
+  - Tests (`config/env.test.ts`, with `dotenv/config` mocked):
+    - `CHAIN_ID` missing, empty, non-numeric, unsupported or fractional → throws; 99801 and 11155111 → accepted;
+    - `CONFIRMATIONS` default 12, 0 accepted, -1/1.5/abc rejected;
+    - `getViemChain(1)` throws.
+  - **validate (c) and (f) are green.**
 
 ## Phase 4: Frontend
 

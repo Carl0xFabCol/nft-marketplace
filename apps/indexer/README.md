@@ -208,6 +208,7 @@ pnpm run build
 
 | Variable                | Required | Default | Description                             |
 | ----------------------- | -------- | ------- | --------------------------------------- |
+| `CHAIN_ID`              | ✅       | -       | Chain to index (99801 Elysium, 11155111 Sepolia); no default |
 | `FAST_RPC_URL`          | ✅       | -       | Primary RPC endpoint                    |
 | `ARCHIVE_RPC_URL`       | ❌       | -       | Archive node for historical data        |
 | `FALLBACK_RPC_URL`      | ❌       | -       | Backup RPC endpoint                     |

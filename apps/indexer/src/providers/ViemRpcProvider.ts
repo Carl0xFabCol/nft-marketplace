@@ -17,13 +17,14 @@ export class ViemRpcProvider implements IRpcProvider {
   public readonly type: RpcProviderType
   private client: PublicClient
 
-  constructor(config: { name: string; url: string; type: RpcProviderType; headers?: Record<string, string>; chainId?: number; chain?: Chain }) {
+  constructor(config: { name: string; url: string; type: RpcProviderType; headers?: Record<string, string>; chainId: number; chain?: Chain }) {
     this.name = config.name
     this.type = config.type
 
     // Create viem client with optional custom headers (e.g., for authentication)
     this.client = createPublicClient({
-      chain: config.chain ?? getViemChain(config.chainId ?? 11155111),
+      // ADDR-3: chainId is required; getViemChain throws on an unknown id.
+      chain: config.chain ?? getViemChain(config.chainId),
       transport: http(config.url, {
         timeout: 30_000, // 30s timeout
         ...(config.headers && {

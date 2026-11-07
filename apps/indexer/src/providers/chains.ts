@@ -36,6 +36,11 @@ export const VIEM_CHAINS_BY_ID: Record<number, Chain> = {
   [CHAIN_IDS.ELYSIUM]: elysium,
 }
 
+/** ADDR-3: no silent Sepolia fallback for an unknown chain id. */
 export function getViemChain(chainId: number): Chain {
-  return VIEM_CHAINS_BY_ID[chainId] ?? sepolia
+  const chain = VIEM_CHAINS_BY_ID[chainId]
+  if (!chain) {
+    throw new Error(`Unsupported chain id ${chainId}: no viem chain configured (supported: ${Object.keys(VIEM_CHAINS_BY_ID).join(", ")})`)
+  }
+  return chain
 }

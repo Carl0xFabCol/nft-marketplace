@@ -2,8 +2,9 @@
 // validate:integration: checks (a), (b), (c), (d), (f) of INTEGRATION_AUDIT §8
 // step 6, including test #7 (config coverage, §10).
 //
-// KNOWN-FAILING by design (Phase 0). These checks encode defects the audit
-// found; they are NOT fixed here and must not be weakened. They run in the
+// Introduced as KNOWN-FAILING by design (Phase 0); (a), (c) and (f) turned
+// green in Phase 3A. These checks encode defects the audit found and must not
+// be weakened. They run in the
 // continue-on-error CI job `integration-contract-tests` and are excluded from
 // the default `vitest run`. See "Known-failing tests" in docs/PRODUCTION_PLAN.md.
 //
@@ -111,14 +112,15 @@ describe("validate:integration", () => {
     expect(checkHandlerBijection(indexedContracts(), registeredHandlers())).toEqual([])
   })
 
-  // KNOWN FAILURE: env.ts defaults CHAIN_ID to 11155111. Fixed in Phase 3 (ADDR-3).
+  // Was a known failure (env.ts defaulted CHAIN_ID to 11155111); green since Phase 3A (ADDR-3).
   it("(c) CHAIN_ID is required and supported", async () => {
     const chainId = configuredChainId()
     const whenUnset = await loadEnvWithoutChainId()
     expect(checkChainId(whenUnset, chainId, SUPPORTED_CHAIN_IDS)).toEqual([])
   })
 
-  // KNOWN FAILURE: indexer default 11155111 vs 99801 elsewhere. Fixed in Phase 3 (ADDR-3).
+  // Was a known failure (indexer default 11155111 vs 99801 elsewhere); green since
+  // Phase 3A (ADDR-3): the indexer has no default, shared and contracts agree on 99801.
   it("(f) DEFAULT_CHAIN_ID is consistent across shared, contracts and indexer", async () => {
     const whenUnset = await loadEnvWithoutChainId()
     expect(

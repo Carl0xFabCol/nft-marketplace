@@ -1,4 +1,5 @@
 import "dotenv/config"
+import { SUPPORTED_CHAIN_IDS } from "@marketplace/shared"
 import { logger } from "../utils/logger"
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -59,6 +60,17 @@ function loadEnv(): EnvConfig {
     return process.env[key] || defaultValue
   }
 
+  // ADDR-3: no default chain. A missing CHAIN_ID used to fall back to Sepolia
+  // (11155111) and index the wrong addresses into a 99801 database.
+  const requiredChainId = (key: string): number => {
+    const raw = required(key)
+    const value = Number(raw)
+    if (!Number.isSafeInteger(value) || !(SUPPORTED_CHAIN_IDS as readonly number[]).includes(value)) {
+      throw new Error(`❌ ${key} must be one of ${SUPPORTED_CHAIN_IDS.join(", ")}, got "${raw}"`)
+    }
+    return value
+  }
+
   const optionalNonNegativeInt = (key: string, defaultValue: number): number => {
     const raw = process.env[key]
     if (raw === undefined || raw === "") return defaultValue
@@ -76,11 +88,10 @@ function loadEnv(): EnvConfig {
 
   return {
     // Chain
-    // Which network this indexer instance/process is indexing. Defaults to Sepolia
-    // (11155111) for backward compatibility with existing deployments that don't
-    // set CHAIN_ID. To index Elysium, set CHAIN_ID=99801 (run a separate instance
-    // per network — this indexer is single-chain-per-process).
-    chainId: optionalNumber("CHAIN_ID", 11155111),
+    // Which network this indexer process indexes. REQUIRED, no default: e.g.
+    // CHAIN_ID=99801 (Elysium) or 11155111 (Sepolia). One process per network.
+    // index.ts additionally refuses any RPC whose eth_chainId differs.
+    chainId: requiredChainId("CHAIN_ID"),
 
     // RPC Providers
     fastRpcUrl: required("FAST_RPC_URL"),
