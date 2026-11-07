@@ -242,6 +242,22 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
     - a collection bid with 3 tokenIds (3 Sales + 1 CollectionBidAccepted) → 3 increments totalling `3 × price`, not 6;
     - a replayed Sale → no second increment;
     - a failed increment → compensating delete + rethrow, and the retry counts it once.
+- [x] 4. IDX-2/IDX-3 (code part): a failed event no longer lets the cursor advance past it. Changes are in `IndexerOrchestrator`:
+  - **Confirmation lag:** it only indexes up to `safeHead = head - CONFIRMATIONS`. New env `CONFIRMATIONS`: a non-negative integer, default 12, documented in the README and `.env.example`.
+  - **Stop at first failure:** events are dispatched in order. The first handler error at block B stops the run, and no later event runs. Every cursor is saved at most at B-1, and the next run re-fetches from B (retry). With no failure, cursors go to `safeHead`.
+  - **Monotonic cursors:**
+    - the global and per-collection cursors are written only when they increase;
+    - `IndexerStateRepository.updateLastBlock` also filters `last_block IS NULL OR last_block < n`, so a stale writer cannot rewind it.
+  - **Replay window on retry:** the events of block B that ran before the failing one. Activity and stats are idempotent (task 3); bid inserts are not (IDX-7, 3B).
+  - The failure log carries block/tx/logIndex and a consecutive-failed-runs counter (Phase 7 alerting can key on it).
+  - Tests (`services/IndexerOrchestrator.test.ts`):
+    - #9: failure → cursor at B-1, later events not run; a failure in the first block → no write;
+    - retry on the next run;
+    - #10: lower head → no rewind; up/down heads → monotonic;
+    - lag 200−12 → 188;
+    - collection cursors clamped (behind, ahead, not-yet-started);
+    - the DB-side guard.
+  - **Not done (3B):** `last_block_hash` and reorg rollback.
 
 ## Phase 4: Frontend
 

@@ -1,13 +1,12 @@
-import { erc721Abi, type Address } from "viem"
+import { erc721Abi } from "viem"
 import type { ProviderPool } from "../providers/ProviderPool"
 import type { BatchEventFetcher } from "../fetchers/BatchEventFetcher"
 import type { HandlerRegistry } from "../handlers/HandlerRegistry"
 import type { IndexerStateRepository } from "../persistence/IndexerStateRepository"
 import type { ContractIndexerStateRepository } from "../persistence/ContractIndexerStateRepository"
 import type { CollectionsRepository } from "../persistence/CollectionsRepository"
-import type { ContractConfig, ContractFetchRequest } from "../types/indexer.types"
+import type { ContractConfig, ContractFetchRequest, ParsedEvent } from "../types/indexer.types"
 import { logger } from "../utils/logger"
-import { CHAIN_IDS } from "@marketplace/shared"
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // INDEXER ORCHESTRATOR - THE HEART OF THE INDEXER
@@ -17,6 +16,23 @@ export interface IndexerOrchestratorConfig {
   pollingIntervalMs: number
   batchSize: number
   chainId: number
+  /** Blocks behind the head that are not indexed yet (env CONFIRMATIONS). */
+  confirmations: number
+}
+
+interface CollectionCursor {
+  address: string
+  /** Last block fully processed for this collection's Transfer events. */
+  last: bigint
+}
+
+interface IterationPlan {
+  /** Last block fully processed for the static contracts (core, bids). */
+  globalLast: bigint
+  collectionCursors: CollectionCursor[]
+  fetchRequests: ContractFetchRequest[]
+  /** head - confirmations: the highest block this run may index. */
+  safeHead: bigint
 }
 
 /**
@@ -28,6 +44,7 @@ export class IndexerOrchestrator {
   private running = false
   private shouldStop = false
   private currentRun = 0
+  private consecutiveFailedRuns = 0
 
   constructor(
     private providerPool: ProviderPool,
@@ -58,6 +75,7 @@ export class IndexerOrchestrator {
         pollingIntervalMs: this.config.pollingIntervalMs,
         batchSize: this.config.batchSize,
         chainId: this.config.chainId,
+        confirmations: this.config.confirmations,
       },
       "🚀 Starting IndexerOrchestrator...",
     )
@@ -104,175 +122,58 @@ export class IndexerOrchestrator {
   }
 
   /**
-   * Execute a single indexing iteration:
-   * 1. Get last indexed block from global state
-   * 2. Discover active collection contracts from collections table
-   * 3. Determine per-contract fromBlock (global for core/bids, per-contract for collections)
-   * 4. Get current chain block
-   * 5. Fetch events in batches (per-contract fromBlock)
-   * 6. Dispatch to handlers
-   * 7. Update global + per-contract state
+   * Execute a single indexing iteration.
+   *
+   * Cursor semantics (IDX-2 / IDX-3):
+   * - Only blocks at or below `safeHead = head - confirmations` are indexed.
+   * - Events are dispatched in on-chain order. Processing STOPS at the first
+   *   event whose handler throws (block B): later events are not run, so they
+   *   are not replayed twice. Every cursor then moves to at most B - 1, so the
+   *   next iteration re-fetches from B and retries the failed event. Without a
+   *   failure the cursors move to safeHead.
+   * - Cursors only move forward: a provider reporting a lower head, or a
+   *   failure below an already-written cursor, never rewinds them
+   *   (IndexerStateRepository also guards this in the UPDATE itself).
+   * - Replay window on retry: the events of block B that ran before the
+   *   failing one. Activity and stats are idempotent on (tx_hash, log_index);
+   *   bid inserts are not yet (IDX-7, Phase 3B).
+   *
+   * Not handled here: reorgs deeper than the confirmation lag (no
+   * last_block_hash yet; Phase 3B).
    */
   private async runSingleIteration(): Promise<void> {
     this.currentRun++
     logger.info({ run: this.currentRun }, "🔄 Starting indexer run...")
 
     try {
-      // Step 1: Get global indexer state (for core, bids contracts)
-      const state = await this.stateRepo.getState(this.config.chainId)
-      if (!state) {
-        logger.error({ chainId: this.config.chainId }, "❌ No indexer state found for chain")
-        return
-      }
+      const plan = await this.buildPlan()
+      if (!plan) return
 
-      const globalFromBlock = BigInt(state.last_block + 1)
-
-      // Step 2: Discover active collections for this chain and build per-contract state
-      const collections = await this.collectionsRepo.getAll(this.config.chainId)
-
-      // Build contract fetch requests:
-      // - Static contracts (core, bids) use global fromBlock
-      // - Dynamic collection contracts use per-contract fromBlock from contract_indexer_state
-      const fetchRequests: ContractFetchRequest[] = []
-
-      // Static contracts
-      for (const contract of this.contracts) {
-        fetchRequests.push({ contract, fromBlock: globalFromBlock })
-      }
-
-      // Dynamic collection contracts
-      for (const collection of collections) {
-        const collectionAddress = collection.contract_address as string
-        const indexerBlock = collection.indexer_block as number
-
-        // Get per-contract state (last_block processed)
-        const contractState = await this.contractStateRepo.getContractState(collectionAddress, this.config.chainId)
-
-        // If no state exists, start from the collection's indexer_block (registration block)
-        // If state exists, continue from last_block + 1
-        const contractFromBlock = contractState
-          ? BigInt(contractState.last_block + 1)
-          : BigInt(indexerBlock)
-
-        fetchRequests.push({
-          contract: {
-            name: "nft",
-            address: collectionAddress as `0x${string}`,
-            abi: erc721Abi,
-            events: ["Transfer"],
-          } as ContractConfig,
-          fromBlock: contractFromBlock,
-        })
-      }
-
-      // Step 3: Get current block number
-      const currentBlock = await this.providerPool.executeWithFallback(async (provider) => {
-        return await provider.getBlockNumber()
-      })
-
-      if (!currentBlock) {
-        logger.error("❌ Failed to get current block number from all providers")
-        return
-      }
-
-      const toBlock = currentBlock
+      const { fetchRequests, safeHead } = plan
 
       logger.info(
         {
-          globalFromBlock: globalFromBlock.toString(),
-          toBlock: toBlock.toString(),
+          safeHead: safeHead.toString(),
           contracts: fetchRequests.map((r) => ({ name: r.contract.name, fromBlock: r.fromBlock.toString() })),
         },
         "🔍 Fetching events...",
       )
 
-      // Step 4: Fetch all events from all contracts (per-contract fromBlock)
-      const events = await this.eventFetcher.fetchEventsForContracts(fetchRequests, toBlock)
+      const events = await this.eventFetcher.fetchEventsForContracts(fetchRequests, safeHead)
+      logger.info({ eventCount: events.length, toBlock: safeHead.toString() }, `📊 Fetched ${events.length} events`)
 
+      const failedAtBlock = await this.processEvents(events)
+      const target = failedAtBlock === null ? safeHead : failedAtBlock - 1n
+      await this.checkpoint(plan, target)
+
+      if (failedAtBlock !== null) {
+        this.recordFailedRun(failedAtBlock, target)
+        return
+      }
+
+      this.consecutiveFailedRuns = 0
       logger.info(
-        {
-          eventCount: events.length,
-          toBlock: toBlock.toString(),
-          contracts: fetchRequests.length,
-        },
-        `📊 Fetched ${events.length} events`,
-      )
-
-      // Log warning if no events found despite block range having blocks to process
-      if (events.length === 0) {
-        const minFromBlock = fetchRequests.reduce(
-          (min, req) => (req.fromBlock < min ? req.fromBlock : min),
-          fetchRequests[0]?.fromBlock ?? 0n,
-        )
-        const blockRange = toBlock - minFromBlock + BigInt(1)
-        if (blockRange > 0) {
-          logger.warn(
-            {
-              fromBlock: minFromBlock.toString(),
-              toBlock: toBlock.toString(),
-              blockRange: blockRange.toString(),
-              contracts: fetchRequests.map((r) => r.contract.name),
-            },
-            "⚠️ No events found in range - check RPC connectivity, contract addresses, or event filters",
-          )
-        }
-      }
-
-      // Step 5: Process each event through the handler registry
-      if (events.length > 0) {
-        let successCount = 0
-        let errorCount = 0
-
-        for (const event of events) {
-          try {
-            await this.handlerRegistry.dispatch(event)
-            successCount++
-          } catch (error) {
-            errorCount++
-            logger.error(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                eventName: event.eventName,
-                contractAddress: event.contractAddress,
-                blockNumber: event.blockNumber.toString(),
-                txHash: event.transactionHash,
-              },
-              "❌ Error processing event",
-            )
-            // Continue processing other events - don't let one failure stop the whole batch
-          }
-        }
-
-        logger.info(
-          {
-            total: events.length,
-            success: successCount,
-            errors: errorCount,
-          },
-          `✅ Processed events: ${successCount} success, ${errorCount} errors`,
-        )
-      }
-
-      // Step 6: Update global indexer state (for core/bids contracts)
-      await this.stateRepo.updateLastBlock(this.config.chainId, Number(toBlock))
-
-      // Step 7: Update per-contract indexer state for collection contracts
-      for (const collection of collections) {
-        const collectionAddress = collection.contract_address as string
-        await this.contractStateRepo.upsertContractState(
-          collectionAddress,
-          this.config.chainId,
-          Number(toBlock),
-        )
-      }
-
-      logger.info(
-        {
-          run: this.currentRun,
-          lastBlock: toBlock.toString(),
-          eventsProcessed: events.length,
-          perContractUpdates: collections.length,
-        },
+        { run: this.currentRun, lastBlock: safeHead.toString(), eventsProcessed: events.length },
         `✅ Run #${this.currentRun} complete`,
       )
     } catch (error) {
@@ -289,11 +190,133 @@ export class IndexerOrchestrator {
     }
   }
 
+  private recordFailedRun(failedAtBlock: bigint, cursor: bigint): void {
+    this.consecutiveFailedRuns++
+    logger.error(
+      {
+        run: this.currentRun,
+        failedAtBlock: failedAtBlock.toString(),
+        cursor: cursor.toString(),
+        consecutiveFailedRuns: this.consecutiveFailedRuns,
+      },
+      "❌ Run stopped at a failed event; cursor held before it, the event is retried next run",
+    )
+  }
+
+  /**
+   * Read the cursors, discover collection contracts and compute the safe head.
+   * Returns null when there is nothing to index yet.
+   */
+  private async buildPlan(): Promise<IterationPlan | null> {
+    // Global indexer state (core, bids)
+    const state = await this.stateRepo.getState(this.config.chainId)
+    if (!state) {
+      logger.error({ chainId: this.config.chainId }, "❌ No indexer state found for chain")
+      return null
+    }
+    const globalLast = BigInt(state.last_block)
+
+    // Static contracts use the global cursor.
+    const fetchRequests: ContractFetchRequest[] = this.contracts.map((contract) => ({ contract, fromBlock: globalLast + 1n }))
+
+    // Dynamic collection contracts use contract_indexer_state, or start at
+    // their registration block (indexer_block) when they have no row yet.
+    const collections = await this.collectionsRepo.getAll(this.config.chainId)
+    const collectionCursors: CollectionCursor[] = []
+    for (const collection of collections) {
+      const address = collection.contract_address as string
+      const contractState = await this.contractStateRepo.getContractState(address, this.config.chainId)
+      const last = contractState ? BigInt(contractState.last_block) : BigInt(collection.indexer_block as number) - 1n
+      collectionCursors.push({ address, last })
+      fetchRequests.push({
+        contract: {
+          name: "nft",
+          address: address as `0x${string}`,
+          abi: erc721Abi,
+          events: ["Transfer"],
+        } as ContractConfig,
+        fromBlock: last + 1n,
+      })
+    }
+
+    const head = await this.providerPool.executeWithFallback(async (provider) => provider.getBlockNumber())
+    if (head === null || head === undefined) {
+      logger.error("❌ Failed to get current block number from all providers")
+      return null
+    }
+
+    const safeHead = head - BigInt(this.config.confirmations)
+    const minFromBlock = fetchRequests.reduce((min, r) => (r.fromBlock < min ? r.fromBlock : min), globalLast + 1n)
+
+    if (safeHead < minFromBlock) {
+      logger.info(
+        { head: head.toString(), confirmations: this.config.confirmations, nextBlock: minFromBlock.toString() },
+        "⏳ No confirmed blocks to index yet",
+      )
+      return null
+    }
+
+    return { globalLast, collectionCursors, fetchRequests, safeHead }
+  }
+
+  /**
+   * Dispatch events in order and stop at the first failure.
+   * @returns the block of the failed event, or null if every event succeeded.
+   */
+  private async processEvents(events: ParsedEvent[]): Promise<bigint | null> {
+    let processed = 0
+    for (const event of events) {
+      try {
+        await this.handlerRegistry.dispatch(event)
+        processed++
+      } catch (error) {
+        logger.error(
+          {
+            error: error instanceof Error ? error.message : String(error),
+            eventName: event.eventName,
+            contractAddress: event.contractAddress,
+            blockNumber: event.blockNumber.toString(),
+            txHash: event.transactionHash,
+            logIndex: event.logIndex,
+            processedBefore: processed,
+            notRun: events.length - processed - 1,
+          },
+          "❌ Error processing event; stopping this run at its block",
+        )
+        return event.blockNumber
+      }
+    }
+    if (events.length > 0) logger.info({ total: events.length }, `✅ Processed ${events.length} events`)
+    return null
+  }
+
+  /**
+   * Move every cursor forward to `target`, never backwards. The global cursor
+   * covers core/bids; each collection has its own row in contract_indexer_state.
+   */
+  private async checkpoint(plan: IterationPlan, target: bigint): Promise<void> {
+    if (target > plan.globalLast) {
+      await this.stateRepo.updateLastBlock(this.config.chainId, Number(target))
+      plan.globalLast = target
+    }
+    for (const cursor of plan.collectionCursors) {
+      if (target > cursor.last) {
+        await this.contractStateRepo.upsertContractState(cursor.address, this.config.chainId, Number(target))
+        cursor.last = target
+      }
+    }
+  }
+
   /**
    * Sleep utility for polling interval
    */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  /** Run exactly one iteration (used by tests and one-shot tooling). */
+  async runOnce(): Promise<void> {
+    await this.runSingleIteration()
   }
 
   /**

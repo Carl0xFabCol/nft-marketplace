@@ -243,6 +243,7 @@ async function main() {
     pollingIntervalMs: env.pollingIntervalMs,
     batchSize: env.batchSize,
     chainId: env.chainId,
+    confirmations: env.confirmations,
   })
 
   // ─────────────────────────────────────────────────────────────────────────────

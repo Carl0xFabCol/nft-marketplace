@@ -214,8 +214,11 @@ pnpm run build
 | `BATCH_SIZE`            | ❌       | 5000    | Max blocks per iteration                |
 | `MAX_PARALLEL_REQUESTS` | ❌       | 3       | Concurrent contract fetches             |
 | `POLLING_INTERVAL_MS`   | ❌       | 15000   | Time between polls (ms)                 |
+| `CONFIRMATIONS`         | ❌       | 12      | Blocks behind head not yet indexed (reorg margin; non-negative integer) |
 | `MAX_RETRY_ATTEMPTS`    | ❌       | 3       | Retry attempts per RPC call             |
 | `LOG_LEVEL`             | ❌       | info    | Log level (trace/debug/info/warn/error) |
+
+**Cursor semantics.** Each run indexes up to `head - CONFIRMATIONS`. If a handler throws at block B, the run stops there: no later event is processed, the cursor is saved as B - 1, and the next run retries from B. A persistently failing event therefore halts progress loudly; it is never skipped. Cursors only move forward. Reorgs deeper than `CONFIRMATIONS` are not handled yet (no block-hash check).
 
 ### Performance Tuning
 

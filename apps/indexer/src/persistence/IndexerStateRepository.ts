@@ -34,10 +34,18 @@ export class IndexerStateRepository {
   }
 
   /**
-   * Update the last indexed block for a chain.
+   * Move the last indexed block for a chain forward.
+   *
+   * IDX-3: the UPDATE only matches while the stored value is lower (or NULL),
+   * so a stale or concurrent writer can never move the cursor backwards. A
+   * non-advancing call is a silent no-op.
    */
   async updateLastBlock(chainId: number, lastBlock: number): Promise<void> {
-    const { error } = await this.supabase.from("indexer_state").update({ last_block: lastBlock }).eq("chain_id", chainId)
+    const { error } = await this.supabase
+      .from("indexer_state")
+      .update({ last_block: lastBlock })
+      .eq("chain_id", chainId)
+      .or(`last_block.is.null,last_block.lt.${lastBlock}`)
 
     if (error) {
       logger.error({ error, chainId, lastBlock }, "❌ Failed to update indexer state")

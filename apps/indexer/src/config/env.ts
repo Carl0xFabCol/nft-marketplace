@@ -27,6 +27,8 @@ export interface EnvConfig {
   batchSize: number
   maxParallelRequests: number
   pollingIntervalMs: number
+  /** Blocks behind the chain head that are not indexed yet (reorg safety margin). */
+  confirmations: number
 
   // Retry & Resilience
   maxRetryAttempts: number
@@ -57,6 +59,16 @@ function loadEnv(): EnvConfig {
     return process.env[key] || defaultValue
   }
 
+  const optionalNonNegativeInt = (key: string, defaultValue: number): number => {
+    const raw = process.env[key]
+    if (raw === undefined || raw === "") return defaultValue
+    const value = Number(raw)
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error(`❌ ${key} must be a non-negative integer, got "${raw}"`)
+    }
+    return value
+  }
+
   const optionalNumber = (key: string, defaultValue: number): number => {
     const value = process.env[key]
     return value ? Number(value) : defaultValue
@@ -83,6 +95,9 @@ function loadEnv(): EnvConfig {
     batchSize: optionalNumber("BATCH_SIZE", 5000),
     maxParallelRequests: optionalNumber("MAX_PARALLEL_REQUESTS", 3),
     pollingIntervalMs: optionalNumber("POLLING_INTERVAL_MS", 15000),
+    // IDX-3: only blocks at or below head - CONFIRMATIONS are indexed. 12 is
+    // ~3 s on Elysium (Arbitrum Orbit, ~0.25 s blocks) and ~2.4 min on Sepolia.
+    confirmations: optionalNonNegativeInt("CONFIRMATIONS", 12),
 
     // Retry & Resilience
     maxRetryAttempts: optionalNumber("MAX_RETRY_ATTEMPTS", 3),
@@ -112,6 +127,7 @@ logger.info(
     batchSize: env.batchSize,
     maxParallelRequests: env.maxParallelRequests,
     pollingIntervalMs: env.pollingIntervalMs,
+    confirmations: env.confirmations,
   },
   "⚙️  Configuration loaded",
 )
