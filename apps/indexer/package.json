@@ -8,7 +8,8 @@
     "diagnose": "tsx src/scripts/diagnose.ts",
     "backfill": "tsx src/scripts/backfill-nfts.ts",
     "backfill:image-urls": "tsx src/scripts/backfill-image-urls.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

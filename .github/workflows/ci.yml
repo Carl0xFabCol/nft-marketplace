@@ -77,10 +77,10 @@ jobs:
       - name: Test
         run: pnpm turbo run test
 
-      # @marketplace/database typecheck is a known pre-existing failure; it runs
-      # in integration-contract-tests instead (see docs/PRODUCTION_PLAN.md).
+      # Every package with a typecheck script, including apps/indexer and
+      # @marketplace/database (both made green in Phase 3A).
       - name: Typecheck
-        run: pnpm turbo run typecheck --filter=!@marketplace/database
+        run: pnpm turbo run typecheck
 
   integration-contract-tests:
     name: Integration contract tests (known failing)
@@ -107,7 +107,3 @@ jobs:
       # Tests #7 + #8 and checks (a)(b)(c)(f). (d) is live-RPC only: no --live here.
       - name: validate:integration (known failing)
         run: pnpm validate:integration --chain-id 99801
-
-      - name: Database typecheck (known failing)
-        if: always()
-        run: pnpm --filter @marketplace/database typecheck

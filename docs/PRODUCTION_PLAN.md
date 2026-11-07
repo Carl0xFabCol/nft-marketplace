@@ -32,7 +32,7 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 | #8 call-shape: `acceptCollectionBid` | web passes 3 args, contract takes 5 (`minPricePerItem`, `minSellerProceeds`) | Phase 4 (ABI-1) |
 | validate (c) CHAIN_ID required | `apps/indexer/src/config/env.ts:71` silently defaults to 11155111 | Phase 3 (ADDR-3) |
 | validate (f) default chain id consistent | indexer 11155111 vs shared/contracts 99801 | Phase 3 (ADDR-3) |
-| `@marketplace/database` typecheck | supabase-js generic type error in `src/client.ts` (2 errors). Phase 1 fixed the missing `@marketplace/shared` dependency, which took it from 6 errors to 2. | cleanup (`packages/database/src/repositories/*` is slated for deletion) |
+| ~~`@marketplace/database` typecheck~~ | **Green since Phase 3A task 1.** It had a supabase-js generic type error in `src/client.ts` (2 errors); the generic was dropped (type-only). It now runs in the main `typescript` job. | Phase 3A |
 | web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, after the fixes: **22/22** | n/a (passes locally) |
 | pgTAP `sec01_rls_privileges.test.sql` (103) | Not in CI. Locally, after 090600 and the fixtures: **103/103**. After 090000–091100 (Phase 2 fixture): 103/103. | n/a (passes locally) |
 | pgTAP `phase2_migrations.test.sql` (56) and `tests-realdata/phase2_roundtrip.test.sql` (19) | Not in CI; they need a local stack (the round-trip also needs the restored backup). Locally: 56/56 and 19/19 (SEC01_STATUS §3.9). | n/a (passes locally) |
@@ -206,6 +206,22 @@ Branch `chore/production-readiness-phase2`, created from `chore/production-readi
 - Do per-chunk checkpointing with streaming (IDX-8). It is P2, but essential if there is ever a backfill.
 - Add a `prepare-deployment` that upserts `indexer_state` with `deployBlock - 1`.
 - Run tests 9–16 and verify that `total_volume` still matches `getCollectionStats` (0.215 / 6).
+
+### Phase 3A: indexer code fixes, no schema change
+
+Branch `chore/production-readiness-phase3a`, created from `chore/production-readiness-phase2`. Nothing is merged to main.
+- No new `.sql`, no RPC signature change.
+- The indexer runs against the Phase 1+2 schema.
+- Every test uses mocked repositories and providers.
+
+- [x] 1. Indexer `typecheck` script; fix what it reveals.
+  - `apps/indexer` had never been typechecked. It had 18 errors:
+    - 16 came from `moduleResolution: node`: ox `.ts` sources were checked under `lib: ES2020`, and `exports` subpaths did not resolve.
+    - 2 came from `packages/database/src/client.ts`.
+  - Fixes:
+    - indexer tsconfig: `module: ESNext`, `moduleResolution: bundler`. There is no emit step; the runtime is tsx/vitest.
+    - `createAnonClient`/`createServiceClient` drop their unused `<T>` generic. This is type-only; no caller passed one.
+  - `@marketplace/database` typecheck is now **green**. CI runs `turbo run typecheck` with no exclusion, and the "Database typecheck (known failing)" step is removed.
 
 ## Phase 4: Frontend
 

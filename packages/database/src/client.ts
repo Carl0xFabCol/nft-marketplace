@@ -6,18 +6,18 @@ import WebSocket from "ws"
 // Use createAnonClient() in the browser (apps/web).
 // Use createServiceClient() on the server / in apps/indexer.
 //
-// The Database generic is intentionally untyped here to avoid requiring
-// the generated types as a hard dependency. Each consumer passes its own
-// Database type via the generic parameter, or uses the re-export from this
-// package once types are consolidated.
+// The clients are intentionally untyped (no Database generic) to avoid requiring
+// the generated types as a hard dependency. A generic parameter used to be
+// accepted here, but no caller passed one and it did not typecheck against
+// supabase-js 2.9x. Re-add a typed variant once types are consolidated.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Creates a browser-safe anonymous Supabase client.
  * Reads env vars injected at build time in apps/web.
  */
-export function createAnonClient<T = unknown>(supabaseUrl: string, supabaseAnonKey: string): SupabaseClient<T> {
-  return createClient<T>(supabaseUrl, supabaseAnonKey, {
+export function createAnonClient(supabaseUrl: string, supabaseAnonKey: string): SupabaseClient {
+  return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -40,8 +40,8 @@ export function createAnonClient<T = unknown>(supabaseUrl: string, supabaseAnonK
  * Uses the SERVICE_ROLE_KEY — NEVER expose this to the browser.
  * Used by apps/indexer and Next.js server actions / route handlers.
  */
-export function createServiceClient<T = unknown>(supabaseUrl: string, supabaseServiceRoleKey: string): SupabaseClient<T> {
-  return createClient<T>(supabaseUrl, supabaseServiceRoleKey, {
+export function createServiceClient(supabaseUrl: string, supabaseServiceRoleKey: string): SupabaseClient {
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
