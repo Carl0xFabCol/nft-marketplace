@@ -208,6 +208,21 @@ async function checkLive(d: VerifiedDeployment, fileName: string, reader: ChainR
   if (!fingerprint.ok) fail(7, `core.OWNER_QUERY_GAS() did not answer (legacy build?): ${fingerprint.error}`)
 }
 
+/**
+ * Rules 1-4 only (no RPC) for ONE record: stage=verified + configured, chainId
+ * matches the network, required addresses present, distinct and checksummed.
+ * Used by the indexer's prepare-deployment (INTEGRATION_AUDIT §8 step 8),
+ * which must refuse an unverified record without needing a live RPC.
+ */
+export function checkRecordStatic(
+  file: RecordFile,
+  chainIds: Readonly<Record<string, number>> = NETWORK_CHAIN_IDS,
+): { readonly ok: true; readonly deployment: VerifiedDeployment } | { readonly ok: false; readonly errors: string[] } {
+  const errors: string[] = []
+  const deployment = checkStatic(file, chainIds, errors)
+  return deployment && errors.length === 0 ? { ok: true, deployment } : { ok: false, errors }
+}
+
 export async function validateRecords(options: GenerateAddressesOptions): Promise<ValidationResult> {
   const chainIds = options.networkChainIds ?? NETWORK_CHAIN_IDS
   const errors: string[] = []

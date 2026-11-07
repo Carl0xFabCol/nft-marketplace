@@ -8,7 +8,7 @@ import { logger } from "../utils/logger"
 /**
  * Per-contract indexing progress tracking.
  * Each row tracks the last_block processed for a specific contract address.
- * Table: contract_indexer_state (PK: contract_address)
+ * Table: contract_indexer_state (PK: (chain_id, contract_address) since 20261028091500)
  */
 export interface ContractIndexerState {
   contract_address: string
@@ -71,6 +71,26 @@ export class ContractIndexerStateRepository {
       logger.error({ error, contractAddress, chainId, lastBlock }, "❌ Failed to upsert contract indexer state")
       throw error
     }
+  }
+
+  /**
+   * Insert a cursor row only if (contract_address, chain_id) has none.
+   * Returns true when a row was created; an existing row is never changed.
+   */
+  async seedIfMissing(contractAddress: string, chainId: number, lastBlock: number): Promise<boolean> {
+    const { data, error } = await this.supabase
+      .from("contract_indexer_state")
+      .upsert(
+        { contract_address: contractAddress.toLowerCase(), chain_id: chainId, last_block: lastBlock, updated_at: new Date().toISOString() },
+        { onConflict: "contract_address,chain_id", ignoreDuplicates: true },
+      )
+      .select("contract_address")
+
+    if (error) {
+      logger.error({ error, contractAddress, chainId, lastBlock }, "❌ Failed to seed contract indexer state")
+      throw error
+    }
+    return Array.isArray(data) && data.length > 0
   }
 
   /**

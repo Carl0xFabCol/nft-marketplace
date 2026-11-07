@@ -8,6 +8,8 @@ import { logger } from "../utils/logger"
 export interface IndexerState {
   chain_id: number
   last_block: number
+  /** Hash of last_block when it was checkpointed (IDX-3 reorg detection); NULL when unknown. */
+  last_block_hash?: string | null
   created_at?: Date
   updated_at?: Date
 }
@@ -31,6 +33,36 @@ export class IndexerStateRepository {
     }
 
     return data
+  }
+
+  /**
+   * Like getState, but returns null instead of throwing when the chain has no row.
+   */
+  async findState(chainId: number): Promise<IndexerState | null> {
+    const { data, error } = await this.supabase.from("indexer_state").select("*").eq("chain_id", chainId).maybeSingle()
+
+    if (error) {
+      logger.error({ error, chainId }, "❌ Failed to fetch indexer state")
+      throw error
+    }
+
+    return data
+  }
+
+  /**
+   * prepare-deployment only: set the cursor to an exact block (may lower it,
+   * the caller enforces --force) and forget the stored hash. Creates the row
+   * if the chain has none (UNIQUE (chain_id), migration 20261028091000).
+   */
+  async setForDeployment(chainId: number, lastBlock: number): Promise<void> {
+    const { error } = await this.supabase
+      .from("indexer_state")
+      .upsert({ chain_id: chainId, last_block: lastBlock, last_block_hash: null }, { onConflict: "chain_id" })
+
+    if (error) {
+      logger.error({ error, chainId, lastBlock }, "❌ Failed to set indexer state for deployment")
+      throw error
+    }
   }
 
   /**

@@ -10,7 +10,8 @@
     "backfill:image-urls": "tsx src/scripts/backfill-image-urls.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:localdb": "vitest run --config vitest.localdb.config.ts"
+    "test:localdb": "vitest run --config vitest.localdb.config.ts",
+    "prepare-deployment": "tsx src/scripts/prepare-deployment.ts"
   },
   "keywords": [],
   "author": "",
