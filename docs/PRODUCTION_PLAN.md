@@ -36,6 +36,7 @@ Do not weaken these. Each one turns green when the listed phase fixes the code.
 | web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, after the fixes: **22/22** | n/a (passes locally) |
 | pgTAP `sec01_rls_privileges.test.sql` (103) | Not in CI. Locally, after 090600 and the fixtures: **103/103**. After 090000–091100 (Phase 2 fixture): 103/103. | n/a (passes locally) |
 | pgTAP `phase2_migrations.test.sql` (56) and `tests-realdata/phase2_roundtrip.test.sql` (19) | Not in CI; they need a local stack (the round-trip also needs the restored backup). Locally: 56/56 and 19/19 (SEC01_STATUS §3.9). | n/a (passes locally) |
+| pgTAP `phase3b_migrations.test.sql` (78) and indexer `test:localdb` (8) | Not in CI; they need a local stack. Locally, empty baseline and restored backup: 78/78 and 8/8 (SEC01_STATUS §3.10). | n/a (passes locally) |
 
 `(b)` handler/config bijection **passes** today, because `ContractAuthorizedHandler` exists and matches the stale config. It will catch the Phase 3 change if handlers and config are not updated together.
 
@@ -123,7 +124,7 @@ Branch `chore/production-readiness-phase1`. It is **not merged to main** and mus
 
 ## Phase 2: Database migrations (while there are only ~46 rows)
 
-Branch `chore/production-readiness-phase2`, created from `chore/production-readiness-phase1`. Neither branch is merged to main. **Nothing has been applied to production.** Applying it is your manual step: follow `docs/PHASE2_RUNBOOK.md`. Full results are in `docs/SEC01_STATUS.md` §3.9.
+Branch `chore/production-readiness-phase2`, created from `chore/production-readiness-phase1`. Neither branch is merged to main. Applied to production by the operator, following `docs/PHASE2_RUNBOOK.md` (status updated in Phase 3B). Full results are in `docs/SEC01_STATUS.md` §3.9.
 
 **Cutover hazard** (Phase 1 finding, widened in Phase 2).
 - The branch code and migrations 090000–091100 must go live together, in this order: stop the indexer → apply the migrations → deploy indexer + web → restart the indexer.
@@ -166,7 +167,7 @@ Branch `chore/production-readiness-phase2`, created from `chore/production-readi
   - Main fails loudly: 42P10 on the collections and listings upserts, 23502 on bid inserts.
   - Main also has the known silent 0-row `updatePrice`.
 - [x] Runbook `docs/PHASE2_RUNBOOK.md`: go/no-go, read-only pre-check (`phase2_precheck_readonly.sql`), backup and verification, indexer stop, per-file command, expected notices and verification query, fingerprint diff, deploy, restart, post-checks, failure handling, a **rehearsed** rollback, a staging dry-run checklist, measured locks and duration.
-- [ ] **Apply to production** (you, by hand, after the staging dry run).
+- [x] **Apply to production**: done by the operator. Per the operator (2026-11-07, Phase 3B kickoff), 090000–091100 are live. Not verified from this side, but the Phase 3B pre-check asserts it (`FINGERPRINT-OK` against `after.txt`).
 - [x] Leave M-5 (RPCs with `p_chain_id`) for Phase 3.
 - [x] Version the schema in the repository, partially.
   - The migrations and `scripts/rehearsal/catalog_fingerprint.{before,after}.txt` are tracked. The fingerprints describe the full public-schema catalog before and after.
@@ -373,6 +374,149 @@ Branch `chore/production-readiness-phase3a`, created from `chore/production-read
 - `nfts_market_view` chain join.
 - Columns IDX-5 handlers would need (not invented in 3A): `collections.royalty_overridden` and `collections.royalty_receiver`, written by `CollectionRoyaltyUpdated` / `RoyaltyOverrideCleared`.
 - Phase 4 (read side): select `price::text` (PostgREST returns `numeric` as a JSON number).
+
+### Phase 3B: schema-coupled indexer work (rehearsed locally, NOT applied)
+
+Branch `chore/production-readiness-phase3b`, created from `chore/production-readiness-phase3a`. Nothing is merged to main.
+- **Nothing was applied to any real database.** Applying it is your manual step: `docs/PHASE3B_RUNBOOK.md`.
+- Per the operator, 090000–091100 (Phase 2) are already live. The new migrations come after 091100.
+- **Local stack:**
+  - Supabase CLI 2.119.0, project `sec01-local` in a scratch dir outside the repo, image 17.11.0.002, pgTAP 1.3.3;
+  - only db, auth, rest and kong ran;
+  - no `.env` was read and no remote database was contacted;
+  - env vars came from `supabase status -o env` inside each command.
+
+- [x] 0. Verify the 3A assumption on a real PostgREST.
+  - New gated suite `apps/indexer/src/__localdb__/*.localdb.test.ts`, run with `pnpm --filter @marketplace/indexer test:localdb`. It needs `INDEXER_TEST_SUPABASE_URL`/`…_SERVICE_ROLE_KEY`, refuses non-local URLs and aliases `dotenv/config` away.
+  - **Result: the assumption holds.**
+    - `ActivityRepository.insert` returns `true` and then `false` for a replayed `(tx_hash, log_index)`, with 1 row.
+    - A mixed `upsert([dup, new], {ignoreDuplicates})` returns only the new row.
+    - No fix was needed.
+- [x] 1. Atomic sale + stats: `20261028091200_sale_activity_stats_rpc.sql` (183 lines).
+  - `indexer_record_sale(chain, collection, token, from, to, price_wei text, tx_hash, log_index, created_at, source)` is **SECURITY DEFINER** with `search_path = public, pg_temp` and `public.`-qualified names. EXECUTE is revoked from public/anon/authenticated and granted to service_role only.
+  - One transaction: `INSERT activity … ON CONFLICT (tx_hash, log_index) DO NOTHING`, and only for a fresh row, `total_volume += wei * 1e-18` (exact: multiplication, never division) and `total_sales += 1` on `(chain_id, contract_address)`.
+  - It validates canonical inputs (22023 otherwise).
+  - Code changes:
+    - `SaleHandler` → `ActivityRepository.recordSale`;
+    - removed: the compensating `deleteByTxLog`, `CollectionsRepository.incrementStats` and `weiToEtherDecimal`.
+  - This closes the 3A at-most-once gap.
+- [x] 2. M-5: `20261028091300_m5_chain_scoped_rpcs.sql` (419 lines).
+  - The chain-less `increment_collection_stats`, `get_collection_stats`, `update_collection_floor_price`, `get_top_collections` and `cleanup_expired_{listings,token_bids,collection_bids}` are **dropped** and re-created with `p_chain_id integer` first. Every WHERE, including the listings/nfts subqueries, is on `(chain_id, address)`.
+  - All stay SECURITY INVOKER with a pinned search_path, **service_role only** (decision 2026-11-07, including the two read RPCs).
+  - Both floor-price trigger functions recompute `(NEW.chain_id, NEW.collection_address)` only, with the logic inlined.
+  - The preflight aborts on catalog dependents or `pg_cron` jobs that use the old signatures.
+  - Callers: the indexer has none left; the duplicate `packages/database` `collections.repo.ts incrementStats(chainId, …, volume: string)`; the web types only.
+  - `update_collection_floor_price` is **not** called from handlers: the listing triggers already maintain the floor (see discrepancies).
+- [x] 3. IDX-6/IDX-7: `20261028091400_idx7_bid_event_identity.sql` (429 lines). Design decision 2026-11-07: event ledger plus RPCs, not on-chain reads.
+  - Both bid tables gain `tx_hash`, `log_index` and `block_number` of the placement event, with `UNIQUE (chain_id, tx_hash, log_index)`. CHECKs require all three or none, and a canonical hash. Legacy rows stay NULL and count as "oldest".
+  - `collection_bids.placed_quantity` is backfilled with the current quantity: 2/2 rows in the backup.
+  - `collection_bid_fills` ledger, PK `(chain_id, tx_hash, log_index)`, FK bid_id ON DELETE CASCADE. RLS is on with no policy, and no privilege for public/anon/authenticated.
+  - RPCs (INVOKER, service_role only): `indexer_apply_token_bid_event(placed|closed)` and `indexer_apply_collection_bid_event(placed|cancelled|filled)`.
+    - Closing a slot only touches bids placed **before** the event, so a replayed cancel never closes a later bid.
+    - Placements and fills are `ON CONFLICT DO NOTHING`.
+    - Remaining = `placed_quantity − Σ fills`. Nothing reads the previous quantity.
+  - `BidsRepository` is rewritten around the RPCs with an explicit chain id. `getActiveCollectionBid`, `updateCollectionBidQuantity` and the chain-less filters are gone.
+  - Tests:
+    - the 3A `it.fails` markers are now plain passing tests;
+    - #14 (event-derived quantity, partial then full fill, replay);
+    - #15 (cross-chain isolation, unit and localdb);
+    - out-of-order cancel;
+    - #11 for bids (memoryDb, plus real Postgres through the real handlers: full and partial replay give identical rows).
+- [x] 4. DB-6/DB-7 and types:
+  - `20261028091500_indexer_state_types.sql` (176 lines):
+    - `contract_indexer_state.chain_id` NOT NULL + CHECK > 0;
+    - **PK `(contract_address)` → `(chain_id, contract_address)`** (decision 2026-11-07), and the redundant composite unique is dropped;
+    - `indexer_state.chain_id` numeric → integer;
+    - `indexer_state.last_block_hash` for task 6.
+  - Code paths: `getState`/`updateLastBlock`/`getContractState` filter by a JS number and work for both types; the upsert target `contract_address,chain_id` still infers the new PK. The web types for both tables were wrong (no `chain_id`, a non-existent `last_updated`) and are corrected.
+  - `20261028091600_market_view_chain_join.sql` (109 lines): `nfts_market_view` joins listings, token_bids and collection_bids on `chain_id = n.chain_id`. Same columns (pinned by the preflight); `security_invoker` and the grants are kept.
+  - Royalty columns (`royalty_overridden`, `royalty_receiver`): **left open**. The handlers work without them; whether the UI models the ERC-2981 override is a Phase 4 decision.
+- [x] 5. `prepare-deployment` (audit §8 step 8): `pnpm --filter @marketplace/indexer prepare-deployment -- --network <net> [--deploy-block n] [--force] [--dry-run]`.
+  - It requires `deployments/<net>.json` to pass rules 1–4, via the new static-only `checkRecordStatic` export of `@marketplace/contracts/deployment-records`. The record's chainId must equal `CHAIN_ID`.
+  - deployBlock comes from the record, or `--deploy-block` (the record has none today); both must agree.
+  - It upserts `indexer_state (last_block = deployBlock − 1, last_block_hash = NULL)` and refuses to lower without `--force`. It seeds `contract_indexer_state` at `indexer_block − 1` only where missing.
+  - Tests: 21 offline tests (every refusal, force, idempotence, dry-run, argv), localdb with the real repositories, and the real CLI against the stack (refusal paths, exit 1).
+- [x] 6. IDX-3 hash part: **detect and halt** (decision 2026-11-07).
+  - Each checkpoint writes `last_block` + `last_block_hash` in one monotonic UPDATE, via the new `IRpcProvider.getBlockHash`.
+  - Each run first compares the stored hash with the canonical one. On a mismatch it logs fatal `REORG_DETECTED` and fetches, dispatches and writes nothing until an operator acts.
+  - A NULL hash is accepted. A failed hash read fails the run without moving the cursor.
+  - **Automatic rollback is not implemented.** activity and the last-writer state have no `block_number`, so orphaned writes cannot be undone safely. The design and the interim operator procedure are in `docs/REORG_ROLLBACK_DESIGN.md`.
+- [x] Rehearsal tooling:
+  - `scripts/rollback/phase3b_down.sql` (393 lines, generated from the baseline): back to the **exact** post-Phase-2 catalog, with byte-exact CRLF function bodies and original ACL order, keeping rows;
+  - `scripts/rehearsal/phase3b_precheck_readonly.sql` (114 lines): all 0 on the backup, and it detects injected bad state;
+  - `scripts/rehearsal/catalog_fingerprint.after_phase3b.txt`;
+  - `.gitattributes` pins rollback/rehearsal SQL to LF.
+- [x] `docs/PHASE3B_RUNBOOK.md`.
+- [ ] **Apply to production** (you, by hand, after the staging dry run).
+
+**Phase 3B results (2026-11-07, local only).**
+- **Empty baseline → 090000–091600:**
+  - every file exits 0; a second pass is a no-op (identical fingerprint);
+  - pgTAP `Files=3, Tests=237, PASS` (103 SEC-01 + 56 Phase 2 + **78 Phase 3B**, `tests/phase3b_migrations.test.sql`);
+  - vitest RLS 22/22, indexer localdb 8/8, 0 rows left.
+- **Restored `marketplace_pre_phase2.dump` → 090000–091600:**
+  - no preflight failure;
+  - fingerprint == `after_phase3b.txt` (identical to the empty baseline);
+  - all 12 relation counts identical; stats `99801:0.215/6` and cursor `99801:16454480` unchanged;
+  - pgTAP 237 PASS, round-trip 19/19, vitest 22/22, localdb 8/8.
+- **Rollback A** (`phase3b_down.sql`), on both: exactly `catalog_fingerprint.after.txt` with identical counts; a re-apply gives exactly `after_phase3b.txt`. Repeated down → refused by the guard. The SEC-01 (103) and Phase 2 (56) suites pass on the rolled-back state.
+- **Rollback B** (restore a post-Phase-2 dump): `phase2_rollback_prepare.sql` alone refuses on 3B (`collection_bid_fills` remains). down → prepare → restore works, **but only with the default-privileges step** (see discrepancies); with it, the ACLs are semantically identical and the counts identical.
+- **Negative preflights:** 12 cases, each aborts with the schema fingerprint and counts unchanged:
+  - 091300 with a catalog dependent, and with a pg_cron job;
+  - 091400 with a fills table lacking the PK, and with a wrong-type column;
+  - 091500 with a NULL chain, a fractional chain, and a chain > int4;
+  - 091600 with changed view columns;
+  - 091200/091300/091400/091500 run before their Phase 2 prerequisites.
+- **Cutover probes (supabase-js):** the pre-3B `increment_collection_stats(text,…)` gets **PGRST202** after 3B; `indexer_record_sale` gets **PGRST202** after the down.
+- **Locks:** 091200/091300 take none on tables; 091400 takes ACCESS EXCLUSIVE on the bid tables plus fills; 091500 on the cursor tables; 091600 on the view. Each file takes ≤ 0.38 s locally.
+- **Typecheck and tests:**
+  - turbo typecheck green (5/5);
+  - turbo test: shared 8, contracts 72, web 40 + 22 skipped, database 2, **indexer 128** (95 + 1 todo before; no todo left);
+  - `validate:integration`: only #8 ×2 fail (ABI-1, Phase 4);
+  - `forge test` 336/336; `generate:abis:check` up to date.
+
+### Audit vs. code discrepancies found in Phase 3B
+
+- **The floor price is already maintained, by two duplicate triggers.** Audit §5.3 says "update_collection_floor_price exists but no handler calls it". In fact `auto_update_floor_price` (→ `trigger_update_floor_price` → `update_collection_floor_price`) and `trg_update_floor_price` (→ `update_floor_price`) both recompute it on every listings write, by address only.
+  - Fixed: both are chain-scoped now. Dropping the old `update_collection_floor_price(text)` without replacing the trigger body would have broken **every** listing write.
+  - Handler calls are not added. The duplicate triggers are left; that is open.
+- **`get_collection_stats` and `get_top_collections` never worked on real data.** They fail with 42804 on any non-empty row: `total_sales` is numeric and `floor_price` is numeric(78,0), while the declared types are integer and text. The new versions declare the real types, with floor as exact text.
+- **The web calls none of the M-5 functions**, only type declarations, so the "coordinated deploy" is indexer-only. The web's only stats RPC, `get_top_collections_volume_24h`, is chain-less and not in M-5. It also filters `'TOKEN BID ACCEPTED'`/`'COLLECTION BID ACCEPTED'` with spaces, which the indexer never writes; if the names matched, it would double-count with SALE. Open (Phase 4).
+- **`contract_indexer_state` PK was `(contract_address)` alone.** Audit §5.2 ("composite unique exists, not a bug") misses that the PK blocks the same address on two chains. Fixed in 091500.
+- **There is no on-chain bid id.** The audit's "unique constraint on the on-chain bid identity" is implemented as the identity of the **placement event** `(chain_id, tx_hash, log_index)`, plus an event-keyed fill ledger. The slot (collection, [token,] bidder) is not unique historically: bid rows keep history.
+- **Restoring a post-SEC-01 dump into Supabase re-opens the trust boundary.** Not in the audit. Found in the rollback-B rehearsal.
+  - `pg_dump` emits GRANTs relative to the owner default and never REVOKEs. `ALTER DEFAULT PRIVILEGES FOR ROLE postgres … GRANT ALL … TO anon, authenticated` then gives every restored table ALL, and every function (incl. `sec01_save_listing_batch`) EXECUTE, for anon/authenticated.
+  - The runbook suspends those defaults around `pg_restore`; this was rehearsed.
+  - Phase 2's own rollback was unaffected: its pre-SEC-01 dump was permissive anyway.
+  - Any future restore-based rollback after SEC-01 needs the same step.
+- **The live function bodies are CRLF.** The baseline dump is CRLF, and the fingerprints are md5s of it. Git Bash `grep` strips CRs, so a scratch baseline made with `grep -v` differs in md5 for 9+ functions. The rehearsal rebuilt it byte-preserving; `phase3b_down.sql` recreates CRLF bodies from LF text. This is tooling only, but the rollback depends on it.
+- **The deployment record has no `deployBlock`** (already known from Phase 0), so `prepare-deployment` takes `--deploy-block`. It will prefer a record field once `DeploymentConfig.sol` writes one (Phase 6).
+- **Docs vs reality:** the Phase 2 sections said "Nothing has been applied to production"; per the operator, 090000–091100 are now live. The plan and SEC01_STATUS are updated; this was not verified by me, since I connect to no remote database. The 3B runbook's pre-check asserts it, as `FINGERPRINT-OK` against `after.txt`.
+- **IDX-3:** the audit's "roll back when the stored hash no longer matches" is not safely implementable on this schema (see `docs/REORG_ROLLBACK_DESIGN.md`). Detection and halt are implemented.
+
+### Still open after Phase 3B
+
+- **Phase 4:**
+  - bid acceptance arity (ABI-1, #8 ×2);
+  - `chainGuard` integration;
+  - UI handling of 23503 (`listings_nft_fk`);
+  - web bid/listing/collection reads by chain (DB-1/DB-9 web side);
+  - `price::text` reads;
+  - `get_top_collections_volume_24h`;
+  - royalty columns / ERC-2981 override modelling.
+- **Phase 5/6:**
+  - the Anvil rehearsal (test 21);
+  - `DeploymentConfig.sol` writing `deployBlock`/`verifiedAt`;
+  - running `prepare-deployment` for the new deployment.
+- **Ops / Phase 7:**
+  - automatic reorg rollback (design in docs; needs `activity.block_number`);
+  - a hash for collection cursors;
+  - the duplicate floor triggers;
+  - chain-less `expire_stale_records()`;
+  - re-creating any pg_cron job with `p_chain_id`;
+  - the reconciliation job (`total_volume` vs `getCollectionStats`);
+  - legacy bid rows have NULL event identity;
+  - the broken indexer Dockerfile (from 3A).
 
 ## Phase 4: Frontend
 

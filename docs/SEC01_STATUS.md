@@ -1,6 +1,8 @@
 # SEC-01 status
 
-Last updated: 2026-11-07, Phase 2, branch `chore/production-readiness-phase2` (from `chore/production-readiness-phase1`). Phase 1 local DB verification is in §3.1–§3.8. The Phase 2 migrations (M-1, M-2, M-4, M-6, M-7) and their real-data rehearsal are in §2 and §3.9. **Nothing has been applied to production.**
+Last updated: 2026-11-07, Phase 3B, branch `chore/production-readiness-phase3b` (from `…-phase3a` ← `…-phase2` ← `…-phase1`). Phase 1 local DB verification is in §3.1–§3.8; Phase 2 in §2 and §3.9; Phase 3B (091200–091600) in §2 and §3.10.
+
+**Production status:** per the operator, 090000–091100 are **applied** (not verified from this side; the Phase 3B pre-check asserts it). 091200–091600 are **unapplied**: they are rehearsed locally only, and the procedure is `docs/PHASE3B_RUNBOOK.md`.
 
 This file replaces an earlier SEC-01 status note. That note was never tracked in git (`docs/*` is gitignored), and it described migrations and code as "Implemented" when they existed only on the unmerged commit `fc85e2b` (`fix/bigint-precision`). See `docs/INTEGRATION_AUDIT.md` §6.3. Everything below was checked against the code in this branch.
 
@@ -21,14 +23,15 @@ Status vocabulary:
 | Wallet ownership resolved from the service-role-only `user_wallets` mapping, not `profiles.wallet` | `apps/web/lib/supabase/auth.ts` | `auth.test.ts` (mocked) |
 | Phase 2 writes required by the new schema:<br>- collections upsert `onConflict: "chain_id,contract_address"` (M-2);<br>- bid inserts carry `chain_id = env.chainId` (M-1; bid *filters* stay chain-less until IDX-6);<br>- listings upsert sends `buyer_wallet: null` (M-7). | `apps/indexer/src/persistence/{CollectionsRepository,BidsRepository,ListingsRepository}.ts`, `packages/database/src/repositories/collections.repo.ts` | `CollectionsRepository.test.ts`, `BidsRepository.test.ts`, `ListingsRepository.test.ts` (mocked); cutover probes §3.9 (real local DB) |
 | **Phase 3A (indexer, code only, no schema change):**<br>- IDX-4: wei is sent as exact decimal strings into `numeric(78,0)`; stats get an exact ether decimal;<br>- IDX-1: `Sale` is the only stats source, gated on a fresh activity row;<br>- IDX-2/3: the cursor never passes a failed event; monotonic; `CONFIRMATIONS` lag;<br>- IDX-5: unverify, royalty, launchpad and withdrawal listeners; decoding uses the generated ABIs;<br>- IDX-9: no 1970 timestamps;<br>- ADDR-3: `CHAIN_ID` is required;<br>- IDX-8: per-chunk checkpointing.<br>Collection verification and royalty updates are chain-scoped. | `apps/indexer/src/**` | Indexer unit tests (95 + 1 todo), all mocked or in-memory:<br>- audit tests #9, #10, #11 (handler level), #12, #13, #16;<br>- `validate:integration` (a)(b)(c)(f). |
+| **Phase 3B (indexer + schema, migrations 091200–091600):**<br>- the sale and its stats are one atomic RPC (`indexer_record_sale`), exactly once per log;<br>- bid writes are chain-scoped RPCs keyed on the placement event, with an event-derived remaining quantity (IDX-6/7);<br>- M-5 callers pass `p_chain_id`;<br>- `prepare-deployment`;<br>- reorg detection via `last_block_hash` (halt; no automatic rollback). | `apps/indexer/src/**`, `packages/database/src/repositories/collections.repo.ts`, `apps/web/lib/supabase/types.ts` (types only), `packages/contracts/scripts/lib/addresses.ts` (`checkRecordStatic`) | Indexer unit tests (128); `test:localdb` (8, real local Postgres); pgTAP `phase3b_migrations.test.sql` (78) |
 | Optimistic batch listings go through the `sec01_save_listing_batch` RPC with the service role. Wei stays a decimal string. Duplicate and canonical-form checks happen client-side too. | `apps/web/actions/listings/createBatch.ts` | `createBatch.test.ts` (mocked RPC) |
 | `failListingsByTxHash` scoped by chain and by the authenticated caller's wallet | `apps/web/actions/listings/failBatch.ts` | `failBatch.test.ts` (mocked) |
 | Login mapping lookup uses `maybeSingle` with an explicit error | `apps/web/app/api/auth/login/route.ts` | none |
 | `chainGuard` (`assertWalletChain`, `requireSupportedChainId`) and an explicit `chainId` through hooks, components and pages. Realtime drops other-chain rows. Merge keys are chain-aware. | `apps/web/lib/chainGuard.ts`, `apps/web/hooks/*`, `apps/web/lib/listingMerge.ts` | `chainGuard.test.ts`, `listingMerge.test.ts`, `nft.service.test.ts` (unit) |
 
-## 2. Written but unapplied to the live database
+## 2. Migrations and their production status
 
-None of these migrations has been applied to the live Supabase project. Applying them is human-gated and follows `docs/PHASE2_RUNBOOK.md`. All of them assume the existing Supabase schema: the `anon`/`authenticated`/`service_role` roles, the `auth` schema, and the 11 public tables.
+090000–091100 have been applied to the live Supabase project by the operator, following `docs/PHASE2_RUNBOOK.md` (reported at the Phase 3B kickoff, 2026-11-07). 091200–091600 are **unapplied**; follow `docs/PHASE3B_RUNBOOK.md`. All of them assume the existing Supabase schema: the `anon`/`authenticated`/`service_role` roles, the `auth` schema, and the 11 public tables.
 
 | Migration | Effect | Notes for the operator |
 | --- | --- | --- |
@@ -44,6 +47,11 @@ None of these migrations has been applied to the live Supabase project. Applying
 | `20261028090900_m4_activity_chain_id_integer.sql` (127 lines) | **M-4.** `activity.chain_id` text → integer. The `'11155111'` default is dropped (not replaced). NOT NULL, CHECK > 0. | The preflight requires a lossless cast and no NULLs. Re-runnable. No code coupling. |
 | `20261028091000_m6_indexer_state_chain_unique.sql` (84 lines) | **M-6.** `indexer_state_chain_id_key UNIQUE (chain_id)`. | The preflight aborts on duplicates. Re-runnable. |
 | `20261028091100_m7_relist_clears_buyer.sql` (259 lines) | **M-7.** `sec01_save_listing_batch` is an exact copy of the 090500 version, plus `buyer_wallet = null` in `ON CONFLICT … DO UPDATE`. | SECURITY DEFINER, `search_path = public, pg_temp` and service_role-only EXECUTE are kept and asserted. Re-runnable. |
+| `20261028091200_sale_activity_stats_rpc.sql` (183 lines), **unapplied** | `indexer_record_sale`: SALE activity + chain-scoped stats in one transaction, idempotent on `(tx_hash, log_index)`. | **SECURITY DEFINER**, `search_path = public, pg_temp`, service_role-only EXECUTE (revoked from public/anon/authenticated). Re-runnable. |
+| `20261028091300_m5_chain_scoped_rpcs.sql` (419 lines), **unapplied** | **M-5.** 7 RPCs re-created with `p_chain_id` first; old signatures dropped; floor triggers chain-scoped. | INVOKER, service_role only (incl. the two read RPCs). The preflight aborts on catalog dependents / pg_cron jobs. Re-runnable. Code coupling: pre-3B indexers get PGRST202 on the Sale path. |
+| `20261028091400_idx7_bid_event_identity.sql` (429 lines), **unapplied** | **IDX-6/7.** Bid event identity, `UNIQUE (chain_id, tx_hash, log_index)`, `placed_quantity`, `collection_bid_fills` ledger (RLS, no client privileges), 2 bid RPCs. | INVOKER, service_role only. Legacy rows keep NULL identity. Re-runnable. |
+| `20261028091500_indexer_state_types.sql` (176 lines), **unapplied** | `contract_indexer_state` chain_id NOT NULL, PK `(chain_id, contract_address)`; `indexer_state.chain_id` integer; `last_block_hash`. | Preflight: NULL/fractional/out-of-range chains. Re-runnable. |
+| `20261028091600_market_view_chain_join.sql` (109 lines), **unapplied** | `nfts_market_view` joins listings and bids on `chain_id`. | Same columns (pinned by the preflight), `security_invoker` and grants kept. Re-runnable. |
 
 **Deploy coupling:** the code in §1 and migrations 090000–090600 must go live together. Verified locally on 2026-11-07 (§3.5):
 - The new indexer and web code need 090500 (the conflict target) and the RPC.
@@ -260,6 +268,77 @@ Each file takes ≤ 0.33 s wall time locally, including `docker exec`.
 
 **Line endings.** With `core.autocrlf=true`, the 090000–090500 working copies were CRLF, so function bodies created from a Windows checkout contained `\r` (fingerprint md5 difference on `sec01_enforce_listing_tx_seller`). `.gitattributes` now pins `packages/database/migrations/*.sql` to LF; repository content is unchanged. All results above were re-run on the LF files.
 
+### 3.10 Phase 3B: migrations 091200–091600, real-data rehearsal, rollback (2026-11-07)
+
+Same local-only setup as §3.9: Supabase CLI 2.119.0, project `sec01-local` in a scratch dir outside the repo, image 17.11.0.002, pgTAP 1.3.3. No remote database was contacted, and no `.env` was read.
+
+**Baseline fidelity.** The adapted baseline was rebuilt **byte-preserving**. A first build with Git Bash `grep -v` stripped the CRs, and the live function bodies are CRLF. With the rebuilt baseline, empty baseline + 090000–091100 is byte-identical to `catalog_fingerprint.after.txt`.
+
+**Empty baseline → 090000–091600.**
+- All exit 0. Expected NOTICEs on the first apply: only the 3 from 091500 (PK move, redundant unique dropped, numeric → integer).
+- A second pass of 091200–091600 is a no-op (identical fingerprint).
+- The result is committed as `catalog_fingerprint.after_phase3b.txt`.
+
+**Real data.**
+- `marketplace_pre_phase2.dump` was restored as in §3.9: filtered TOC, `supabase_admin` default ACLs, 8 placeholder `auth.users`, then the `profiles_id_fkey` entry. The restore matches `catalog_fingerprint.before.txt`.
+- 090000–091600 applied with no preflight failure. The fingerprint == `after_phase3b.txt`.
+- Counts are identical before and after: activity 32, collection_bids 2, collections 1, contract_indexer_state 1, indexer_state 1, listings 1, nfts 7, nfts_market_view 7, nonces 158, profiles 8, token_bids 7, user_wallets 8.
+- Stats `99801:0.215/6` and cursor `99801:16454480` are unchanged.
+- Both collection bids have `placed_quantity = quantity`, no bid has an event identity (legacy), and the cursor hash is NULL.
+
+**Test results.**
+
+| Run | pgTAP `tests/` | Round-trip `tests-realdata/` | Vitest RLS | Indexer `test:localdb` |
+| --- | --- | --- | --- | --- |
+| Empty baseline → 090000–091600 | `Files=3, Tests=237, PASS` (103 + 56 + 78) | n/a | 22/22, 0 rows left | 8/8 |
+| Restored backup → 090000–091600 | `Files=3, Tests=237, PASS` | 19/19 | 22/22 | 8/8 |
+
+- `phase3b_migrations.test.sql` (78) covers, for every migration, the constraint/function shape and a negative test (23505 / 23502 / 23514 / 22P02 / 22023 / 42501, old signatures absent). It also has privilege checks:
+  - anon and authenticated cannot EXECUTE any of the 12 new or changed functions;
+  - PUBLIC has no EXECUTE;
+  - service_role can;
+  - every one pins `search_path = public, pg_temp`;
+  - only `indexer_record_sale` is DEFINER;
+  - `collection_bid_fills` has RLS and no anon/authenticated privilege.
+- Negative control: on the Phase 2 state the file fails from test 1.
+- The localdb suite runs the real repositories and handlers against the stack:
+  - the ignoreDuplicates assumption;
+  - sale exactness/replay/cross-chain;
+  - bid #11 (full and partial replay give identical rows), #14 and #15;
+  - prepare-deployment;
+  - the cursor hash, the monotonic guard and its CHECK.
+
+**Negative preflights:** 12 cases; each aborts with the schema fingerprint and counts unchanged (list in PRODUCTION_PLAN, Phase 3B results).
+
+**Read-only pre-check** (`phase3b_precheck_readonly.sql`): 14 checks, all 0 on the backup. It detected injected bad state: a catalog dependent, a pg_cron job, a NULL chain, a fractional chain.
+
+**Rollback.**
+- **A** (`rollback/phase3b_down.sql`, schema only):
+  - result: exactly `catalog_fingerprint.after.txt` with identical counts, on the empty baseline and on the backup;
+  - re-apply: exactly `after_phase3b.txt`;
+  - the SEC-01 and Phase 2 suites pass on the rolled-back state;
+  - its guard refuses a second run.
+- **B** (restore a post-Phase-2 dump):
+  - `phase2_rollback_prepare.sql` refuses on a 3B database (`collection_bid_fills` remains), so `phase3b_down.sql` runs first;
+  - **finding:** restoring a post-SEC-01 dump makes every public table ALL and every function EXECUTE for anon/authenticated, because of `ALTER DEFAULT PRIVILEGES FOR ROLE postgres` in the target. With those defaults suspended around `pg_restore` and restored afterwards, the ACLs are semantically identical (only the item order differs in 10 lines) and the counts identical. `docs/PHASE3B_RUNBOOK.md` §R includes the step.
+
+**Cutover probes (supabase-js).**
+- After 3B, the pre-3B `increment_collection_stats(p_collection_address, p_sales, p_volume)` gets `PGRST202`.
+- After the down, `indexer_record_sale` gets `PGRST202`.
+- Pre-3B identity-less bid inserts stay schema-compatible (the Phase 2 suite inserts bids without identity and passes).
+
+**Measured locks:**
+
+| Migration | ACCESS EXCLUSIVE on |
+| --- | --- |
+| 091200 | none (function) |
+| 091300 | none (functions; trigger bodies replaced) |
+| 091400 | `token_bids`, `collection_bids`, `collection_bid_fills` |
+| 091500 | `indexer_state`, `contract_indexer_state` |
+| 091600 | `nfts_market_view` |
+
+Each file takes ≤ 0.38 s wall time locally.
+
 ## 4. Missing (not implemented anywhere)
 
 - ~~IDX-4 wei precision in the indexer.~~ **Done in Phase 3A** (writes are exact, test #12).
@@ -268,12 +347,14 @@ Each file takes ≤ 0.33 s wall time locally, including `docker exec`.
   - The indexer now **refuses to start without `CHAIN_ID`**: set `CHAIN_ID=99801`, which the runbook already requires.
   - It indexes up to `head - CONFIRMATIONS` (default 12).
   - A persistently failing event now **halts the cursor** instead of being skipped. Watch the "Run stopped at a failed event" log and its `consecutiveFailedRuns` counter.
-- **Sale stats are at-most-once, not exactly-once.** A crash between the activity insert and `increment_collection_stats`, or a failed compensating delete, undercounts one Sale. The fix is an atomic sale+stats RPC (Phase 3B, with M-5).
-- **M-5** (`p_chain_id` on `increment_collection_stats`, `get_collection_stats`, `update_collection_floor_price`, `get_top_collections`, `cleanup_expired_*`). Phase 3, with the indexer. Until then, the floor-price triggers and stats RPCs match collections by address only. Once one address exists on two chains (now allowed by M-2), they update both chains' rows.
-- **Bids are not chain-scoped in code, and bid writes are not replay-safe** (IDX-6, IDX-7, Phase 3B).
+- ~~Sale stats are at-most-once.~~ **Fixed in Phase 3B** (`indexer_record_sale`, one transaction). Takes effect once 091200 and the 3B indexer are deployed.
+- ~~M-5~~ **Written in Phase 3B** (091300, unapplied). Still chain-less: `expire_stale_records()` (not in M-5) and `get_top_collections_volume_24h()` (the web's only stats RPC; it also filters event names the indexer never writes). Open, Phase 4.
+- ~~Bids are not chain-scoped in the indexer and not replay-safe~~ **Fixed in Phase 3B** (091400 + BidsRepository RPCs, unapplied). **Still open (Phase 4): web bid reads are not chain-filtered.** The original text follows for history.
   - Since M-1, rows carry `chain_id`, but the indexer's bid update/select filters and the web's bid reads do not filter by it.
   - Replaying a block range duplicates bid rows, and a replayed collection-bid acceptance decrements the quantity twice. Both are encoded as `it.fails` markers in `ReplayIdempotency.test.ts`. `nfts_market_view` still joins listings and bids without `chain_id` (the view part of DB-1). Collections and activity reads are only partially chain-filtered. Phases 3–4.
-- **`indexer_state.chain_id` is still `numeric`.** M-6 adds the unique; the type is unchanged (not in the audit's M-6).
-- **Phase 2 is not applied to production.** Applying it is human-gated; see `docs/PHASE2_RUNBOOK.md`.
+- ~~`indexer_state.chain_id` is numeric~~ → integer in 091500 (unapplied). `nfts_market_view` chain joins are in 091600 (unapplied).
+- **Restore-based rollback re-opens SEC-01 ACLs.** Restoring any post-SEC-01 `pg_dump` into Supabase gives anon/authenticated ALL/EXECUTE through the target's default privileges, unless they are suspended around `pg_restore` (§3.10; `docs/PHASE3B_RUNBOOK.md` §R). PITR is not affected.
+- **Reorgs deeper than `CONFIRMATIONS`** are detected and halt the indexer (3B); there is no automatic rollback (`docs/REORG_ROLLBACK_DESIGN.md`).
+- **Phase 3B is not applied to production.** Applying it is human-gated; see `docs/PHASE3B_RUNBOOK.md`. (Phase 2 is applied, per the operator.)
 - **Default privileges.** New tables will still receive Supabase's default `anon`/`authenticated` grants.
 - **`user_wallets.supabase_password`** is still stored. After 090000 it is unreadable to clients, but it is not removed (DB-11).
