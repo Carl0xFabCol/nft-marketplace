@@ -37,6 +37,21 @@ describe.skipIf(!configured)("SEC-01 database authorization", () => {
   let walletA: string
   let walletB: string
   const createdTxHashes: string[] = []
+  const createdCollections: string[] = []
+
+  // listings has a FK to nfts(collection_address, token_id, chain_id), and nfts
+  // has a FK to collections. Create the parents a listing batch needs.
+  async function ensureNfts(collection: string, chainId: number, tokenIds: string[], owner: string) {
+    createdCollections.push(collection)
+    const { error: collectionError } = await admin
+      .from("collections")
+      .insert({ contract_address: collection, chain_id: chainId })
+    if (collectionError) throw collectionError
+    const { error: nftError } = await admin.from("nfts").insert(
+      tokenIds.map((token_id) => ({ collection_address: collection, token_id, owner_wallet: owner, chain_id: chainId })),
+    )
+    if (nftError) throw nftError
+  }
 
   async function createTestUser(label: string, wallet: string) {
     const email = `sec01-${label}-${randomUUID()}@example.com`
@@ -122,6 +137,11 @@ describe.skipIf(!configured)("SEC-01 database authorization", () => {
 
     if (createdTxHashes.length > 0) {
       await admin.from("listings").delete().in("tx_hash", createdTxHashes)
+    }
+
+    if (createdCollections.length > 0) {
+      await admin.from("nfts").delete().in("collection_address", createdCollections)
+      await admin.from("collections").delete().in("contract_address", createdCollections)
     }
 
     const ids = [userA?.id, userB?.id, userC?.id].filter((id): id is string => Boolean(id))
@@ -285,6 +305,7 @@ describe.skipIf(!configured)("SEC-01 database authorization", () => {
     const txHash = randomTxHash()
     const collection = randomAddress()
     createdTxHashes.push(txHash)
+    await ensureNfts(collection, 99801, ["9101", "9102"], walletA)
 
     const first = await admin.rpc("sec01_save_listing_batch", {
       p_seller: walletA,
@@ -309,6 +330,7 @@ describe.skipIf(!configured)("SEC-01 database authorization", () => {
     const txHash = randomTxHash()
     const collection = randomAddress()
     createdTxHashes.push(txHash)
+    await ensureNfts(collection, 99801, ["9201", "9202"], walletA)
 
     const [a, b] = await Promise.all([
       admin.rpc("sec01_save_listing_batch", {
@@ -336,6 +358,7 @@ describe.skipIf(!configured)("SEC-01 database authorization", () => {
     const secondTx = randomTxHash()
     const collection = randomAddress()
     createdTxHashes.push(firstTx, secondTx)
+    await ensureNfts(collection, 99801, ["9301"], walletA)
 
     const first = await admin.rpc("sec01_save_listing_batch", {
       p_seller: walletA,
