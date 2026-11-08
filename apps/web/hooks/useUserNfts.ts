@@ -5,6 +5,7 @@ import { useAccount, useConnection, usePublicClient, useReadContracts, useWriteC
 import { erc721Abi } from "viem"
 import { EnrichedUserNFT, UserNFT } from "@/types/user.types"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
+import { useWriteGuard } from "@/hooks/useWriteGuard"
 import { useTx } from "@/app/context/TxContext"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { UseBatchOperationsReturn } from "./useBatchOperations"
@@ -30,6 +31,7 @@ export function useUserNfts({ nfts, batchOps, userAddress, chainId, onDelist, on
   const { address } = useAccount()
   const { chainId: connectedChainId } = useConnection()
   const { CORE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
   const { delistBatch, approveBatch, clearBatch } = batchOps
   const { addTx, removeTx, updateTx } = useTx()
 
@@ -50,7 +52,7 @@ export function useUserNfts({ nfts, batchOps, userAddress, chainId, onDelist, on
     })),
     chainId,
     query: {
-      enabled: uniqueCollections.length > 0 && address?.toLowerCase() === userAddress.toLowerCase(),
+      enabled: uniqueCollections.length > 0 && !!CORE_CONTRACT_ADDRESS && address?.toLowerCase() === userAddress.toLowerCase(),
     },
   })
 
@@ -122,13 +124,13 @@ export function useUserNfts({ nfts, batchOps, userAddress, chainId, onDelist, on
     // Approve the marketplace to transfer all tokens of this collection.
     let txHash: `0x${string}` | undefined
     try {
-      assertWalletChain(connectedChainId, chainId)
+      const { MARKETPLACE_CORE } = guardWrite()
 
       txHash = await writeContractAsync({
         address: collectionAddress,
         abi: erc721Abi,
         functionName: "setApprovalForAll",
-        args: [CORE_CONTRACT_ADDRESS, true],
+        args: [MARKETPLACE_CORE, true],
         chainId,
       })
 

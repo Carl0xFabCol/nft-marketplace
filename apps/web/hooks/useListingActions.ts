@@ -3,15 +3,15 @@
 import { useWriteContract, usePublicClient } from "wagmi"
 import type { PublicClient } from "viem"
 import { MarketplaceABI } from "@/lib/abi"
-import { useContractAddresses } from "@/hooks/useContractAddresses"
+import { useWriteGuard } from "@/hooks/useWriteGuard"
 
 export function useCancelList(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
 
   const cancelList = async (collection: `0x${string}`, tokenId: number) => {
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "cancelListing",
       args: [collection, BigInt(tokenId)],
@@ -31,11 +31,11 @@ export interface UseCancelListBatchResult {
 export function useCancelListBatch(chainId: number): UseCancelListBatchResult {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient({ chainId })
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
 
   const cancelListBatch = async (_collections: `0x${string}`[], _tokenIds: bigint[]) => {
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "cancelListingBatch",
       args: [_collections, _tokenIds],

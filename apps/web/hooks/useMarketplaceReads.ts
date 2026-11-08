@@ -4,11 +4,12 @@ import { useReadContract, useAccount } from "wagmi"
 import { MiColeccionABI, MarketplaceABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
 
-export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
+export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`, chainId: number) {
   const { data: totalSupply, refetch: refetchTotalSupply } = useReadContract({
     address: NFT_CONTRACT_ADDRESS,
     abi: MiColeccionABI,
     functionName: "totalSupply",
+    chainId,
     query: {
       refetchInterval: false,
     },
@@ -18,24 +19,28 @@ export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
     address: NFT_CONTRACT_ADDRESS,
     abi: MiColeccionABI,
     functionName: "maxSupply",
+    chainId,
   })
 
   const { data: mintPrice } = useReadContract({
     address: NFT_CONTRACT_ADDRESS,
     abi: MiColeccionABI,
     functionName: "mintPrice",
+    chainId,
   })
 
   const { data: mintEndsAt } = useReadContract({
     address: NFT_CONTRACT_ADDRESS,
     abi: MiColeccionABI,
     functionName: "mintEndsAt",
+    chainId,
   })
 
   const { data: isMintActive } = useReadContract({
     address: NFT_CONTRACT_ADDRESS,
     abi: MiColeccionABI,
     functionName: "isMintActive",
+    chainId,
   })
 
   return {
@@ -48,7 +53,7 @@ export function useNftStats(NFT_CONTRACT_ADDRESS: `0x${string}`) {
   }
 }
 
-export function useMarketplaceInfo(chainId?: number) {
+export function useMarketplaceInfo(chainId: number) {
   const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
 
   const { data: owner } = useReadContract({
@@ -56,6 +61,7 @@ export function useMarketplaceInfo(chainId?: number) {
     abi: MarketplaceABI,
     functionName: "owner",
     chainId,
+    query: { enabled: !!MARKETPLACE_CONTRACT_ADDRESS },
   })
 
   const { data: marketplaceFee } = useReadContract({
@@ -63,6 +69,7 @@ export function useMarketplaceInfo(chainId?: number) {
     abi: MarketplaceABI,
     functionName: "marketplaceFee",
     chainId,
+    query: { enabled: !!MARKETPLACE_CONTRACT_ADDRESS },
   })
 
   const { data: feeReceiver } = useReadContract({
@@ -70,6 +77,7 @@ export function useMarketplaceInfo(chainId?: number) {
     abi: MarketplaceABI,
     functionName: "feeReceiver",
     chainId,
+    query: { enabled: !!MARKETPLACE_CONTRACT_ADDRESS },
   })
 
   const { data: totalListings, refetch: refetchTotalListings } = useReadContract({
@@ -77,6 +85,7 @@ export function useMarketplaceInfo(chainId?: number) {
     abi: MarketplaceABI,
     functionName: "totalListings",
     chainId,
+    query: { enabled: !!MARKETPLACE_CONTRACT_ADDRESS },
   })
 
   const { data: totalSales, refetch: refetchTotalSales } = useReadContract({
@@ -84,6 +93,7 @@ export function useMarketplaceInfo(chainId?: number) {
     abi: MarketplaceABI,
     functionName: "totalSales",
     chainId,
+    query: { enabled: !!MARKETPLACE_CONTRACT_ADDRESS },
   })
 
   const { data: totalVolume, refetch: refetchTotalVolume } = useReadContract({
@@ -91,6 +101,7 @@ export function useMarketplaceInfo(chainId?: number) {
     abi: MarketplaceABI,
     functionName: "totalVolume",
     chainId,
+    query: { enabled: !!MARKETPLACE_CONTRACT_ADDRESS },
   })
 
   return { owner, marketplaceFee, feeReceiver, totalListings, totalSales, totalVolume, refetchTotalSales, refetchTotalVolume, refetchTotalListings }
@@ -100,9 +111,9 @@ export function useMarketplaceInfo(chainId?: number) {
  * External collection registration is restricted to the marketplace owner/admin.
  * Launchpad-created collections are registered automatically by the factory.
  */
-export function useIsMarketplaceAdmin() {
+export function useIsMarketplaceAdmin(chainId: number) {
   const { address } = useAccount()
-  const { owner } = useMarketplaceInfo()
+  const { owner } = useMarketplaceInfo(chainId)
 
   return {
     owner: owner as `0x${string}` | undefined,

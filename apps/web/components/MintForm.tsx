@@ -5,7 +5,8 @@ import { useNftStats } from "@/hooks/useMarketplaceReads"
 import { useMint } from "@/hooks/useMintActions"
 import { explorerTxUrl, SUPPORTED_CHAINS } from "@/lib/chains"
 import { motion, AnimatePresence } from "framer-motion"
-import { useBalance, useAccount, useChainId } from "wagmi"
+import { useBalance, useAccount } from "wagmi"
+import { DATA_CHAIN_ID } from "@/lib/chainGuard"
 import { formatEther } from "viem"
 import ConnectWallet from "./ConnectWallet"
 import { useTx } from "@/app/context/TxContext"
@@ -21,13 +22,12 @@ export function MintForm({ contractAddress, name }: props) {
   const [status, setStatus] = useState<"idle" | "waiting" | "loading" | "success" | "error">("idle")
   const [txHash, setTxHash] = useState<string | null>(null)
 
-  const { mintPrice, maxSupply, totalSupply, isMintActive, refetchTotalSupply } = useNftStats(
-    contractAddress as `0x${string}`,
-  )
-  const { mint, publicClient } = useMint()
+  // Launchpad collections live on the data chain, never the wallet's chain.
+  const chainId = DATA_CHAIN_ID
+  const { mintPrice, maxSupply, totalSupply, isMintActive, refetchTotalSupply } = useNftStats(contractAddress as `0x${string}`, chainId)
+  const { mint, publicClient } = useMint(chainId)
   const { addTx, updateTx, removeTx } = useTx()
   const { address } = useAccount()
-  const chainId = useChainId()
   const nativeSymbol = SUPPORTED_CHAINS.find((chain) => chain.id === chainId)?.nativeCurrency.symbol ?? "HYPE"
 
   const price = mintPrice ?? BigInt(0)

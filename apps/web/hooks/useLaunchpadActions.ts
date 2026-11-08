@@ -4,20 +4,22 @@ import { useReadContract, useWriteContract, usePublicClient } from "wagmi"
 import type { PublicClient } from "viem"
 import { LaunchPadABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
+import { useWriteGuard } from "@/hooks/useWriteGuard"
 
 /**
- * Reads LaunchPad factory configuration for the connected chain.
+ * Reads LaunchPad factory configuration for `chainId` (the data chain).
  * The factory is only deployed on some chains (Elysium), so all reads are
  * disabled when no address is configured for the active chain.
  */
-export function useLaunchpadInfo() {
-  const { LAUNCHPAD_CONTRACT_ADDRESS } = useContractAddresses()
+export function useLaunchpadInfo(chainId: number) {
+  const { LAUNCHPAD_CONTRACT_ADDRESS } = useContractAddresses(chainId)
   const enabled = !!LAUNCHPAD_CONTRACT_ADDRESS
 
   const { data: launchFee } = useReadContract({
     address: LAUNCHPAD_CONTRACT_ADDRESS,
     abi: LaunchPadABI,
     functionName: "launchFee",
+    chainId,
     query: { enabled },
   })
 
@@ -25,6 +27,7 @@ export function useLaunchpadInfo() {
     address: LAUNCHPAD_CONTRACT_ADDRESS,
     abi: LaunchPadABI,
     functionName: "MAX_ROYALTY_FEE",
+    chainId,
     query: { enabled },
   })
 
@@ -32,6 +35,7 @@ export function useLaunchpadInfo() {
     address: LAUNCHPAD_CONTRACT_ADDRESS,
     abi: LaunchPadABI,
     functionName: "paused",
+    chainId,
     query: { enabled },
   })
 
@@ -63,16 +67,17 @@ export interface UseCreateCollectionResult {
  * auto-registers the collection in MarketplaceCore, so it becomes tradeable
  * without any admin action.
  */
-export function useCreateCollection(): UseCreateCollectionResult {
+export function useCreateCollection(chainId: number): UseCreateCollectionResult {
   const { writeContractAsync } = useWriteContract()
-  const publicClient = usePublicClient()
-  const { LAUNCHPAD_CONTRACT_ADDRESS } = useContractAddresses()
+  const publicClient = usePublicClient({ chainId })
+  const guardWrite = useWriteGuard(chainId)
 
   const createCollection = async (params: CreateCollectionParams, value: bigint) => {
-    if (!LAUNCHPAD_CONTRACT_ADDRESS) throw new Error("Launchpad is not available on this network")
+    const launchpad = guardWrite().LAUNCHPAD
+    if (!launchpad) throw new Error("Launchpad is not available on this network")
 
     const hash = await writeContractAsync({
-      address: LAUNCHPAD_CONTRACT_ADDRESS,
+      address: launchpad,
       abi: LaunchPadABI,
       functionName: "createCollection",
       args: [
@@ -86,6 +91,7 @@ export function useCreateCollection(): UseCreateCollectionResult {
         params.mintDuration,
       ],
       value,
+      chainId,
     })
 
     return hash

@@ -4,7 +4,7 @@ import type { ParsedEvent } from "../types/indexer.types"
 import type { MetadataFetcher } from "../fetchers/MetadataFetcher"
 import { logger } from "../utils/logger"
 import { toWeiString } from "../utils/wei"
-import { getContractAddresses } from "@marketplace/contracts"
+import { requireContractAddresses } from "@marketplace/contracts"
 import { env } from "../config/env"
 import type { ActivityRepository } from "../persistence/ActivityRepository"
 import type { CollectionsRepository } from "../persistence/CollectionsRepository"
@@ -12,7 +12,7 @@ import type { ListingsRepository } from "../persistence/ListingsRepository"
 import type { NFTRepository } from "../persistence/NFTRepository"
 
 // Resolve the Core contract address for whichever chain this process indexes.
-const CORE_CONTRACT_ADDRESS = getContractAddresses(env.chainId).MARKETPLACE_CORE
+const CORE_CONTRACT_ADDRESS = requireContractAddresses(env.chainId).MARKETPLACE_CORE
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CORE CONTRACT EVENT HANDLERS - FULLY REFACTORED WITH REPOSITORIES

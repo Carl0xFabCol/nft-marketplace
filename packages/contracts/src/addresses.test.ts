@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import {
   CONTRACT_ADDRESSES,
   DEFAULT_ADDRESSES_CHAIN_ID,
   ELYSIUM_ADDRESSES,
   SEPOLIA_ADDRESSES,
   getContractAddresses,
+  requireContractAddresses,
 } from "./addresses"
 
 describe("contracts addresses", () => {
@@ -39,11 +40,17 @@ describe("contracts addresses", () => {
     expect(addrs).toBe(ELYSIUM_ADDRESSES)
   })
 
-  it("getContractAddresses falls back to default chain with a warning", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    const addrs = getContractAddresses(999999)
-    expect(addrs).toBe(CONTRACT_ADDRESSES[DEFAULT_ADDRESSES_CHAIN_ID])
-    expect(warn).toHaveBeenCalled()
-    warn.mockRestore()
+  it("getContractAddresses returns undefined for unknown chains (no fallback, ADDR-2)", () => {
+    for (const chainId of [1, 999999, 0, -1, 1.5, Number.NaN]) {
+      expect(getContractAddresses(chainId)).toBeUndefined()
+    }
+    // Inherited object keys are not chains.
+    expect(getContractAddresses("constructor" as unknown as number)).toBeUndefined()
+  })
+
+  it("requireContractAddresses throws for unknown chains and resolves known ones", () => {
+    expect(() => requireContractAddresses(1)).toThrow(/chainId 1/)
+    expect(requireContractAddresses(99801)).toBe(ELYSIUM_ADDRESSES)
+    expect(CONTRACT_ADDRESSES[DEFAULT_ADDRESSES_CHAIN_ID]).toBe(ELYSIUM_ADDRESSES)
   })
 })

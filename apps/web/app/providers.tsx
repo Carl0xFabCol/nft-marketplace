@@ -7,6 +7,7 @@ import { useState } from "react"
 import { AuthProvider } from "@/components/AuthProvider"
 import { TxProvider } from "./context/TxContext"
 import Header from "@/components/Header"
+import { NetworkStatus } from "@/components/NetworkStatus"
 import { Modal } from "@/components/ui/Modal"
 import { WalletOptions } from "./WalletOptions"
 import { elysium, ELYSIUM_RPC_URL } from "@/lib/chains"
@@ -37,6 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <AuthProvider>
           <TxProvider>
             <Header openWalletModal={() => setWalletModal(true)} />
+            <NetworkStatus />
             {walletOptionsCard && (
               <Modal
                 id="woc"

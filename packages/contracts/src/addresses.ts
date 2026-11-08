@@ -35,23 +35,24 @@ export const CONTRACT_ADDRESSES: Record<number, ContractAddresses> = {
   99801: ELYSIUM_ADDRESSES,
 }
 
-/** Chain ID used when no explicit chainId is provided to address lookups. */
+/** The project's default chain (Elysium). Never used as an address fallback. */
 export const DEFAULT_ADDRESSES_CHAIN_ID = 99801 // Elysium
 
 /**
- * Resolve the deployed contract addresses for a given chain id.
- * Falls back to DEFAULT_ADDRESSES_CHAIN_ID's addresses if the chain id is
- * not recognized (with a console warning), so callers never get `undefined`.
+ * Deployed contract addresses for `chainId`, or `undefined` when nothing is
+ * deployed there (ADDR-2). There is deliberately NO fallback: a wrong chain
+ * must never resolve to another chain's contracts, because these addresses
+ * decide where funds go. Callers render a "switch network" state instead.
  */
-export function getContractAddresses(chainId?: number): ContractAddresses {
-  const resolvedChainId = chainId ?? DEFAULT_ADDRESSES_CHAIN_ID
-  const addresses = CONTRACT_ADDRESSES[resolvedChainId]
+export function getContractAddresses(chainId: number): ContractAddresses | undefined {
+  if (!Number.isInteger(chainId)) return undefined
+  return Object.prototype.hasOwnProperty.call(CONTRACT_ADDRESSES, chainId) ? CONTRACT_ADDRESSES[chainId] : undefined
+}
 
-  if (!addresses) {
-    console.warn(`⚠️ No contract addresses configured for chainId ${resolvedChainId}. Falling back to default.`)
-    return CONTRACT_ADDRESSES[DEFAULT_ADDRESSES_CHAIN_ID]
-  }
-
+/** Like getContractAddresses, but throws for an unknown chain (services/indexer). */
+export function requireContractAddresses(chainId: number): ContractAddresses {
+  const addresses = getContractAddresses(chainId)
+  if (!addresses) throw new Error(`No contract addresses configured for chainId ${chainId}`)
   return addresses
 }
 

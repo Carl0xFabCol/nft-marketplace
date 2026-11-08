@@ -6,6 +6,8 @@
 // page's data belongs to. Pages pass the server-resolved chain ID down; these
 // helpers fail closed before any chain-dependent write.
 
+import { getContractAddresses, type ContractAddresses } from "@marketplace/contracts"
+import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
 import { SUPPORTED_CHAIN_IDS } from "@/lib/chains"
 
 const CHAIN_LABELS: Record<number, string> = {
@@ -58,4 +60,29 @@ export function assertWalletChain(connectedChainId: number | null | undefined, t
 export function chainGuardErrorMessage(error: unknown): string | null {
   if (error instanceof ChainGuardError) return error.message
   return null
+}
+
+/**
+ * The ONE chain whose data the app shows (reads, realtime, pagination) and
+ * whose contracts it writes to. Never derived from the wallet: a wallet on
+ * another chain sees "switch network", not another chain's data/contracts.
+ */
+export const DATA_CHAIN_ID: number = requireSupportedChainId(DEFAULT_CHAIN_ID)
+
+/** The chain's marketplace contracts, or a ChainGuardError (ADDR-2: no fallback). */
+export function requireChainContracts(chainId: number): ContractAddresses {
+  const addresses = getContractAddresses(chainId)
+  if (!addresses) {
+    throw new ChainGuardError(`The marketplace is not deployed on ${chainLabel(chainId)}. Switch to ${chainLabel(DATA_CHAIN_ID)}.`)
+  }
+  return addresses
+}
+
+/**
+ * Gate for every contract write: the wallet must be connected to `targetChainId`
+ * and that chain must have marketplace contracts. Returns the addresses to use.
+ */
+export function assertWriteTarget(connectedChainId: number | null | undefined, targetChainId: number): ContractAddresses {
+  const target = assertWalletChain(connectedChainId, targetChainId)
+  return requireChainContracts(target)
 }

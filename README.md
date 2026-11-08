@@ -61,7 +61,7 @@ This ensures an instantaneous UI while maintaining the decentralization and secu
 ### Multi-chain
 
 - Contracts are deployed on **Sepolia** (11155111) and **Elysium** (99801).
-- `packages/contracts/src/addresses.ts` defaults to **Elysium** when no chain ID is given; always prefer `getContractAddresses(chainId)` for Sepolia.
+- `getContractAddresses(chainId)` returns `undefined` for a chain without a deployment (no fallback); `requireContractAddresses(chainId)` throws. The web app shows one data chain (`DATA_CHAIN_ID`, Elysium) and refuses writes from a wallet on any other chain.
 
 - **Runtime**: Node.js
 - **Indexer**: Viem (Blockchain event polling)

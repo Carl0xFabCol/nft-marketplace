@@ -2,6 +2,7 @@
 "use client"
 
 import { useState } from "react"
+import { DATA_CHAIN_ID } from "@/lib/chainGuard"
 import { AnimatePresence } from "framer-motion"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -24,9 +25,9 @@ export function RegisterCollection() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const { addTx, removeTx, updateTx } = useTx()
-  const { registerCollection, publicClient } = useRegisterCollection()
+  const { registerCollection, publicClient } = useRegisterCollection(DATA_CHAIN_ID)
   const { address } = useConnection()
-  const { isAdmin } = useIsMarketplaceAdmin()
+  const { isAdmin } = useIsMarketplaceAdmin(DATA_CHAIN_ID)
 
   // External collections can only be registered by the marketplace owner/admin.
   // Collections launched through the Launchpad are registered automatically.

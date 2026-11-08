@@ -2,7 +2,8 @@
 
 import { useWriteContract, usePublicClient } from "wagmi"
 import { MarketplaceABI } from "@/lib/abi"
-import { useContractAddresses } from "@/hooks/useContractAddresses"
+import { useWriteGuard } from "@/hooks/useWriteGuard"
+import { requireChainContracts } from "@/lib/chainGuard"
 import { useSlippageBps } from "@/hooks/useSlippageBps"
 import {
   acceptBounds,
@@ -14,11 +15,11 @@ import type { Address, PublicClient } from "viem"
 
 export function useBidToken(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
 
   const bidToken = async (collection: Address, tokenId: bigint, price: bigint, expiresAt: number) => {
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "placeTokenBid",
       args: [collection, tokenId, price, BigInt(expiresAt)],
@@ -45,10 +46,10 @@ export interface UseBidTokenBatchResult {
 export function useBidTokenBatch(chainId: number): UseBidTokenBatchResult {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient({ chainId })
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
   const bidTokenBatch = async (collection: `0x${string}`, tokenIds: bigint[], prices: bigint[], totalValue: bigint, expiresAts: number[]) => {
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "placeTokenBidBatch",
       args: [collection, tokenIds, prices, expiresAts.map(BigInt)],
@@ -63,11 +64,11 @@ export function useBidTokenBatch(chainId: number): UseBidTokenBatchResult {
 
 export function useCancelTokenBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
 
   const cancelTokenBid = async (collection: `0x${string}`, tokenId: number) => {
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "cancelTokenBid",
       args: [collection, BigInt(tokenId)],
@@ -81,11 +82,11 @@ export function useCancelTokenBid(chainId: number) {
 
 export function useCancelTokenBidBatch(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
 
   const cancelTokenBids = async (collections: `0x${string}`[], tokenIds: bigint[]) => {
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "cancelTokenBidBatch",
       args: [collections, tokenIds],
@@ -106,19 +107,19 @@ export function useCancelTokenBidBatch(chainId: number) {
 export function useAcceptTokenBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient({ chainId })
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
   const slippageBps = useSlippageBps()
 
   const quoteTokenBid = async (params: { collection: Address; tokenId: bigint; bidder: Address; shownPrice: bigint }): Promise<AcceptQuote> => {
     if (!publicClient) throw new Error("No RPC client for this network")
-    return quoteTokenBidOnChain(publicClient, { router: MARKETPLACE_CONTRACT_ADDRESS, ...params })
+    return quoteTokenBidOnChain(publicClient, { router: requireChainContracts(chainId).MARKETPLACE, ...params })
   }
 
   const acceptTokenBid = async (quote: AcceptQuote) => {
     if (quote.kind !== "token" || quote.tokenIds.length !== 1) throw new Error("Not a token-bid quote")
     const { minPrice, minSellerProceeds } = acceptBounds(quote, slippageBps)
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "acceptTokenBid",
       args: [quote.collection, quote.tokenIds[0], quote.bidder, minPrice, minSellerProceeds],
@@ -134,19 +135,19 @@ export function useAcceptTokenBid(chainId: number) {
 export function useAcceptCollectionBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient({ chainId })
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
   const slippageBps = useSlippageBps()
 
   const quoteCollectionBid = async (params: { collection: Address; bidder: Address; tokenIds: bigint[]; shownPricePerItem: bigint }): Promise<AcceptQuote> => {
     if (!publicClient) throw new Error("No RPC client for this network")
-    return quoteCollectionBidOnChain(publicClient, { router: MARKETPLACE_CONTRACT_ADDRESS, ...params })
+    return quoteCollectionBidOnChain(publicClient, { router: requireChainContracts(chainId).MARKETPLACE, ...params })
   }
 
   const acceptCollectionBid = async (quote: AcceptQuote) => {
     if (quote.kind !== "collection") throw new Error("Not a collection-bid quote")
     const { minPrice, minSellerProceeds } = acceptBounds(quote, slippageBps)
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "acceptCollectionBid",
       args: [quote.collection, quote.bidder, quote.tokenIds, minPrice, minSellerProceeds],
@@ -160,11 +161,11 @@ export function useAcceptCollectionBid(chainId: number) {
 
 export function useBidCollection(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
 
   const bidCollection = async (collection: Address, price: bigint, quantity: number, expiresAt: number) => {
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "placeCollectionBid",
       args: [collection, price, quantity, BigInt(expiresAt)],
@@ -179,11 +180,11 @@ export function useBidCollection(chainId: number) {
 
 export function useCancelCollectionBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
-  const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
 
   const cancelCollectionBid = async (collection: `0x${string}`) => {
     const txHash = await writeContractAsync({
-      address: MARKETPLACE_CONTRACT_ADDRESS,
+      address: guardWrite().MARKETPLACE,
       abi: MarketplaceABI,
       functionName: "cancelCollectionBid",
       args: [collection],

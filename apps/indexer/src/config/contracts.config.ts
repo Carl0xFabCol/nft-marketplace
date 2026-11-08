@@ -1,5 +1,5 @@
 import { Address } from "viem"
-import { getContractAddresses } from "@marketplace/contracts"
+import { requireContractAddresses } from "@marketplace/contracts"
 // Decode with the ABIs generated from the compiled contracts, not the
 // hand-pasted ones: the hand-pasted Core ABI lacks CollectionUnverified,
 // RoyaltyOverrideCleared and others, and BatchEventFetcher silently skips logs
@@ -16,7 +16,7 @@ import { env } from "./env"
 // Resolve addresses for whichever chain this indexer process is configured for
 // (via the required CHAIN_ID env var). This lets the same code index
 // either Sepolia or Elysium depending on how the process is launched.
-const addresses = getContractAddresses(env.chainId)
+const addresses = requireContractAddresses(env.chainId)
 
 /**
  * Centralized configuration for all contracts to index.

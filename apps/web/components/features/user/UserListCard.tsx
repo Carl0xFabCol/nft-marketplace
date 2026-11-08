@@ -8,8 +8,9 @@ import { HypeIcon } from "@/components/ui/HypeIcon"
 import { MdOutlineLocalOffer } from "react-icons/md"
 import { RiNftFill } from "react-icons/ri"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
+import { useWriteGuard } from "@/hooks/useWriteGuard"
 import { MarketplaceABI } from "@/lib/abi"
-import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
+import { chainGuardErrorMessage } from "@/lib/chainGuard"
 import { EnrichedUserNFT, UserListing, Collection, UserNFT } from "@/types/user.types"
 import { BatchType } from "@/hooks/useBatchOperations"
 import { useMarketplaceInfo } from "@/hooks/useMarketplaceReads"
@@ -54,8 +55,9 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
   const [formError, setFormError] = useState<string | null>(null)
   const { addTx, removeTx, updateTx } = useTx()
   const info = useMarketplaceInfo(chainId)
-  const { address, chainId: connectedChainId } = useConnection()
+  const { address } = useConnection()
   const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
 
   const [prevItems, setPrevItems] = useState(items)
   if (items !== prevItems) {
@@ -87,7 +89,7 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
     })),
     chainId,
     query: {
-      enabled: Boolean(collections.length),
+      enabled: Boolean(collections.length) && !!MARKETPLACE_CONTRACT_ADDRESS,
     },
   } as never)
 
@@ -154,8 +156,9 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
       return
     }
 
+    let marketplace: Address
     try {
-      assertWalletChain(connectedChainId, chainId)
+      marketplace = guardWrite().MARKETPLACE
     } catch (error) {
       setFormError(chainGuardErrorMessage(error))
       return
@@ -170,7 +173,7 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
       const expiresAts = validItems.map((i) => dateToEpochSeconds(i.expiresAt).toString())
 
       txHash = await writeContractAsync({
-        address: MARKETPLACE_CONTRACT_ADDRESS,
+        address: marketplace,
         abi: MarketplaceABI,
         functionName: "createListingBatch",
         args: [collections, tokenIds.map(BigInt), prices.map(BigInt), expiresAts.map(BigInt)],

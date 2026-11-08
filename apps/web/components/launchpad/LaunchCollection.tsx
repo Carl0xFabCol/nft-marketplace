@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/Modal"
 import { useTx } from "@/app/context/TxContext"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
+import { DATA_CHAIN_ID } from "@/lib/chainGuard"
 import { useCreateCollection, useLaunchpadInfo } from "@/hooks/useLaunchpadActions"
 import { LaunchPadABI } from "@/lib/abi"
 import { explorerAddressUrl } from "@/lib/chains"
@@ -24,9 +25,9 @@ const inputClass =
 export function LaunchCollection() {
   const router = useRouter()
   const { address } = useAccount()
-  const { LAUNCHPAD_CONTRACT_ADDRESS } = useContractAddresses()
-  const { launchFee, maxRoyaltyFee, paused } = useLaunchpadInfo()
-  const { createCollection, publicClient } = useCreateCollection()
+  const { LAUNCHPAD_CONTRACT_ADDRESS } = useContractAddresses(DATA_CHAIN_ID)
+  const { launchFee, maxRoyaltyFee, paused } = useLaunchpadInfo(DATA_CHAIN_ID)
+  const { createCollection, publicClient } = useCreateCollection(DATA_CHAIN_ID)
   const { addTx, updateTx, removeTx } = useTx()
 
   const mounted = useSyncExternalStore(

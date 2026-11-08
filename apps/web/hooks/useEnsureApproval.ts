@@ -2,18 +2,20 @@
 
 import { usePublicClient, useWriteContract } from "wagmi"
 import { erc721Abi, type Address } from "viem"
-import { useContractAddresses } from "@/hooks/useContractAddresses"
+import { useWriteGuard } from "@/hooks/useWriteGuard"
 import { useTx } from "@/app/context/TxContext"
 import { waitForTxConfirmation } from "@/lib/tx"
 
 export function useEnsureApproval(chainId: number) {
   const { writeContractAsync } = useWriteContract()
   const publicClient = usePublicClient({ chainId })
-  const { CORE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const guardWrite = useWriteGuard(chainId)
   const { addTx, updateTx, removeTx } = useTx()
 
   const ensureApproval = async (collection: Address, owner: Address): Promise<`0x${string}` | null> => {
     if (!publicClient) throw new Error("Public client is not available")
+    // Approval is a write on this chain: same gate as the sale it precedes.
+    const { MARKETPLACE_CORE: CORE_CONTRACT_ADDRESS } = guardWrite()
 
     const approved = await publicClient.readContract({
       address: collection,
