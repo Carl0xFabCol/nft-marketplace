@@ -1,6 +1,6 @@
 # SEC-01 status
 
-Last updated: 2026-11-07, Phase 3B, branch `chore/production-readiness-phase3b` (from `…-phase3a` ← `…-phase2` ← `…-phase1`). Phase 1 local DB verification is in §3.1–§3.8; Phase 2 in §2 and §3.9; Phase 3B (091200–091600) in §2 and §3.10.
+Last updated: 2026-11-08, Phase 4, branch `chore/production-readiness-phase4` (from `…-phase3b` ← `…-phase3a` ← `…-phase2` ← `…-phase1`). Phase 1 local DB verification is in §3.1–§3.8; Phase 2 in §2 and §3.9; Phase 3B (091200–091600) in §2 and §3.10; Phase 4 (web only, no migration) in §1 and §3.11.
 
 **Production status:** per the operator, 090000–091100 are **applied** (not verified from this side; the Phase 3B pre-check asserts it). 091200–091600 are **unapplied**: they are rehearsed locally only, and the procedure is `docs/PHASE3B_RUNBOOK.md`.
 
@@ -28,6 +28,7 @@ Status vocabulary:
 | `failListingsByTxHash` scoped by chain and by the authenticated caller's wallet | `apps/web/actions/listings/failBatch.ts` | `failBatch.test.ts` (mocked) |
 | Login mapping lookup uses `maybeSingle` with an explicit error | `apps/web/app/api/auth/login/route.ts` | none |
 | `chainGuard` (`assertWalletChain`, `requireSupportedChainId`) and an explicit `chainId` through hooks, components and pages. Realtime drops other-chain rows. Merge keys are chain-aware. | `apps/web/lib/chainGuard.ts`, `apps/web/hooks/*`, `apps/web/lib/listingMerge.ts` | `chainGuard.test.ts`, `listingMerge.test.ts`, `nft.service.test.ts` (unit) |
+| **Phase 4 (web; no schema change):**<br>- one data chain (`DATA_CHAIN_ID`) for reads, realtime, pagination and writes;<br>- every write goes through `useWriteGuard` (wallet chain checked at call time; no address fallback, ADDR-2);<br>- every bid, activity, collection and search read is chain-filtered;<br>- wei is read as `::text` and handled as bigint/decimal strings; realtime rows are re-read exactly;<br>- bid acceptance passes exact `minPrice`/`minSellerProceeds` from an on-chain quote (0 slippage);<br>- generated ABIs and readable custom errors;<br>- 23503 `listings_nft_fk` → `not_indexed` + retry;<br>- generated Supabase types (one file). | `apps/web/**`, `packages/contracts/src/{abis/web.ts,addresses.ts}`, `packages/database/scripts/gen-types-local.mjs` | Web unit tests (98 + 22 RLS); `chainScope.test.ts`, `weiText.test.ts` (mutation-checked guards); `writeGuard.test.ts` (real hooks, wagmi mocked); #8 47/47; local PostgREST probe (§3.11) |
 
 ## 2. Migrations and their production status
 
@@ -339,17 +340,30 @@ Same local-only setup as §3.9: Supabase CLI 2.119.0, project `sec01-local` in a
 
 Each file takes ≤ 0.38 s wall time locally.
 
+### 3.11 Phase 4: web against the local stack (2026-11-08)
+
+Same local-only setup as §3.10: project `sec01-local` in a scratch dir, rebuilt from the byte-preserving adapted baseline + 090000–091600. No remote database was contacted and no `.env` was read. The stack was stopped afterwards, with 0 rows left in the market tables.
+
+- **Schema used for the types:** catalog fingerprint `FINGERPRINT-SAME` as `catalog_fingerprint.after_phase3b.txt`. `gen:types:local --check` is deterministic.
+- **PostgREST numeric serialization**, measured with one seeded row each (later deleted):
+  - `listings.price` selected plainly gives `1234567890123456800` (JSON number, rounded);
+  - `price::text` gives `"1234567890123456789"`;
+  - the same holds for token/collection bids, `floor_price::text`, `total_volume::text` (`"1.234567890123456789"`) and casts inside embedded selects (`collections!inner(...)`, `nfts(count)` alongside).
+- **23503 shape** from `sec01_save_listing_batch` with no `nfts` parent: `code 23503`, message `… violates foreign key constraint "listings_nft_fk"`, details `Key (collection_address, token_id, chain_id)=(…) is not present in table "nfts".` The web now maps exactly this to `not_indexed`.
+- **RLS vitest** (`rls.integration.test.ts`) against the stack: **22/22**.
+- **Compatibility:** every column the Phase 4 web selects exists in the baseline or in Phase 2 (live), so the web does not depend on 3B being applied.
+
 ## 4. Missing (not implemented anywhere)
 
 - ~~IDX-4 wei precision in the indexer.~~ **Done in Phase 3A** (writes are exact, test #12).
-  - **Still open on the read side (Phase 4):** PostgREST serializes `numeric` as a JSON number. Web reads of `listings.price` and `*_bids.price` can round unless they select `price::text`.
+  - ~~Still open on the read side (Phase 4)~~ **Done in Phase 4:** every web read of an amount uses `::text` (measured in §3.11), and realtime rows are re-read.
 - **Phase 3A deploy note.** It does not change the Phase 2 cutover order.
   - The indexer now **refuses to start without `CHAIN_ID`**: set `CHAIN_ID=99801`, which the runbook already requires.
   - It indexes up to `head - CONFIRMATIONS` (default 12).
   - A persistently failing event now **halts the cursor** instead of being skipped. Watch the "Run stopped at a failed event" log and its `consecutiveFailedRuns` counter.
 - ~~Sale stats are at-most-once.~~ **Fixed in Phase 3B** (`indexer_record_sale`, one transaction). Takes effect once 091200 and the 3B indexer are deployed.
-- ~~M-5~~ **Written in Phase 3B** (091300, unapplied). Still chain-less: `expire_stale_records()` (not in M-5) and `get_top_collections_volume_24h()` (the web's only stats RPC; it also filters event names the indexer never writes). Open, Phase 4.
-- ~~Bids are not chain-scoped in the indexer and not replay-safe~~ **Fixed in Phase 3B** (091400 + BidsRepository RPCs, unapplied). **Still open (Phase 4): web bid reads are not chain-filtered.** The original text follows for history.
+- ~~M-5~~ **Written in Phase 3B** (091300, unapplied). Still chain-less: `expire_stale_records()` (not in M-5) and `get_top_collections_volume_24h()`. **Phase 4:** the web no longer calls the latter (chain-filtered SALE activity, aggregated in bigint); both functions remain in the schema, unused by app code (Phase 7 cleanup).
+- ~~Bids are not chain-scoped in the indexer and not replay-safe~~ **Fixed in Phase 3B** (091400 + BidsRepository RPCs, unapplied). ~~Still open (Phase 4): web bid reads are not chain-filtered.~~ **Done in Phase 4.** The original text follows for history.
   - Since M-1, rows carry `chain_id`, but the indexer's bid update/select filters and the web's bid reads do not filter by it.
   - Replaying a block range duplicates bid rows, and a replayed collection-bid acceptance decrements the quantity twice. Both are encoded as `it.fails` markers in `ReplayIdempotency.test.ts`. `nfts_market_view` still joins listings and bids without `chain_id` (the view part of DB-1). Collections and activity reads are only partially chain-filtered. Phases 3–4.
 - ~~`indexer_state.chain_id` is numeric~~ → integer in 091500 (unapplied). `nfts_market_view` chain joins are in 091600 (unapplied).

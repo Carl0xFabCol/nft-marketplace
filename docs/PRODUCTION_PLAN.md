@@ -21,19 +21,19 @@
   - #7 is in the indexer integration suite.
   - #8 `packages/contracts/src/__integration__/frontend-call-shape.integration.test.ts`, with a guard that its table covers every `functionName:` in apps/web.
 
-### Known-failing tests (intentional; run in CI job `integration-contract-tests`, continue-on-error)
+### Known-failing tests (CI job `integration-contract-tests`; blocking since Phase 4, nothing known-failing remains)
 
 Do not weaken these. Each one turns green when the listed phase fixes the code.
 
 | Test / check | Failure today | Fixed in |
 | --- | --- | --- |
 | ~~#7 / validate (a) events exist in generated ABI~~ | **Green since Phase 3A task 5.** It failed because `core:ContractAuthorized` was configured while the event is now `LaunchpadAuthorized`. (b) is still green after the coordinated config and handler change. | Phase 3A |
-| #8 call-shape: `acceptTokenBid` | web passes 3 args, contract takes 5 (`minPrice`, `minSellerProceeds`) | Phase 4 (ABI-1) |
-| #8 call-shape: `acceptCollectionBid` | web passes 3 args, contract takes 5 (`minPricePerItem`, `minSellerProceeds`) | Phase 4 (ABI-1) |
+| ~~#8 call-shape: `acceptTokenBid`~~ | **Green since Phase 4.** It failed because the web passed 3 args and the contract takes 5 (`minPrice`, `minSellerProceeds`). | Phase 4 (ABI-1) |
+| ~~#8 call-shape: `acceptCollectionBid`~~ | **Green since Phase 4.** It failed because the web passed 3 args and the contract takes 5 (`minPricePerItem`, `minSellerProceeds`). | Phase 4 (ABI-1) |
 | ~~validate (c) CHAIN_ID required~~ | **Green since Phase 3A task 7.** It failed because `apps/indexer/src/config/env.ts:71` silently defaulted to 11155111. | Phase 3A |
 | ~~validate (f) default chain id consistent~~ | **Green since Phase 3A task 7.** It failed on indexer 11155111 vs shared/contracts 99801. | Phase 3A |
 | ~~`@marketplace/database` typecheck~~ | **Green since Phase 3A task 1.** It had a supabase-js generic type error in `src/client.ts` (2 errors); the generic was dropped (type-only). It now runs in the main `typescript` job. | Phase 3A |
-| web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, after the fixes: **22/22** | n/a (passes locally) |
+| web `rls.integration.test.ts` (22 tests) | Skipped in CI (needs `SEC01_TEST_SUPABASE_*`). Locally, after the fixes: **22/22** (re-run in Phase 4: 22/22) | n/a (passes locally) |
 | pgTAP `sec01_rls_privileges.test.sql` (103) | Not in CI. Locally, after 090600 and the fixtures: **103/103**. After 090000–091100 (Phase 2 fixture): 103/103. | n/a (passes locally) |
 | pgTAP `phase2_migrations.test.sql` (56) and `tests-realdata/phase2_roundtrip.test.sql` (19) | Not in CI; they need a local stack (the round-trip also needs the restored backup). Locally: 56/56 and 19/19 (SEC01_STATUS §3.9). | n/a (passes locally) |
 | pgTAP `phase3b_migrations.test.sql` (78) and indexer `test:localdb` (8) | Not in CI; they need a local stack. Locally, empty baseline and restored backup: 78/78 and 8/8 (SEC01_STATUS §3.10). | n/a (passes locally) |
@@ -520,19 +520,109 @@ Branch `chore/production-readiness-phase3b`, created from `chore/production-read
 
 ## Phase 4: Frontend
 
-- Regenerate the ABIs and replace the hand-pasted ones.
-- ABI-1: pass `minPrice` and `minSellerProceeds` in `acceptTokenBid` and `acceptCollectionBid`.
-- Product decision: define the default slippage tolerance. A bad value accepts bids at a worse price than displayed.
-- Integrate `chainGuard` and use a single chain id for reads and writes.
-- Filter all listings, collections, activity, and bids queries by chain.
-- `getContractAddresses` must return `undefined` on unknown chains, and the UI must show "switch network".
-- Regenerate Supabase types in a single place.
-- Map the 27 custom errors to show readable messages to the user.
-- **Optimistic listings vs `listings_nft_fk`** (decision 2026-11-07: keep the FK).
-  - `sec01_save_listing_batch` fails with **23503** when the indexer has not yet written the `nfts` row, for example a freshly minted or just-transferred token.
-  - Today `createBatch` turns this into a generic "Failed to save listings".
-  - The UI must recognize 23503 and say clearly that the listing is on-chain but not yet indexed. It should offer a retry, or poll until the `nfts` row exists, and must not report the listing as failed.
-- Run test 8 (call arity) until it passes.
+Branch `chore/production-readiness-phase4`, created from `chore/production-readiness-phase3b`. Nothing is merged to main.
+- **No migration and no DB change.** Only local stacks were used, no `.env` was read and nothing was broadcast.
+- **Deploy coupling:** every column the web reads exists in the baseline or Phase 2 (live). The Phase 4 web therefore runs against the live schema with or without 3B applied. It no longer calls `get_top_collections_volume_24h`.
+
+- [x] 1. ABI-1: generated ABIs and exact bid acceptance.
+  - `packages/contracts/src/abis/web.ts`: `MarketplaceRouterAbi` = the generated router ABI plus every Core/Bids error, deduped by signature. Errors bubble through the router, so viem can only name them if they are in the ABI the call uses. `apps/web/lib/abi.ts` re-exports this bundle; the import names are kept.
+  - The typed generated ABI already rejects the old 3-arg calls **at compile time**.
+  - `lib/bidAcceptance.ts` holds the quote, in bigint only. It mirrors `Core.executeSaleFromBid` (fee = `price*marketplaceFee/10000`, floor) and `Core._getRoyalty`:
+    - override → `royaltyFee` from `collections()`;
+    - otherwise ERC-2981, with Core's exact filters: `supportsInterface` returns exactly 1 word equal to 1, `royaltyInfo` returns exactly 2 words, the address word is clean, the receiver is ≠ 0 and the amount is ≤ 20%;
+    - otherwise the stored fallback.
+  - Collection bids sum the fee and royalty **per token**.
+  - Before the wallet prompt the quote refuses when:
+    - the on-chain bid ≠ the price shown;
+    - the bid has vanished or expired;
+    - there is not enough quantity;
+    - fee + royalty > price;
+    - a value is out of uint128 range.
+  - **Slippage (decision 2026-11-08: none).** `minPrice` = the price shown and `minSellerProceeds` = the proceeds shown. Both come from `applySlippage(x, bps)`, and `bps` comes only from `hooks/useSlippageBps.ts` (0n). A future selector changes only that hook.
+  - **UI:** "Accept bid" is now quote → `AcceptBidConfirm` (bid price, marketplace fee %, royalty and its source, *You receive*) → sign exactly that quote. Before, the UI showed no proceeds at all.
+  - **Known divergence (fail-closed):** on-chain ERC-2981 calls are capped at 50k gas; the quote's are not. If on-chain falls back to a larger royalty, the tx reverts with `SellerProceedsTooLow`. If smaller, the seller gets more than shown.
+  - Test #8 rows now carry 5 args. A new **arity guard** parses each call site's `args: [...]` literal and requires the table row to have the same count; a non-literal `args` fails. 7 rows were added for the quote's reads. `integration-contract-tests` is now **blocking**.
+- [x] 2. ADDR-2.
+  - `getContractAddresses(chainId)` returns `undefined` for an unknown chain: no fallback, no default argument. `requireContractAddresses` throws, and the indexer uses it.
+  - `useContractAddresses(chainId)` requires a chain.
+  - The `NetworkStatus` banner appears when the wallet is on another chain (unsupported, or Sepolia while the data is Elysium) and offers a switch button. Writes are refused until the wallet switches.
+- [x] 3. chainGuard and chain-scoped exact reads.
+  - **One chain.** `DATA_CHAIN_ID` (the validated `DEFAULT_CHAIN_ID`) is used for every page read, pagination call, realtime subscription and write. Services take a required `chainId` and reject unsupported ones.
+  - **Writes.** `useWriteGuard(chainId)` reads the wallet chain **at call time** (`getConnection`) and returns that chain's addresses, or throws a `ChainGuardError`. Every write hook and direct write uses it and pins `chainId`. The hooks that resolved addresses from the wallet chain (launchpad, register, mint, the marketplace info reads) now take the data chain.
+  - **Reads.** chain_id filters were added to the token/collection bids (NFT detail, top-bid maps, user page, collections list, collection page), activity (NFT detail), nfts search, avatar options and `ColInfo`.
+  - **Realtime.** `useRealtimeTable` requires `chainId` and drops rows that do not carry it. INSERT/UPDATE rows are **re-read** by `(id, chain_id)` through the text-cast column lists.
+  - **Wei as text.** `lib/supabase/columns.ts` selects `price::text`, `floor_price::text` and `total_volume::text`. There is no `select("*")` on listings, bids or collections. `lib/wei.ts` formats, compares, sums and parses in bigint and decimal strings. Every `Number(x)/1e18` and `Math.floor(Number(x)*1e18)` is gone.
+  - **24h top collections.** It reads chain-filtered `SALE` activity for the last 24h and aggregates in bigint (no migration). The RPC is now unused.
+  - Tests:
+    - a recording Supabase fake runs the real services and asserts every market-table query is chain-scoped (mutation-checked);
+    - a static guard requires every wei-table select to cast its amounts and avoid `*` (mutation-checked);
+    - the real write hooks, with wagmi mocked, never reach `writeContractAsync` when the wallet is disconnected, on Sepolia or on an unsupported chain.
+- [x] 4. 23503 `listings_nft_fk`.
+  - `saveBatchListingToDB` **returns** `{ success: false, reason: "not_indexed" }` on exactly that FK. It returns rather than throws because Next redacts thrown server-action messages. The error shape was captured from the local stack.
+  - `UserListCard` keeps the optimistic UI and does **not** call `failListingsByTxHash`. After the tx confirms, the toast says "Listed on-chain. Waiting for the indexer…".
+  - It then retries the idempotent RPC at 3/6/12/24 s and ends with "Listed!" or "It will appear automatically once indexed".
+  - Any other 23503 or DB error stays a generic failure.
+- [x] 5. Custom errors.
+  - `lib/contractErrors.ts`: `CONTRACT_ERROR_MESSAGES` is a `Record` over the **union of error names of all 5 generated ABIs**, so a new contract error fails the typecheck.
+  - It decodes through the router bundle and falls back to decoding raw revert data against every generated error.
+  - It covers chain guard, quote refusals, wallet rejection and insufficient funds.
+  - Every write flow shows the message, on the tx toast when there is a hash and inline/alert otherwise. Estimate-time reverts used to be console-only.
+- [x] 6. Supabase types (DB-8).
+  - `apps/web/lib/supabase/types.ts` is **generated** from a local stack (baseline + 090000–091600, catalog fingerprint == `after_phase3b.txt`) and formatted with pinned `prettier@3.3.3`. It is the single canonical file; the web is the only typed consumer.
+  - The new `pnpm --filter @marketplace/database gen:types:local -- --workdir <local project>` (or a localhost `--db-url`; other hosts are refused; `--check` diffs) replaces the dead `generate-types` and web `update-types` scripts.
+  - **Done before 3c:** typed explicit column lists need the real columns.
+- [x] 7. Tests: listed under each task above (`lib/*.test.ts`, `hooks/writeGuard.test.ts`, `services/*.test.ts`, `actions/listings/createBatch.test.ts`, `packages/contracts/src/abis/web.test.ts`, #8 arity guard).
+- [x] 8. The hand-pasted ABIs are deleted (`marketplace`, `marketplace-core`, `marketplace-bids`, `launchpad`, `micoleccion`, `nft`, `mock-nft` `*.abi.ts`), after a grep showed 0 importers. `@marketplace/contracts/abis` re-exports only generated ABIs.
+
+**Phase 4 results (2026-11-08, local only).**
+- `turbo run typecheck`: 5/5 green.
+- `turbo run test`:
+  - shared 8;
+  - contracts 76 (72 before);
+  - database 2;
+  - indexer 128;
+  - **web 98 + 22 skipped** (40 + 22 before).
+- `validate:integration --chain-id 99801`:
+  - indexer suite 5 passed + 1 skipped (live (d));
+  - **#8 47/47** (36/38 before).
+  - **Nothing known-failing remains.**
+- `generate:abis:check` up to date. `forge test` 336/336.
+- On the local stack (stopped afterwards; 0 rows left):
+  - RLS vitest 22/22;
+  - PostgREST probe: `price` → `1234567890123456800`, `price::text` → `"1234567890123456789"`, including embedded selects.
+
+### Audit vs. code discrepancies found in Phase 4
+
+- **DB-9 is outdated.** "listings is never chain-filtered in any of its 8 query sites" stopped being true in Phase 1: all listing reads were already scoped. `nft.service.ts:49` and the collection page were scoped too. What was really unscoped: every bid read (7 sites), activity at `nft.service:51`, nfts search, `ColInfo`, and the 24h RPC.
+- **ABI-1 is wider than an arity fix.** The UI never displayed seller proceeds, so "minSellerProceeds = proceeds shown" needed a new confirmation step. `Bids.acceptTokenBid` also re-reads the **current** marketplace fee; it is not snapshotted like listings.
+- **ABI-6 "27 custom errors".** There are 70 distinct custom errors across router/Core/Bids/LaunchPad/Hyperc. 27 was the number missing from the hand-pasted ABIs. Separately, the router ABI declares none of the Core/Bids errors, so even the generated router ABI alone could not name `SellerProceedsTooLow`.
+- **DB-8.**
+  - "lines 263-273 declare composite FKs … that the live schema does not have" is wrong: the baseline has `listings_nft_fk (collection_address, token_id, chain_id) → nfts`.
+  - The hand-maintained types were also missing `listings.status`/`source`, `collections.banner_url`, `user_wallets`, the 3B tables and columns, and `sec01_save_listing_batch`.
+- **"ColInfo shows raw total_volume" is not a bug.** `collections.total_volume` is ether-denominated (the indexer adds `wei*1e-18`). It is now exact text.
+- **Bugs found on the way (fixed):**
+  - the buy `value` was `BigInt(rounded Number)`, which could under/overpay vs the exact listing price;
+  - bid inputs used `Math.floor(Number(x)*1e18)`;
+  - `UserCollectionBids` summed prices as floats for a quantity bar;
+  - write reverts at estimation were only console-logged;
+  - `useNftStats`/`useMint`/launchpad/register used the wallet chain.
+- **ADDR-2 also had web singletons.** `apps/web/lib/constants.ts` re-exported Elysium-pinned address singletons. They were unused and are removed. The package singletons remain until Phase 6 regenerates addresses.
+- **Plan order.** Task 6 (types) ran before 3c because explicit typed column lists need the real columns.
+
+### Still open after Phase 4
+
+- **Phase 5/6:**
+  - Anvil rehearsal (test 21) **including a real bid acceptance through the UI quote**: this exercises the ERC-2981 path and the 0-slippage bounds against real contracts;
+  - `addresses.generated.ts` (the current addresses still point at the legacy stack, ADDR-1);
+  - `DeploymentConfig.sol` `deployBlock`/`verifiedAt`;
+  - `prepare-deployment`.
+- **Product:** a slippage selector, if wanted (plug into `useSlippageBps`); multi-chain browsing, if wanted (today the app shows exactly one data chain).
+- **Ops / Phase 7:**
+  - drop or replace the unused `get_top_collections_volume_24h()` and `expire_stale_records()`;
+  - realtime DELETE payloads without `chain_id` are dropped (fail-closed; the indexer deactivates rather than deletes);
+  - royalty override columns (`royalty_overridden`, `royalty_receiver`) are still not modelled; the quote reads them on-chain instead;
+  - a `gen:types:local --check` in CI needs a DB service container.
+- Carried over from 3B: Phase 3B apply (runbook), automatic reorg rollback, duplicate floor triggers, reconciliation job, Dockerfile.
 
 ## Phase 5: Rehearsal on Anvil
 
