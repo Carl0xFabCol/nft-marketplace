@@ -6,10 +6,14 @@
 // argument shape the hook/component passes today. A selector or arity change
 // on-chain then fails here instead of reverting in a user's wallet.
 //
-// KNOWN-FAILING by design (Phase 0): acceptTokenBid and acceptCollectionBid
-// pass 3 args; the contracts take 5 (minPrice/minSellerProceeds). Fixed in
-// Phase 4 (ABI-1). Runs only in the continue-on-error CI job; excluded from
-// the default `vitest run`. Do not weaken it: fix the call site instead.
+// Phase 0 shipped this red on acceptTokenBid/acceptCollectionBid (3 args vs
+// 5); Phase 4 (ABI-1) fixed the hooks. Excluded from the default `vitest run`;
+// runs via `pnpm validate:integration` and the blocking CI job. Do not weaken
+// it: fix the call site instead.
+//
+// Drift guard: the table's arg COUNT per row must equal the number of
+// top-level elements in the call site's `args: [...]` literal (0 when the call
+// has no `args`). A non-literal `args` fails the guard on purpose.
 //
 // The ABIs are widened to `Abi` on purpose so a wrong arity is a runtime
 // assertion failure here, not a typecheck failure of the whole package.
@@ -17,7 +21,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
-import { encodeFunctionData, erc721Abi, type Abi } from "viem"
+import { encodeFunctionData, erc721Abi, parseAbi, type Abi } from "viem"
 import { HypercAbi } from "../abis/collection.generated"
 import { MarketplaceAbi } from "../abis/full.generated"
 import { LaunchPadAbi } from "../abis/launchpad.generated"
@@ -30,6 +34,11 @@ const ABIS: Record<string, Abi> = {
   LaunchPadABI: LaunchPadAbi as Abi,
   MiColeccionABI: HypercAbi as Abi,
   erc721Abi: erc721Abi as Abi, // viem's canonical ERC-721 (not hand-pasted)
+  // Standard IERC2981 + IERC165, as lib/bidAcceptance.ts declares it (raw eth_call).
+  erc2981Abi: parseAbi([
+    "function supportsInterface(bytes4 interfaceId) view returns (bool)",
+    "function royaltyInfo(uint256 tokenId, uint256 salePrice) view returns (address receiver, uint256 royaltyAmount)",
+  ]),
 }
 
 const COLLECTION = "0x1000000000000000000000000000000000000001" as const
@@ -53,10 +62,10 @@ const CALL_SITES: readonly CallSite[] = [
   { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "placeTokenBidBatch", args: [COLLECTION, [1n, 2n], [1n, 2n], [1790000000, 1790000000].map(BigInt)] },
   { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "cancelTokenBid", args: [COLLECTION, BigInt(1)] },
   { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "cancelTokenBidBatch", args: [[COLLECTION], [1n]] },
-  // KNOWN FAILURE (Phase 4, ABI-1): args: [collection, BigInt(tokenId), bidder]
-  { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "acceptTokenBid", args: [COLLECTION, BigInt(1), OTHER] },
-  // KNOWN FAILURE (Phase 4, ABI-1): args: [collection, bidder, tokenIds]
-  { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "acceptCollectionBid", args: [COLLECTION, OTHER, [1n]] },
+  // args: [quote.collection, quote.tokenIds[0], quote.bidder, minPrice, minSellerProceeds] (bigint bounds from acceptBounds)
+  { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "acceptTokenBid", args: [COLLECTION, 1n, OTHER, 10n ** 18n, 925n * 10n ** 15n] },
+  // args: [quote.collection, quote.bidder, quote.tokenIds, minPrice (per item), minSellerProceeds (total)]
+  { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "acceptCollectionBid", args: [COLLECTION, OTHER, [1n, 2n], 10n ** 18n, 185n * 10n ** 16n] },
   { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "placeCollectionBid", args: [COLLECTION, 10n ** 18n, 1, BigInt(1790000000)] },
   { file: "hooks/useBidActions.ts", abi: "MarketplaceABI", functionName: "cancelCollectionBid", args: [COLLECTION] },
   // hooks/useCollectionActions.ts: args: [collection, Number(royaltyFee), receiver]
@@ -98,6 +107,14 @@ const CALL_SITES: readonly CallSite[] = [
   { file: "components/features/user/UserListCard.tsx", abi: "MarketplaceABI", functionName: "collections", args: [COLLECTION] },
   // args: [collections, tokenIds.map(BigInt), prices.map(BigInt), expiresAts.map(BigInt)]
   { file: "components/features/user/UserListCard.tsx", abi: "MarketplaceABI", functionName: "createListingBatch", args: [[COLLECTION], ["1"].map(BigInt), ["1000"].map(BigInt), ["1790000000"].map(BigInt)] },
+  // lib/bidAcceptance.ts (accept-bid quote: router reads + the collection's ERC-2981)
+  { file: "lib/bidAcceptance.ts", abi: "MarketplaceABI", functionName: "marketplaceFee", args: [] },
+  { file: "lib/bidAcceptance.ts", abi: "MarketplaceABI", functionName: "royaltyOverridden", args: [COLLECTION] },
+  { file: "lib/bidAcceptance.ts", abi: "MarketplaceABI", functionName: "collections", args: [COLLECTION] },
+  { file: "lib/bidAcceptance.ts", abi: "MarketplaceABI", functionName: "tokenBids", args: [COLLECTION, 1n, OTHER] },
+  { file: "lib/bidAcceptance.ts", abi: "MarketplaceABI", functionName: "collectionBids", args: [COLLECTION, OTHER] },
+  { file: "lib/bidAcceptance.ts", abi: "erc2981Abi", functionName: "supportsInterface", args: ["0x2a55205a"] },
+  { file: "lib/bidAcceptance.ts", abi: "erc2981Abi", functionName: "royaltyInfo", args: [1n, 10n ** 18n] },
   // components/features/collections/collection/CollectionClientArea.tsx
   { file: "components/features/collections/collection/CollectionClientArea.tsx", abi: "erc721Abi", functionName: "name", args: [] },
 ]
@@ -114,11 +131,75 @@ function walk(dir: string, out: string[] = []): string[] {
 
 /** Every `functionName: "x"` literal in apps/web, as "file#name" (with multiplicity). */
 function webCallSites(): string[] {
+  return webCallSitesWithArity().map((s) => s.replace(/\/-?\d+$/, ""))
+}
+
+/**
+ * Top-level element count of the array literal starting at `src[open]` ("["),
+ * skipping strings/template literals and nested ()[]{}.
+ */
+function countTopLevelElements(src: string, open: number): number {
+  let depth = 0
+  let count = 0
+  let sawToken = false
+  for (let i = open; i < src.length; i++) {
+    const ch = src[i]
+    if (ch === '"' || ch === "'" || ch === "`") {
+      const end = src.indexOf(ch, i + 1)
+      i = end < 0 ? src.length : end
+      sawToken = true
+      continue
+    }
+    if (ch === "[" || ch === "(" || ch === "{") {
+      depth++
+      if (depth > 1) sawToken = true
+      continue
+    }
+    if (ch === "]" || ch === ")" || ch === "}") {
+      depth--
+      if (depth === 0) return sawToken ? count + 1 : count
+      continue
+    }
+    if (depth === 1 && ch === ",") {
+      if (sawToken) count++
+      sawToken = false
+      continue
+    }
+    if (depth >= 1 && !/\s/.test(ch)) sawToken = true
+  }
+  throw new Error("unterminated array literal")
+}
+
+/**
+ * Arity of the call object containing `functionName` at `at`: the element count
+ * of its `args: [...]`, 0 if the object has no `args`, -1 if `args` is not an
+ * array literal (the guard then fails, by design).
+ */
+function callSiteArity(src: string, at: number): number {
+  let depth = 0
+  for (let i = at; i < src.length; i++) {
+    const ch = src[i]
+    if (ch === "{" || ch === "[" || ch === "(") depth++
+    else if (ch === "}" || ch === "]" || ch === ")") {
+      if (depth === 0) return 0 // end of the call object, no args
+      depth--
+    } else if (depth === 0 && src.startsWith("args:", i)) {
+      const m = /^args:\s*/.exec(src.slice(i))!
+      const open = i + m[0].length
+      return src[open] === "[" ? countTopLevelElements(src, open) : -1
+    }
+  }
+  return -1
+}
+
+/** "file#name/arity" for every call site in apps/web. */
+function webCallSitesWithArity(): string[] {
   const found: string[] = []
   for (const file of walk(WEB_ROOT)) {
     const rel = path.relative(WEB_ROOT, file).split(path.sep).join("/")
-    for (const m of readFileSync(file, "utf8").matchAll(/functionName:\s*["'`]([A-Za-z0-9_]+)["'`]/g)) {
-      found.push(`${rel}#${m[1]}`)
+    const src = readFileSync(file, "utf8")
+    for (const m of src.matchAll(/functionName:\s*["'`]([A-Za-z0-9_]+)["'`]/g)) {
+      found.push(`${rel}#${m[1]}/${callSiteArity(src, m.index! + m[0].length)}`)
     }
   }
   return found.sort()
@@ -127,6 +208,19 @@ function webCallSites(): string[] {
 describe("frontend call-shape (test #8)", () => {
   it("the table covers every functionName call site in apps/web", () => {
     expect(CALL_SITES.map((c) => `${c.file}#${c.functionName}`).sort()).toEqual(webCallSites())
+  })
+
+  it("each row passes as many args as the call site's args literal (drift guard)", () => {
+    expect(CALL_SITES.map((c) => `${c.file}#${c.functionName}/${c.args.length}`).sort()).toEqual(webCallSitesWithArity())
+  })
+
+  it("the arity parser counts top-level elements only", () => {
+    const at = (src: string) => callSiteArity(src, src.indexOf('"f"') + 3)
+    expect(at('{ functionName: "f", args: [a, b.map((x, y) => [x, y]), "c,d", `e,${f}`, { g, h }] }')).toBe(5)
+    expect(at('{ functionName: "f", args: [] }')).toBe(0)
+    expect(at('{ functionName: "f", address }')).toBe(0)
+    expect(at('{ functionName: "f", args: buildArgs() }')).toBe(-1)
+    expect(at('{ functionName: "f", args: [a, b,] }')).toBe(2)
   })
 
   for (const site of CALL_SITES) {

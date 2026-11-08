@@ -83,12 +83,11 @@ jobs:
         run: pnpm turbo run typecheck
 
   integration-contract-tests:
-    name: Integration contract tests (known failing)
+    name: Integration contract tests
     runs-on: ubuntu-latest
-    # These checks encode defects the audit found that later phases fix.
-    # They are expected to fail until then; see the "Known-failing tests"
-    # table in docs/PRODUCTION_PLAN.md. Do not weaken them to turn this green.
-    continue-on-error: true
+    # Blocking since Phase 4: every audit defect these checks encoded is fixed
+    # (see "Known-failing tests" in docs/PRODUCTION_PLAN.md). Do not weaken a
+    # check to turn this green; fix the code it points at.
     steps:
       - uses: actions/checkout@v4
 
@@ -105,5 +104,5 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Tests #7 + #8 and checks (a)(b)(c)(f). (d) is live-RPC only: no --live here.
-      - name: validate:integration (known failing)
+      - name: validate:integration
         run: pnpm validate:integration --chain-id 99801
