@@ -7,6 +7,7 @@ import { HypeIcon } from "@/components/ui/HypeIcon"
 import { useAuth } from "@/components/AuthProvider"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
+import { formatWei } from "@/lib/wei"
 
 interface ConnectWalletProps {
   textMsg: string
@@ -99,7 +100,7 @@ export default function ConnectWallet({ textMsg, setWalletOptionsCard }: Connect
     return (
       <div className="flex lg:flex-row flex-col items-center gap-4 lg:border-2 rounded-[10px] border-(--bg)! relative">
         <span className="px-4 p-2 h-full flex items-center lg:border-r border-(--bg) gap-2">
-          <span>{balance?.value && (Number(balance.value) / 1e18).toFixed(3)}</span>
+          <span>{balance?.value !== undefined && formatWei(balance.value, 3)}</span>
           <span className="opacity-75">
             <HypeIcon />
           </span>

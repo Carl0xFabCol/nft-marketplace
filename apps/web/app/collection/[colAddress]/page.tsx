@@ -1,5 +1,6 @@
 // app/collection/[colAddress]/page.tsx
 import { getServerSupabase } from "@/lib/supabase/server"
+import { COLLECTION_BID_COLUMNS } from "@/lib/supabase/columns"
 
 import ColInfo from "../../../components/features/collections/collection/ColInfo"
 import CollectionClientArea from "../../../components/features/collections/collection/CollectionClientArea"
@@ -21,7 +22,7 @@ export default async function CollectionPage({ params }: { params: { colAddress:
 
     supabase
       .from("collection_bids")
-      .select("*")
+      .select(COLLECTION_BID_COLUMNS)
       .eq("collection_address", colAddress.toLowerCase())
       .eq("chain_id", chainId)
       .eq("is_active", true)
@@ -30,7 +31,7 @@ export default async function CollectionPage({ params }: { params: { colAddress:
 
     supabase
       .from("collections")
-      .select("floor_price")
+      .select("floor_price::text")
       .eq("contract_address", colAddress.toLowerCase())
       .eq("chain_id", chainId)
       .single(),
@@ -46,7 +47,7 @@ export default async function CollectionPage({ params }: { params: { colAddress:
         chainId={chainId}
         collectionBids={collectionBidsResult.data ?? []}
         initialNftsData={initialNftsData}
-        initialFloorPrice={collectionResult.data?.floor_price?.toString() ?? "0"}
+        initialFloorPrice={collectionResult.data?.floor_price ?? "0"}
       />
     </div>
   )

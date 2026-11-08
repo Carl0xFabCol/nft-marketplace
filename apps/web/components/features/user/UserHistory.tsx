@@ -14,6 +14,7 @@ import { explorerTxUrl } from "@/lib/chains"
 import { UserService } from "@/services/user.service"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { Pagination } from "@/components/ui/ServerPagination"
+import { formatWei } from "@/lib/wei"
 
 const PAGE_SIZE = 24
 
@@ -57,7 +58,8 @@ function AddressCell({ addr, self }: { addr: string | null; self: string | undef
 interface ActivityRow {
   event: string
   token_id?: string | number
-  price?: string | number | null
+  /** wei, decimal-integer text (activity.price is a text column) */
+  price?: string | null
   from: string | null
   to: string | null
   tx_hash: string
@@ -138,7 +140,7 @@ export default function UserHistory({ activity: initialActivity, userAddress, ch
             <div className="p-2 flex-1 relative z-10">
               {a.price ? (
                 <div className="flex gap-2 items-center">
-                  <span>{Number(a.price) / 1e18}</span>
+                  <span>{formatWei(a.price, 18)}</span>
                   <HypeIcon />
                 </div>
               ) : (

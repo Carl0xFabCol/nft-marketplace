@@ -1,6 +1,7 @@
 // types/user.types.ts
 import { Address } from "viem"
 import { Tables } from "@/lib/supabase/types"
+import type { CollectionBidRowText, CollectionRowText } from "@/lib/supabase/columns"
 
 export interface UserProfile {
   id: string
@@ -33,15 +34,17 @@ export interface Collection {
   created_at: string | null
   deployed_at: number | null
   indexer_block: number | null
-  total_volume: number | null
+  /** ether, exact decimal text */
+  total_volume: string | null
   total_sales: number | null
-  floor_price: number | string | null
+  /** wei, exact decimal-integer text */
+  floor_price: string | null
   updated_at: string | null
   is_verified: boolean | null
   nft_count: number
   royalty_fee: number | null
   owner_count?: number
-  top_bid?: Tables<"collection_bids"> | null
+  top_bid?: Pick<CollectionBidRowText, "collection_address" | "price" | "bidder_wallet" | "created_at"> | null
 }
 
 /** A collection plus the viewer-specific flags used on the user page. */
@@ -59,9 +62,9 @@ export interface Collection24h {
   name: string | null
   symbol: string | null
   image_url: string | null
-  total_volume: number | null
+  total_volume: string | null
   total_sales: number | null
-  floor_price: number | string | null
+  floor_price: string | null
   nft_count: number
   is_verified: boolean
 }
@@ -92,7 +95,8 @@ export interface UserListing {
   is_active: boolean
   listed_at: string | null
   listing_id: string | null
-  price: number
+  /** wei, exact decimal-integer text */
+  price: string
   seller_wallet: string | null
   token_id: string
   tx_hash: string
@@ -110,7 +114,8 @@ export interface UserCollectionBid {
   expires_at: string | null
   id: string
   is_active: boolean | null
-  price: number | null
+  /** wei per item, exact decimal-integer text */
+  price: string | null
   quantity: number | null
   seller_wallet: string | null
   updated_at: string | null
@@ -123,7 +128,8 @@ export interface UserTokenBid {
   expires_at: string | null
   id: string
   is_active: boolean | null
-  price: number | null
+  /** wei, exact decimal-integer text */
+  price: string | null
   seller_wallet: string | null
   token_id: string | null
   updated_at: string | null
@@ -157,7 +163,8 @@ export interface EnrichedUserNFT extends UserNFT {
 
 /** NFT shape used by the batch (buy/bid/list) flows. */
 export type BatchNFT = EnrichedUserNFT & {
-  price?: number | string | null
+  /** wei, exact decimal-integer text */
+  price?: string | null
   seller_wallet?: string | null
 }
 
@@ -197,7 +204,7 @@ export type NFTDetail = Omit<Tables<"nfts">, "metadata" | "collection_address"> 
   /** Active token bids, highest first. */
   bids?: UserTokenBid[]
   /** Parent collection row. */
-  collection?: Tables<"collections"> | null
+  collection?: CollectionRowText | null
   /** Activity rows for this token, newest first. */
   history?: Tables<"activity">[]
 }

@@ -1,8 +1,8 @@
 // services/collections.service.ts
 import { SupabaseClient } from "@supabase/supabase-js"
+import { COLLECTION_COLUMNS, type CollectionBidRowText, type CollectionRowText } from "@/lib/supabase/columns"
 import { Address } from "viem"
 import { Collection } from "@/types/user.types"
-import { Tables } from "@/lib/supabase/types"
 import { clampInt, sanitizePostgrestSearch } from "@/lib/validation"
 
 export type { Collection }
@@ -17,9 +17,9 @@ function requireSupportedChain(chainId: number): number {
   return chainId
 }
 
-type CollectionRow = Tables<"collections">
+type CollectionRow = CollectionRowText
 type CollectionRowWithCount = CollectionRow & { nfts?: Array<{ count: number }> }
-type CollectionBidRow = Tables<"collection_bids">
+type CollectionBidRow = Pick<CollectionBidRowText, "collection_address" | "price" | "bidder_wallet" | "created_at">
 type Volume24hRow = { collection_address: string; total_sales: number; total_volume: number }
 
 export type CollectionWith24hStats = Collection & {
@@ -64,7 +64,7 @@ export class CollectionService {
     const to = from + limit - 1
 
     // Single query — nft_count comes from Supabase's aggregate count.
-    let query = supabase.from("collections").select(`*, nfts(count)`, { count: "exact" }).eq("chain_id", chainId).neq("nfts.owner_wallet", ZERO)
+    let query = supabase.from("collections").select(`${COLLECTION_COLUMNS}, nfts(count)`, { count: "exact" }).eq("chain_id", chainId).neq("nfts.owner_wallet", ZERO)
 
     if (verified !== undefined) query = query.eq("is_verified", verified)
 
@@ -102,7 +102,7 @@ export class CollectionService {
 
     const { data, error } = await supabase
       .from("collections")
-      .select(`*, nfts(count)`)
+      .select(`${COLLECTION_COLUMNS}, nfts(count)`)
       .eq("chain_id", chainId)
       .not("total_volume", "is", null)
       .order("total_volume", { ascending: false, nullsFirst: false })
@@ -139,7 +139,7 @@ export class CollectionService {
     // Single fetch for all top bids
     const { data: bids } = await supabase
       .from("collection_bids")
-      .select("collection_address, price, bidder_wallet, created_at")
+      .select("collection_address, price::text, bidder_wallet, created_at")
       .eq("is_active", true)
       .eq("chain_id", chainId)
       .in("collection_address", addresses)
@@ -174,7 +174,7 @@ export class CollectionService {
 
       const addresses = volumeData.map((item) => item.collection_address)
 
-      const { data: collections, error: colErr } = await supabase.from("collections").select(`*, nfts(count)`).in("contract_address", addresses).eq("chain_id", chainId)
+      const { data: collections, error: colErr } = await supabase.from("collections").select(`${COLLECTION_COLUMNS}, nfts(count)`).in("contract_address", addresses).eq("chain_id", chainId)
 
       if (colErr) throw colErr
 

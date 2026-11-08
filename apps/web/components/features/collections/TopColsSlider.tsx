@@ -7,6 +7,7 @@ import Link from "next/link"
 import { FiChevronLeft, FiChevronRight, FiImage } from "react-icons/fi"
 import { Collection } from "@/types/user.types"
 import { MdOutlineVerified } from "react-icons/md"
+import { formatEtherText, formatWei, toWei } from "@/lib/wei"
 
 interface TopCollectionsSliderProps {
   collections: Collection[]
@@ -34,10 +35,8 @@ export function TopCollectionsSlider({ collections }: TopCollectionsSliderProps)
     }
   }
 
-  const formatVolume = (volume: number | null) => {
-    if (!volume) return "0 HYPE"
-    return `${volume.toFixed(3)} HYPE`
-  }
+  // total_volume is ether-denominated decimal text (exact).
+  const formatVolume = (volume: string | null) => `${formatEtherText(volume, 3, "0")} HYPE`
 
   if (collections.length === 0) {
     return (
@@ -126,7 +125,7 @@ export function TopCollectionsSlider({ collections }: TopCollectionsSliderProps)
                       <div className="flex card p-2 rounded gap-2 flex-col text-sm border border-(--text)/20 items-center">
                         <span className="text-gray-300">Market Cap</span>
                         <span className="font-medium text-white">
-                          {((Number(collection.nft_count?.toLocaleString()) || 0) * (collection.floor_price ? Number(collection.floor_price) : 0)) / 1e18} HYPE
+                          {formatWei((toWei(collection.floor_price) ?? BigInt(0)) * BigInt(collection.nft_count || 0), 3, "0")} HYPE
                         </span>
                       </div>
                     </div>

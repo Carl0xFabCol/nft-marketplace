@@ -131,7 +131,7 @@ export function MintForm({ contractAddress, name }: props) {
       <span className="text-[12px] text-(--muted)">
         Cost:{" "}
         <span className="text-(--foreground) font-medium">
-          {Number(cost).toFixed(Number(cost) < 0.001 ? 6 : 4)} {nativeSymbol}
+          {cost} {nativeSymbol}
         </span>
       </span>
 

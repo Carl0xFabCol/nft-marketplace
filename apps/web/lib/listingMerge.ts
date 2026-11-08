@@ -20,7 +20,8 @@ export type RealtimeListingRow = {
   token_id: string
   seller_wallet?: string | null
   buyer_wallet?: string | null
-  price?: number | string | null
+  /** wei, exact decimal-integer text (rows are re-read through price::text). */
+  price?: string | null
   is_active?: boolean
   chain_id?: number | null
   listed_at?: string | null
@@ -34,7 +35,6 @@ export type RealtimeListingRow = {
 
 /** Normalize a realtime row (possibly column-filtered) into a UserListing. */
 export function toUserListing(row: RealtimeListingRow): UserListing {
-  const rawPrice = row.price ?? 0
   const rawTokenId = String(row.token_id)
 
   return {
@@ -44,7 +44,7 @@ export function toUserListing(row: RealtimeListingRow): UserListing {
     token_id: tryNormalizeTokenId(rawTokenId) ?? rawTokenId,
     seller_wallet: row.seller_wallet?.toLowerCase() ?? null,
     buyer_wallet: row.buyer_wallet?.toLowerCase() ?? null,
-    price: typeof rawPrice === "string" ? Number(rawPrice) : rawPrice,
+    price: row.price ?? "0",
     is_active: row.is_active ?? true,
     chain_id: row.chain_id ?? null,
     listed_at: row.listed_at ?? null,

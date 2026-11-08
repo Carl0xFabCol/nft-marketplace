@@ -21,6 +21,7 @@ import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { formatWei, percentOf } from "@/lib/wei"
 
 interface ListItemWithPrice extends EnrichedUserNFT {
   price?: bigint
@@ -119,10 +120,12 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
     return map
   }, [listings])
 
+  // Estimate only (bigint, floor like the contracts): the listing snapshots the
+  // royalty at listing time and the sale charges min(listing fee, current fee).
   const { totalEstimated, totalMarketplaceFee, totalRoyalties } = useMemo(() => {
-    let marketplaceFee = 0
-    let royaltyFee = 0
-    let estimated = 0
+    let marketplaceFee = BigInt(0)
+    let royaltyFee = BigInt(0)
+    let estimated = BigInt(0)
 
     if (colsData && info) {
       listItems.forEach((item) => {
@@ -132,14 +135,13 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
         if (colIndex === -1 || !colsData[colIndex]) return
 
         const colData = colsData[colIndex].result as unknown as CollectionInfo
-        const priceNum = Number(item.price)
-
-        const itemRoyalty = (priceNum * Number(colData.royaltyFee)) / 10000
-        const itemMarketplaceFee = (priceNum * Number(info.marketplaceFee)) / 10000
+        const price = item.price
+        const itemRoyalty = (price * BigInt(colData.royaltyFee)) / BigInt(10000)
+        const itemMarketplaceFee = info.marketplaceFee === undefined ? BigInt(0) : (price * BigInt(info.marketplaceFee)) / BigInt(10000)
 
         marketplaceFee += itemMarketplaceFee
         royaltyFee += itemRoyalty
-        estimated += priceNum - itemRoyalty - itemMarketplaceFee
+        estimated += price - itemRoyalty - itemMarketplaceFee
       })
     }
 
@@ -313,7 +315,7 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
           const collectionName = getCollectionName(item.collection_address)
           const colData = getCollectionData(item.collection_address)
           const royaltyPercent = colData ? Number(colData.royaltyFee) / 100 : 0
-          const royaltyAmount = item.priceHype ? (Number(item.priceHype) * royaltyPercent) / 100 : 0
+          const royaltyAmount = item.price && colData ? (item.price * BigInt(colData.royaltyFee)) / BigInt(10000) : BigInt(0)
 
           return (
             <div className="flex items-center px-6 justify-between w-full py-6 " key={`${item.chain_id}-${item.collection_address}-${item.token_id}`}>
@@ -329,7 +331,7 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
               {/* Floor */}
               <div className="flex gap-2 items-center flex-1">
                 <div className="flex gap-1 items-center">
-                  <span>{floor ? (Number(floor) / 1e18).toFixed(4) : "-"}</span>
+                  <span>{floor ? formatWei(floor) : "-"}</span>
                   {floor && <HypeIcon className="text-sm" />}
                 </div>
               </div>
@@ -337,8 +339,8 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
               {/* Royalty */}
               <div className="flex-1 flex items-center gap-2">
                 <span className="flex items-center gap-1">
-                  {royaltyAmount ? royaltyAmount.toFixed(4) : "-"}
-                  {royaltyAmount > 0 && <HypeIcon className="text-sm" />}
+                  {royaltyAmount > BigInt(0) ? formatWei(royaltyAmount) : "-"}
+                  {royaltyAmount > BigInt(0) && <HypeIcon className="text-sm" />}
                 </span>
                 <span className="text-sm opacity-65">({royaltyPercent ? `${royaltyPercent}%` : "-%"})</span>
               </div>
@@ -382,7 +384,7 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
             <div className="flex items-center gap-4">
               <span className="font-bold text-xl">Total estimated:</span>
               <div className="flex gap-2 items-center text-xl">
-                <span>{totalEstimated ? (totalEstimated / 1e18).toFixed(4) : "0.00"}</span>
+                <span>{formatWei(totalEstimated)}</span>
                 <HypeIcon />
               </div>
             </div>
@@ -393,9 +395,9 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
               <div className="flex items-center gap-2">
                 <span className="font-bold">Royalties:</span>
                 <div className="flex gap-2 items-center">
-                  <span>{totalRoyalties ? (totalRoyalties / 1e18).toFixed(4) : "0.00"}</span>
+                  <span>{formatWei(totalRoyalties)}</span>
                   <span>
-                    ({totalRoyalties ? ((totalRoyalties / (totalEstimated + totalMarketplaceFee + totalRoyalties)) * 100).toFixed(2) : "0"}
+                    ({percentOf(totalRoyalties, totalEstimated + totalMarketplaceFee + totalRoyalties)}
                     %)
                   </span>
                 </div>
@@ -405,9 +407,9 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
               <div className="flex items-center gap-2">
                 <span className="font-bold">Marketplace:</span>
                 <div className="flex gap-2 items-center">
-                  <span>{totalMarketplaceFee ? (totalMarketplaceFee / 1e18).toFixed(4) : "0.00"}</span>
+                  <span>{formatWei(totalMarketplaceFee)}</span>
                   <span>
-                    ({totalMarketplaceFee ? ((totalMarketplaceFee / (totalEstimated + totalMarketplaceFee + totalRoyalties)) * 100).toFixed(2) : "0"}
+                    ({percentOf(totalMarketplaceFee, totalEstimated + totalMarketplaceFee + totalRoyalties)}
                     %)
                   </span>
                 </div>

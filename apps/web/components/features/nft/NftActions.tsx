@@ -15,6 +15,7 @@ import { useBatchOperations } from "@/hooks/useBatchOperations"
 import { BatchNFT, NFTDetail } from "@/types/user.types"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
+import { formatWei } from "@/lib/wei"
 
 interface NFTActionsProps {
   nft: NFTDetail
@@ -148,7 +149,7 @@ export function NFTActions({ nft, chainId }: NFTActionsProps) {
             <span className="text-sm opacity-75">Current Price</span>
             <div className="flex items-center gap-2">
               <HypeIcon className="text-3xl" />
-              <span className="text-4xl font-bold">{(Number(nft.listing!.price) / 1e18).toFixed(4)}</span>
+              <span className="text-4xl font-bold">{formatWei(nft.listing!.price)}</span>
             </div>
 
             {/* Price details */}

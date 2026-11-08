@@ -2,7 +2,7 @@
 
 import { supabase } from "@/lib/supabase/client"
 import { useEffect, useRef } from "react"
-import { realtimeChangeMatchesChain, type RealtimeChange } from "@/lib/realtimeChain"
+import { REALTIME_COLUMNS, realtimeChangeMatchesChain, toExactChange, type ExactRowFetcher, type RealtimeChange, type RealtimeTableName } from "@/lib/realtimeChain"
 
 // hooks/useRealtimeTable.ts
 //
@@ -17,12 +17,23 @@ import { realtimeChangeMatchesChain, type RealtimeChange } from "@/lib/realtimeC
 // row that does not explicitly carry that chain (including column-filtered or
 // key-only DELETE payloads) is dropped rather than merged.
 //
+// Exactness: INSERT/UPDATE rows are re-read by (id, chain_id) through the
+// text-cast column lists (lib/realtimeChain.ts) before `onChange` sees them,
+// because realtime payloads carry numeric(78,0) wei as lossy JSON numbers.
+//
 // `onChange` is held in a ref so the subscription is created once per
 // (table, filter) instead of being torn down/recreated on every parent render.
 
-export type RealtimeTableName = "listings" | "token_bids" | "collection_bids"
+export type { RealtimeChange, RealtimeTableName } from "@/lib/realtimeChain"
 
-export type { RealtimeChange } from "@/lib/realtimeChain"
+const fetchExactRow: ExactRowFetcher = async (table, id, chainId) => {
+  const { data, error } = await supabase.from(table).select(REALTIME_COLUMNS[table]).eq("id", id).eq("chain_id", chainId).maybeSingle()
+  if (error) {
+    console.warn(`realtime: exact re-read of ${table} ${id} failed`, error)
+    return null
+  }
+  return (data as Record<string, unknown> | null) ?? null
+}
 
 export interface UseRealtimeTableOptions<T> {
   /** The table to subscribe to. */
@@ -68,7 +79,10 @@ export function useRealtimeTable<T>({ table, chainId, filter, enabled = true, on
             new: payload.new as T | undefined,
             old: payload.old as T | undefined,
           }
-          if (realtimeChangeMatchesChain(change, chainId)) onChangeRef.current(change)
+          if (!realtimeChangeMatchesChain(change, chainId)) return
+          void toExactChange(change, table, chainId, fetchExactRow).then((exact) => {
+            if (exact) onChangeRef.current(exact)
+          })
         },
       )
       .subscribe()

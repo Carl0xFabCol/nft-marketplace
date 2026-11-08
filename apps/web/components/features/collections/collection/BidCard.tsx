@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/Modal"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { dateToEpochSeconds } from "@/lib/dates"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { formatWei, parseEtherInput } from "@/lib/wei"
 
 interface BidItemWithPrice extends BatchNFT {
   expiresAt?: Date
@@ -117,7 +118,7 @@ export function BidCard({ items, collectionAddress, chainId, collectionName, onC
   const updateItemPrice = (tokenId: string, value: string) => {
     if (!/^\d*\.?\d*$/.test(value)) return
 
-    const bidPrice = value === "" || value === "." ? undefined : BigInt(Math.floor(Number(value) * 1e18))
+    const bidPrice = parseEtherInput(value)
 
     setBidItems((prev) => prev.map((item) => (item.token_id === tokenId ? { ...item, priceHype: value, bidPrice } : item)))
   }
@@ -130,7 +131,7 @@ export function BidCard({ items, collectionAddress, chainId, collectionName, onC
   const updateAllPrices = (value: string) => {
     if (!/^\d*\.?\d*$/.test(value)) return
 
-    const bidPrice = value === "" || value === "." ? undefined : BigInt(Math.floor(Number(value) * 1e18))
+    const bidPrice = parseEtherInput(value)
 
     setPriceAll(value)
     setBidItems((prev) =>
@@ -187,7 +188,7 @@ export function BidCard({ items, collectionAddress, chainId, collectionName, onC
                 <div className="flex flex-1 justify-center items-center gap-2">
                   {item.price ? (
                     <>
-                      <span>{(Number(item.price) / 1e18).toFixed(4)}</span>
+                      <span>{formatWei(item.price)}</span>
                       <HypeIcon />
                     </>
                   ) : (
@@ -227,7 +228,7 @@ export function BidCard({ items, collectionAddress, chainId, collectionName, onC
             <div className="flex items-center gap-4">
               <span className="text-xl font-bold ">Total balance needed: </span>
               <div className="flex items-center gap-2 text-xl">
-                <span>{(Number(totalValue) / 1e18).toFixed(4)}</span>
+                <span>{formatWei(totalValue)}</span>
                 <HypeIcon />
               </div>
             </div>

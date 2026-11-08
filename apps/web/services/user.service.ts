@@ -1,5 +1,6 @@
 // services/user.service.ts
 import { SupabaseClient } from "@supabase/supabase-js"
+import { COLLECTION_BID_COLUMNS, COLLECTION_COLUMNS, LISTING_COLUMNS, TOKEN_BID_COLUMNS, type CollectionRowText } from "@/lib/supabase/columns"
 import { Address, isAddress } from "viem"
 import { UserCollectionSummary, UserPageData, UserListing, UserTokenBid, UserCollectionBid, Activity, UserProfile, ProfileNftOption } from "@/types/user.types"
 import { clampInt } from "@/lib/validation"
@@ -121,7 +122,7 @@ export class UserService {
 
     const { data, error } = await supabase
       .from("listings")
-      .select("*")
+      .select(LISTING_COLUMNS)
       .eq("seller_wallet", userAddress.toLowerCase())
       .eq("chain_id", chainId)
       .eq("is_active", true)
@@ -138,7 +139,7 @@ export class UserService {
     chainId = requireSupportedChain(chainId)
     const { data, error } = await supabase
       .from("collection_bids")
-      .select("*")
+      .select(COLLECTION_BID_COLUMNS)
       .eq("bidder_wallet", userAddress.toLowerCase())
       .eq("chain_id", chainId)
       .eq("is_active", true)
@@ -155,7 +156,7 @@ export class UserService {
     chainId = requireSupportedChain(chainId)
     const { data, error } = await supabase
       .from("token_bids")
-      .select("*")
+      .select(TOKEN_BID_COLUMNS)
       .eq("bidder_wallet", userAddress.toLowerCase())
       .eq("chain_id", chainId)
       .eq("is_active", true)
@@ -175,21 +176,21 @@ export class UserService {
     const [nftColRes, colBidRes, tokenBidRes] = await Promise.all([
       supabase
         .from("collections")
-        .select(`*, user_nfts:nfts!inner(owner_wallet, collection_address)`)
+        .select(`${COLLECTION_COLUMNS}, user_nfts:nfts!inner(owner_wallet, collection_address)`)
         .eq("chain_id", chainId)
         .eq("nfts.owner_wallet", addr)
         .eq("nfts.chain_id", chainId),
 
-      supabase.from("collection_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("chain_id", chainId).eq("is_active", true).eq("collections.chain_id", chainId),
+      supabase.from("collection_bids").select(`collection_address, collections!inner(${COLLECTION_COLUMNS})`).eq("bidder_wallet", addr).eq("chain_id", chainId).eq("is_active", true).eq("collections.chain_id", chainId),
 
-      supabase.from("token_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("chain_id", chainId).eq("is_active", true).eq("collections.chain_id", chainId),
+      supabase.from("token_bids").select(`collection_address, collections!inner(${COLLECTION_COLUMNS})`).eq("bidder_wallet", addr).eq("chain_id", chainId).eq("is_active", true).eq("collections.chain_id", chainId),
     ])
 
     type OwnedCollectionRow = UserCollectionSummary & {
       user_nfts?: Array<{ owner_wallet: string; collection_address: string }>
     }
     type BidJoinRow = {
-      collections: UserCollectionSummary | UserCollectionSummary[] | null
+      collections: CollectionRowText | CollectionRowText[] | null
     }
 
     const map = new Map<string, UserCollectionSummary>()
@@ -209,6 +210,7 @@ export class UserService {
       } else {
         map.set(contract, {
           ...normalized,
+          nft_count: 0,
           user_nft_count: 0,
           has_nfts: false,
           has_collection_bid: flag === "has_collection_bid",

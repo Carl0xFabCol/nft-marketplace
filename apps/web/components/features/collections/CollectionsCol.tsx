@@ -5,6 +5,7 @@ import Link from "next/link"
 import { HypeIcon } from "@/components/ui/HypeIcon"
 import { Collection } from "@/types/user.types"
 import { MdOutlineVerified } from "react-icons/md"
+import { formatEtherText, formatWei } from "@/lib/wei"
 
 interface CollectionsColProps {
   collections: Collection[]
@@ -26,9 +27,9 @@ export default function CollectionsCol({ collections }: CollectionsColProps) {
     <div className="flex flex-col w-full text-(--text)! card rounded-b">
       {collections.map((collection: Collection) => {
         const name = collection.name || "-"
-        const floorFromDB = collection.floor_price ? Number(collection.floor_price) / 1e18 : null
+        const floorFromDB = collection.floor_price ? formatWei(collection.floor_price, 3, "") || null : null
         const royaltyFee = collection.royalty_fee != null ? collection.royalty_fee / 100 : "-"
-        const totalVol = collection.total_volume != null ? collection.total_volume : "-"
+        const totalVol = formatEtherText(collection.total_volume)
         const supply = collection.nft_count || "-"
 
         return (
@@ -55,7 +56,7 @@ export default function CollectionsCol({ collections }: CollectionsColProps) {
               <div className="flex flex-1 items-center gap-1">
                 {floorFromDB !== null ? (
                   <>
-                    <span>{floorFromDB.toFixed(3)}</span>
+                    <span>{floorFromDB}</span>
                     <HypeIcon className="text-xs" />
                   </>
                 ) : (
@@ -67,7 +68,7 @@ export default function CollectionsCol({ collections }: CollectionsColProps) {
               <div className="flex flex-1 items-center gap-1">
                 {collection.top_bid ? (
                   <>
-                    <span>{(Number(collection.top_bid.price) / 1e18).toFixed(3)}</span>
+                    <span>{formatWei(collection.top_bid.price, 3)}</span>
                     <HypeIcon className="text-xs" />
                   </>
                 ) : (

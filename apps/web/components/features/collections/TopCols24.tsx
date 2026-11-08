@@ -5,6 +5,7 @@ import { Collection } from "@/types/user.types"
 import Link from "next/link"
 import { HypeIcon } from "@/components/ui/HypeIcon"
 import { MdOutlineVerified } from "react-icons/md"
+import { formatEtherText, formatWei } from "@/lib/wei"
 
 interface props {
   initialCollections: Collection[]
@@ -71,7 +72,7 @@ export function TopCols24({ initialCollections, initialCollections24 }: props) {
                 <div className="flex flex-1 items-center gap-1">
                   {collection.floor_price != null ? (
                     <>
-                      <span>{(Number(collection.floor_price) / 1e18).toFixed(3)}</span>
+                      <span>{formatWei(collection.floor_price, 3)}</span>
                       <HypeIcon className="text-xs" />
                     </>
                   ) : (
@@ -92,7 +93,7 @@ export function TopCols24({ initialCollections, initialCollections24 }: props) {
                 <div className="flex flex-1 items-center gap-1">
                   {collection.total_volume != null ? (
                     <>
-                      <span>{collection.total_volume}</span>
+                      <span>{formatEtherText(collection.total_volume)}</span>
                       <HypeIcon className="text-xs" />
                     </>
                   ) : (

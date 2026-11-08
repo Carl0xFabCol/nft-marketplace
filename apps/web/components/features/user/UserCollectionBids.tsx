@@ -14,6 +14,7 @@ import { Address } from "viem"
 import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserCollectionBid, upsertCollectionBid, deactivateCollectionBid } from "@/lib/bidMerge"
+import { compareWei, formatWei } from "@/lib/wei"
 
 interface UserCollectionBidsProps {
   collectionBids: UserCollectionBid[]
@@ -60,8 +61,9 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
 
   const { sorted, totalSize } = useMemo(
     () => ({
-      sorted: [...bids].sort((a, b) => Number(a.price) - Number(b.price)),
-      totalSize: bids.reduce((sum, bid) => sum + Number(bid.price), 0),
+      sorted: [...bids].sort((a, b) => compareWei(a.price, b.price)),
+      // Share bar = quantity / total quantity (it summed prices as floats before).
+      totalSize: bids.reduce((sum, bid) => sum + (bid.quantity ?? 0), 0),
     }),
     [bids],
   )
@@ -148,7 +150,7 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
                 </div>
                 <div className="p-2 flex-1 pr-5 pl-5 relative z-10  ">
                   <div className="flex gap-2 items-center">
-                    <span>{Number(c.price) / 1e18}</span>
+                    <span>{formatWei(c.price, 18)}</span>
                     <HypeIcon />
                   </div>
                 </div>

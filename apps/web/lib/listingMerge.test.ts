@@ -22,7 +22,7 @@ function listing(chainId: number, tokenId = "1"): UserListing {
     token_id: tokenId,
     seller_wallet: "0x0000000000000000000000000000000000000002",
     buyer_wallet: null,
-    price: 100,
+    price: "100",
     is_active: true,
     chain_id: chainId,
     listed_at: null,

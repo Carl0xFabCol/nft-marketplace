@@ -14,6 +14,7 @@ import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 import { useCancelTokenBid, useCancelTokenBidBatch } from "@/hooks/useBidActions"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserTokenBid, upsertTokenBid, deactivateTokenBid } from "@/lib/bidMerge"
+import { compareWei, formatWei } from "@/lib/wei"
 
 interface UserTokenBidsProps {
   tokenBids: UserTokenBid[]
@@ -69,7 +70,7 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
     if (selectedCollection) {
       visibleBids = visibleBids.filter((bid) => String(bid.collection_address).toLowerCase() === String(selectedCollection).toLowerCase())
     }
-    return [...visibleBids].sort((a, b) => Number(b.price) - Number(a.price))
+    return [...visibleBids].sort((a, b) => compareWei(b.price, a.price))
   }, [bids, address, selectedCollection])
 
   const handleCancelBids = async () => {
@@ -150,7 +151,7 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
                   </div>
                   <span className="flex-1 py-2 pl-6 flex  relative z-10">
                     <div className="flex gap-2 items-center">
-                      <span>{Number(c.price) / 1e18}</span>
+                      <span>{formatWei(c.price, 18)}</span>
                       <HypeIcon />
                     </div>
                   </span>

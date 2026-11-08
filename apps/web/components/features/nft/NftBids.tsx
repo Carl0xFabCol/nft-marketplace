@@ -16,6 +16,7 @@ import { waitForTxConfirmation } from "@/lib/tx"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { BidAcceptanceError, type AcceptQuote } from "@/lib/bidAcceptance"
 import { AcceptBidConfirm } from "@/components/features/nft/AcceptBidConfirm"
+import { formatWei } from "@/lib/wei"
 
 interface NFTBidsProps {
   bids: UserTokenBid[]
@@ -140,7 +141,7 @@ export default function NFTBids({ bids, chainId, owner = false, collectionAddres
               <div key={bid.id ?? index} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-(--accent)/5 border-b border-(--text)/10 transition-colors">
                 {/* Event type */}
                 <div className="col-span-3 flex items-center gap-2">
-                  <span className="font-semibold">{Number(bid.price) / 1e18}</span>
+                  <span className="font-semibold">{formatWei(bid.price, 18)}</span>
                   <HypeIcon className="text-sm" />
                 </div>
 

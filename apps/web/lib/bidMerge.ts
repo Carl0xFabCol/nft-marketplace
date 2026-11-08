@@ -14,12 +14,14 @@ import { UserTokenBid, UserCollectionBid } from "@/types/user.types"
 // broadcast).
 export type RealtimeTokenBidRow = {
   id?: string
+  chain_id?: number
   bidder_wallet?: string | null
   collection_address?: string | null
   created_at?: string
   expires_at?: string | null
   is_active?: boolean | null
-  price?: number | null
+  /** wei, exact decimal-integer text (rows are re-read through price::text). */
+  price?: string | null
   seller_wallet?: string | null
   token_id?: string | null
   updated_at?: string | null
@@ -27,12 +29,14 @@ export type RealtimeTokenBidRow = {
 
 export type RealtimeCollectionBidRow = {
   id?: string
+  chain_id?: number
   bidder_wallet?: string
   collection_address?: string | null
   created_at?: string
   expires_at?: string | null
   is_active?: boolean | null
-  price?: number | null
+  /** wei, exact decimal-integer text (rows are re-read through price::text). */
+  price?: string | null
   quantity?: number | null
   seller_wallet?: string | null
   updated_at?: string | null

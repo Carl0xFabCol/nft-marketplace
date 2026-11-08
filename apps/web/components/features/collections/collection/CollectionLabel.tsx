@@ -1,6 +1,7 @@
 import { HypeIcon } from "@/components/ui/HypeIcon"
 import { Address } from "viem"
 import { EnrichedUserNFT, UserListing } from "@/types/user.types"
+import { compareWei, formatWei } from "@/lib/wei"
 
 // Receives the collection DB row (with name) + derived item/listing arrays from
 // UserSidebar. No on-chain reads — name comes from the DB.
@@ -17,7 +18,7 @@ interface CollectionLabelProps {
 export function CollectionLabel({ collection }: CollectionLabelProps) {
   const name = collection.name || collection.symbol || "-"
   const listed = collection.colItems.filter((item) => Boolean(item.active_listing))
-  const floor = [...collection.colListings].sort((a, b) => Number(a.price) - Number(b.price))
+  const floor = [...collection.colListings].sort((a, b) => compareWei(a.price, b.price))
 
   return (
     <div className="flex flex-col justify-end w-full h-full">
@@ -28,7 +29,7 @@ export function CollectionLabel({ collection }: CollectionLabelProps) {
         <div className="flex-1 flex items-center justify-center">
           {floor.length ? (
             <span className="flex items-center gap-1">
-              {Number(floor[0].price) / 1e18} <HypeIcon />
+              {formatWei(floor[0].price, 18)} <HypeIcon />
             </span>
           ) : (
             <span>-</span>

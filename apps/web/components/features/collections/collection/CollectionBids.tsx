@@ -9,6 +9,7 @@ import { Address } from "viem"
 import { UserCollectionBid } from "@/types/user.types"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserCollectionBid, upsertCollectionBid, deactivateCollectionBid } from "@/lib/bidMerge"
+import { compareWei, formatWei } from "@/lib/wei"
 
 interface CollectionBidsProps {
   collectionBids: UserCollectionBid[]
@@ -53,7 +54,7 @@ export default function CollectionBids({ collectionBids, allBids = true, collect
     const visibleBids = allBids ? bids : bids.filter((bid) => String(bid.bidder_wallet).toLowerCase() === String(address).toLowerCase())
     return {
       totalSize: visibleBids.reduce((size, bid) => size + Number(bid.quantity), 0),
-      sorted: [...visibleBids].sort((a, b) => Number(b.price) - Number(a.price)),
+      sorted: [...visibleBids].sort((a, b) => compareWei(b.price, a.price)),
     }
   }, [bids, allBids, address])
 
@@ -81,7 +82,7 @@ export default function CollectionBids({ collectionBids, allBids = true, collect
 
             return (
               <div key={c.id} className=" relative flex  ">
-                <span className="p-2 flex-1  relative z-3 ">{Number(c.price) / 1e18}</span>
+                <span className="p-2 flex-1  relative z-3 ">{formatWei(c.price, 18)}</span>
                 <span className="p-2 flex-1 relative z-3">{c.quantity}</span>
                 <Link href={`/user/${c.bidder_wallet}`} className="p-2 flex-1 relative z-3 hover:opacity-50">
                   {c.bidder_wallet.slice(-6)}

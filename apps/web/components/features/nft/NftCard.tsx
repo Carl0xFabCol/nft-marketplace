@@ -14,9 +14,11 @@ import { waitForTxConfirmation } from "@/lib/tx"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { BidAcceptanceError, type AcceptQuote } from "@/lib/bidAcceptance"
 import { AcceptBidConfirm } from "@/components/features/nft/AcceptBidConfirm"
+import { formatWei } from "@/lib/wei"
 
 type NftCardToken = EnrichedUserNFT & {
-  price?: number
+  /** wei, exact decimal-integer text */
+  price?: string
   seller_wallet?: string | null
 }
 
@@ -240,7 +242,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
                 </span>
               </Link>
               <div className="flex gap-2  text-xs lg:text-sm items-center ">
-                <span className="font-bold  ">{token.price ? Number(token.price.toString()) / 1e18 : token.active_listing ? Number(token.active_listing.price.toString()) / 1e18 : "-"}</span>
+                <span className="font-bold  ">{formatWei(token.price ?? token.active_listing?.price, 18)}</span>
                 <HypeIcon />
                 {isUserPage && token.active_listing?.status === "pending" && (
                   <span className="text-[10px] uppercase tracking-wide opacity-70 px-1.5 py-0.5 rounded border border-(--accent)/40 text-(--accent)">Pending…</span>
@@ -252,7 +254,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
               <div className="flex flex-row gap-2" onMouseEnter={handleHoverBid} onMouseLeave={() => setBidHovered(false)}>
                 <span>Top bid:</span>
                 <span className="flex gap-2 items-center">
-                  {token.topBid && Number(token.topBid.price) / 1e18}
+                  {token.topBid && formatWei(token.topBid.price, 18)}
                   {token.topBid && <HypeIcon />}
                   {!token.topBid && "-"}
                 </span>

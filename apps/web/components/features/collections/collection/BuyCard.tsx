@@ -12,6 +12,7 @@ import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { Modal } from "@/components/ui/Modal"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { formatWei } from "@/lib/wei"
 
 interface BuyCardProps {
   items: BatchNFT[]
@@ -125,7 +126,7 @@ export function BuyCard({ items, chainId, collectionName, onClose, onSuccess, on
 
                 {/* Price */}
                 <div className="flex flex-1 justify-center items-center gap-2 font-bold">
-                  <span>{(Number(item.price) / 1e18).toFixed(4)}</span>
+                  <span>{formatWei(item.price)}</span>
                   <HypeIcon />
                 </div>
 
@@ -145,7 +146,7 @@ export function BuyCard({ items, chainId, collectionName, onClose, onSuccess, on
             <div className="flex  gap-4">
               <span className="text-xl font-bold">Total Price: </span>
               <div className="flex items-center gap-2 text-xl ">
-                <span>{(Number(totalPrice) / 1e18).toFixed(4)}</span>
+                <span>{formatWei(totalPrice)}</span>
                 <HypeIcon />
               </div>
             </div>

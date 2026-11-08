@@ -6,6 +6,7 @@ import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { explorerTokenInstanceUrl, explorerTxUrl } from "@/lib/chains"
 import { Tables } from "@/lib/supabase/types"
+import { formatWei } from "@/lib/wei"
 
 interface NFTHistoryProps {
   chainId: number
@@ -83,7 +84,7 @@ export function NFTHistory({ nft, chainId }: NFTHistoryProps) {
                 {activity.price ? (
                   <>
                     <HypeIcon className="text-sm" />
-                    <span className="font-bold">{(Number(activity.price) / 1e18).toFixed(4)}</span>
+                    <span className="font-bold">{formatWei(activity.price)}</span>
                   </>
                 ) : (
                   <span className="opacity-50">—</span>

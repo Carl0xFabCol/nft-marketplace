@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { formatEtherText } from "@/lib/wei"
 import { FaExternalLinkAlt } from "react-icons/fa"
 import { HypeIcon } from "@/components/ui/HypeIcon"
 import { FiCopy } from "react-icons/fi"
@@ -10,7 +11,8 @@ import { supabase } from "@/lib/supabase/client"
 interface ColRow {
   name: string | null
   royalty_fee: number | null
-  total_volume: number | null
+  /** Ether-denominated decimal text (exact). */
+  total_volume: string | null
   total_sales: number | null
 }
 
@@ -21,7 +23,7 @@ export default function ColInfo({ colAddress, chainId }: { colAddress: string; c
     let cancelled = false
     supabase
       .from("collections")
-      .select("name, royalty_fee, total_volume, total_sales")
+      .select("name, royalty_fee, total_volume::text, total_sales")
       .eq("contract_address", colAddress.toLowerCase())
       .eq("chain_id", chainId)
       .single()
@@ -55,7 +57,7 @@ export default function ColInfo({ colAddress, chainId }: { colAddress: string; c
           <div className="card py-2 px-4 rounded-xl border-2 border-(--bg) flex flex-col">
             <span className="font-bold text-xs opacity-75">TOTAL VOLUME</span>
             <div className="flex gap-1 items-center justify-center">
-              <span>{col?.total_volume != null ? col.total_volume : "-"}</span>
+              <span>{formatEtherText(col?.total_volume)}</span>
               <HypeIcon />
             </div>
           </div>

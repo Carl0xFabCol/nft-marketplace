@@ -12,6 +12,7 @@ import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { formatWei, parseEtherInput } from "@/lib/wei"
 
 interface ColBidCardProps {
   collectionAddress: Address
@@ -31,7 +32,9 @@ export function ColBidCard({ collectionAddress, chainId, floorPrice, onClose, on
   const { chainId: connectedChainId } = useConnection()
   const { addTx, removeTx, updateTx } = useTx()
 
-  const totalBalance = price && quantity ? Number(price) * Number(quantity) : 0
+  const priceWei = parseEtherInput(price)
+  const quantityN = /^\d+$/.test(quantity) ? BigInt(quantity) : BigInt(0)
+  const totalBalance = priceWei !== undefined ? priceWei * quantityN : BigInt(0)
 
   const updateItemExpirationDate = (expiresAt: Date) => {
     setExpirationDate(expiresAt)
@@ -53,7 +56,8 @@ export function ColBidCard({ collectionAddress, chainId, floorPrice, onClose, on
     let hash: `0x${string}` | undefined
 
     try {
-      const bidPrice = BigInt(Math.floor(Number(price) * 1e18))
+      const bidPrice = parseEtherInput(price)
+      if (bidPrice === undefined) throw new Error("Invalid price")
       const qty = Number(quantity)
       hash = await bidCollection(collectionAddress, bidPrice, qty, dateToEpochSeconds(expirationDate))
 
@@ -91,7 +95,7 @@ export function ColBidCard({ collectionAddress, chainId, floorPrice, onClose, on
     setQuantity(value)
   }
 
-  const canBid = price && quantity && Number(price) > 0 && Number(quantity) > 0
+  const canBid = priceWei !== undefined && priceWei > BigInt(0) && quantityN > BigInt(0)
 
   return (
     <Modal
@@ -124,7 +128,7 @@ export function ColBidCard({ collectionAddress, chainId, floorPrice, onClose, on
             <div className="flex-1 flex justify-center items-center gap-2 text-lg">
               {floorPrice ? (
                 <>
-                  <span className="font-bold">{(Number(floorPrice) / 1e18).toFixed(4)}</span>
+                  <span className="font-bold">{formatWei(floorPrice)}</span>
                   <HypeIcon />
                 </>
               ) : (
@@ -161,7 +165,7 @@ export function ColBidCard({ collectionAddress, chainId, floorPrice, onClose, on
             <div className="flex flex-col gap-1">
               <span className="text-sm opacity-75">Total Balance Needed</span>
               <div className="flex items-center gap-2 text-2xl font-bold">
-                <span>{totalBalance.toFixed(4)}</span>
+                <span>{formatWei(totalBalance)}</span>
                 <HypeIcon />
               </div>
             </div>
