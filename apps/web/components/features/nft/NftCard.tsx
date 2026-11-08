@@ -12,6 +12,8 @@ import { Address } from "viem"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
+import { BidAcceptanceError, type AcceptQuote } from "@/lib/bidAcceptance"
+import { AcceptBidConfirm } from "@/components/features/nft/AcceptBidConfirm"
 
 type NftCardToken = EnrichedUserNFT & {
   price?: number
@@ -33,8 +35,10 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
   const { addToBatch, isInBatch, removeFromBatch } = batchOps
   const { address, chainId: connectedChainId } = useConnection()
   const publicClient = usePublicClient({ chainId: token.chain_id })
-  const { acceptTokenBid } = useAcceptTokenBid(token.chain_id)
-  const { acceptCollectionBid } = useAcceptCollectionBid(token.chain_id)
+  const { quoteTokenBid, acceptTokenBid } = useAcceptTokenBid(token.chain_id)
+  const { quoteCollectionBid, acceptCollectionBid } = useAcceptCollectionBid(token.chain_id)
+  const [pendingQuote, setPendingQuote] = useState<AcceptQuote | null>(null)
+  const [accepting, setAccepting] = useState(false)
   const { ensureApproval } = useEnsureApproval(token.chain_id)
   const { addTx, removeTx, updateTx } = useTx()
   const handleNFTClick = (nft: NftCardToken, e: React.MouseEvent) => {
@@ -128,6 +132,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
     }
   }
 
+  // Step 1: read the exact on-chain quote and show it (AcceptBidConfirm).
   const handleAcceptBid = async () => {
     if (!token.topBid || !address) return
 
@@ -140,15 +145,31 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
 
     const bid = token.topBid
     const collection = token.collection_address as Address
+    try {
+      const quote =
+        bid.kind === "collection"
+          ? await quoteCollectionBid({ collection, bidder: bid.bidder_wallet, tokenIds: [BigInt(token.token_id)], shownPricePerItem: BigInt(bid.price) })
+          : await quoteTokenBid({ collection, tokenId: BigInt(token.token_id), bidder: bid.bidder_wallet, shownPrice: BigInt(bid.price) })
+      setPendingQuote(quote)
+    } catch (e) {
+      console.error("Error quoting bid:", e)
+      alert(e instanceof BidAcceptanceError ? e.message : "Could not read this bid on-chain. Try again.")
+    }
+  }
+
+  // Step 2: the seller confirmed exactly this quote.
+  const handleConfirmAccept = async (quote: AcceptQuote) => {
+    if (!address) return
+    const collection = token.collection_address as Address
     let hash: `0x${string}` | undefined
+    setAccepting(true)
 
     try {
+      assertWalletChain(connectedChainId, token.chain_id)
       await ensureApproval(collection, address)
 
-      hash =
-        bid.kind === "collection"
-          ? await acceptCollectionBid(collection, bid.bidder_wallet, [BigInt(token.token_id)])
-          : await acceptTokenBid(collection, Number(token.token_id), bid.bidder_wallet)
+      hash = quote.kind === "collection" ? await acceptCollectionBid(quote) : await acceptTokenBid(quote)
+      setPendingQuote(null)
 
       addTx({ hash, label: "Accepting bid...", status: "loading" })
 
@@ -162,10 +183,14 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
       onBidAccepted?.(token)
     } catch (e) {
       console.error("Error accepting bid:", e)
+      const guardMessage = chainGuardErrorMessage(e)
+      if (guardMessage) alert(guardMessage)
       if (hash) {
         updateTx(hash, { label: "Transaction failed", status: "error" })
         setTimeout(() => removeTx(hash!), 6000)
       }
+    } finally {
+      setAccepting(false)
     }
   }
 
@@ -243,6 +268,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
           </div>
         </div>
       </div>
+      <AcceptBidConfirm quote={pendingQuote} busy={accepting} onConfirm={handleConfirmAccept} onCancel={() => setPendingQuote(null)} />
     </motion.div>
   )
 }

@@ -3,6 +3,13 @@
 import { useWriteContract, usePublicClient } from "wagmi"
 import { MarketplaceABI } from "@/lib/abi"
 import { useContractAddresses } from "@/hooks/useContractAddresses"
+import { useSlippageBps } from "@/hooks/useSlippageBps"
+import {
+  acceptBounds,
+  quoteCollectionBid as quoteCollectionBidOnChain,
+  quoteTokenBid as quoteTokenBidOnChain,
+  type AcceptQuote,
+} from "@/lib/bidAcceptance"
 import type { Address, PublicClient } from "viem"
 
 export function useBidToken(chainId: number) {
@@ -90,40 +97,65 @@ export function useCancelTokenBidBatch(chainId: number) {
   return { cancelTokenBids }
 }
 
+/**
+ * Token-bid acceptance (ABI-1). Two steps so the seller sees exactly what is
+ * signed: `quoteTokenBid` reads the on-chain bid, fee and royalty; the UI shows
+ * that quote; `acceptTokenBid(quote)` passes minPrice / minSellerProceeds
+ * derived from it with the single slippage setting (useSlippageBps, 0 today).
+ */
 export function useAcceptTokenBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
+  const publicClient = usePublicClient({ chainId })
   const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const slippageBps = useSlippageBps()
 
-  const acceptTokenBid = async (collection: `0x${string}`, tokenId: number, bidder: `0x${string}`) => {
+  const quoteTokenBid = async (params: { collection: Address; tokenId: bigint; bidder: Address; shownPrice: bigint }): Promise<AcceptQuote> => {
+    if (!publicClient) throw new Error("No RPC client for this network")
+    return quoteTokenBidOnChain(publicClient, { router: MARKETPLACE_CONTRACT_ADDRESS, ...params })
+  }
+
+  const acceptTokenBid = async (quote: AcceptQuote) => {
+    if (quote.kind !== "token" || quote.tokenIds.length !== 1) throw new Error("Not a token-bid quote")
+    const { minPrice, minSellerProceeds } = acceptBounds(quote, slippageBps)
     const txHash = await writeContractAsync({
       address: MARKETPLACE_CONTRACT_ADDRESS,
       abi: MarketplaceABI,
       functionName: "acceptTokenBid",
-      args: [collection, BigInt(tokenId), bidder],
+      args: [quote.collection, quote.tokenIds[0], quote.bidder, minPrice, minSellerProceeds],
       chainId,
     })
     return txHash
   }
 
-  return { acceptTokenBid }
+  return { quoteTokenBid, acceptTokenBid }
 }
 
+/** Collection-bid acceptance; same two-step contract as useAcceptTokenBid. */
 export function useAcceptCollectionBid(chainId: number) {
   const { writeContractAsync } = useWriteContract()
+  const publicClient = usePublicClient({ chainId })
   const { MARKETPLACE_CONTRACT_ADDRESS } = useContractAddresses(chainId)
+  const slippageBps = useSlippageBps()
 
-  const acceptCollectionBid = async (collection: `0x${string}`, bidder: `0x${string}`, tokenIds: bigint[]) => {
+  const quoteCollectionBid = async (params: { collection: Address; bidder: Address; tokenIds: bigint[]; shownPricePerItem: bigint }): Promise<AcceptQuote> => {
+    if (!publicClient) throw new Error("No RPC client for this network")
+    return quoteCollectionBidOnChain(publicClient, { router: MARKETPLACE_CONTRACT_ADDRESS, ...params })
+  }
+
+  const acceptCollectionBid = async (quote: AcceptQuote) => {
+    if (quote.kind !== "collection") throw new Error("Not a collection-bid quote")
+    const { minPrice, minSellerProceeds } = acceptBounds(quote, slippageBps)
     const txHash = await writeContractAsync({
       address: MARKETPLACE_CONTRACT_ADDRESS,
       abi: MarketplaceABI,
       functionName: "acceptCollectionBid",
-      args: [collection, bidder, tokenIds],
+      args: [quote.collection, quote.bidder, quote.tokenIds, minPrice, minSellerProceeds],
       chainId,
     })
     return txHash
   }
 
-  return { acceptCollectionBid }
+  return { quoteCollectionBid, acceptCollectionBid }
 }
 
 export function useBidCollection(chainId: number) {

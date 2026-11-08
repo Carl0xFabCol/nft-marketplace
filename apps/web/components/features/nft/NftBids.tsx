@@ -14,6 +14,8 @@ import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserTokenBid, upsertTokenBid, deactivateTokenBid } from "@/lib/bidMerge"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
+import { BidAcceptanceError, type AcceptQuote } from "@/lib/bidAcceptance"
+import { AcceptBidConfirm } from "@/components/features/nft/AcceptBidConfirm"
 
 interface NFTBidsProps {
   bids: UserTokenBid[]
@@ -26,7 +28,9 @@ interface NFTBidsProps {
 
 export default function NFTBids({ bids, chainId, owner = false, collectionAddress, tokenId }: NFTBidsProps) {
   const [bidList, setBidList] = useState<UserTokenBid[]>(bids)
-  const { acceptTokenBid } = useAcceptTokenBid(chainId)
+  const { quoteTokenBid, acceptTokenBid } = useAcceptTokenBid(chainId)
+  const [pendingQuote, setPendingQuote] = useState<AcceptQuote | null>(null)
+  const [accepting, setAccepting] = useState(false)
   const { ensureApproval } = useEnsureApproval(chainId)
   const { addTx, updateTx, removeTx } = useTx()
   const publicClient = usePublicClient({ chainId })
@@ -59,10 +63,9 @@ export default function NFTBids({ bids, chainId, owner = false, collectionAddres
     },
   })
 
+  // Step 1: read the exact on-chain quote and show it (AcceptBidConfirm).
   const handleAcceptBid = async (bid: UserTokenBid) => {
-    if (!address || !bid.collection_address || !bid.token_id || !bid.bidder_wallet) return
-
-    const collection = bid.collection_address as Address
+    if (!address || !bid.collection_address || !bid.token_id || !bid.bidder_wallet || bid.price == null) return
 
     try {
       assertWalletChain(connectedChainId, chainId)
@@ -71,12 +74,32 @@ export default function NFTBids({ bids, chainId, owner = false, collectionAddres
       return
     }
 
+    try {
+      const quote = await quoteTokenBid({
+        collection: bid.collection_address as Address,
+        tokenId: BigInt(bid.token_id),
+        bidder: bid.bidder_wallet as Address,
+        shownPrice: BigInt(bid.price),
+      })
+      setPendingQuote(quote)
+    } catch (e) {
+      console.error("Error quoting token bid:", e)
+      alert(e instanceof BidAcceptanceError ? e.message : "Could not read this bid on-chain. Try again.")
+    }
+  }
+
+  // Step 2: the seller confirmed exactly this quote.
+  const handleConfirmAccept = async (quote: AcceptQuote) => {
+    if (!address) return
     let hash: `0x${string}` | undefined
+    setAccepting(true)
 
     try {
-      await ensureApproval(collection, address)
+      assertWalletChain(connectedChainId, chainId)
+      await ensureApproval(quote.collection, address)
 
-      hash = await acceptTokenBid(collection, Number(bid.token_id), bid.bidder_wallet as Address)
+      hash = await acceptTokenBid(quote)
+      setPendingQuote(null)
       addTx({ hash, label: "Accepting token bid", status: "loading" })
 
       await waitForTxConfirmation(publicClient, hash)
@@ -85,16 +108,23 @@ export default function NFTBids({ bids, chainId, owner = false, collectionAddres
       setTimeout(() => removeTx(hash!), 5000)
     } catch (e) {
       console.error("Error accepting token bid: " + e)
+      const guardMessage = chainGuardErrorMessage(e)
+      if (guardMessage) alert(guardMessage)
       if (hash) {
         updateTx(hash, { status: "error", label: "Accept bid failed" })
         setTimeout(() => removeTx(hash!), 6000)
       }
+    } finally {
+      setAccepting(false)
     }
   }
+
+  const confirmPanel = <AcceptBidConfirm quote={pendingQuote} busy={accepting} onConfirm={handleConfirmAccept} onCancel={() => setPendingQuote(null)} />
 
   if (bidList.length > 0)
     return (
       <div className="flex flex-col gap-2">
+        {confirmPanel}
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-4 py-2 text-sm font-bold opacity-75 border-b border-(--text)/20">
           <div className="col-span-3">Price</div>

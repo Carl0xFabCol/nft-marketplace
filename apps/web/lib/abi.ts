@@ -1,20 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// This file previously contained ~1100 lines of duplicated ABI definitions.
+// Web ABIs: GENERATED from the Foundry artifacts (packages/contracts/src/abis/
+// *.generated.ts via @marketplace/contracts/abis/web). Never hand-paste ABIs.
 //
-// All ABIs now live in the single source of truth:
-//   packages/contracts/src/abis/
-//
-// This file is a backward-compatible re-export so that existing imports
-// within apps/web/* continue to work without any changes to consumers.
-// The `MockAbi` alias preserves the old export name used by the mint flow.
+// The import names are kept so call sites (and test #8's table) stay stable:
+//   MarketplaceABI → Marketplace router + every Core/Bids custom error
+//   LaunchPadABI   → LaunchPad
+//   MiColeccionABI → Hyperc (src/MERC721.sol), the launchpad collection
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {
-  nftAbi,
-  MarketplaceABI,
-  MarketplaceBidsABI,
-  MarketplaceCoreABI,
-  LaunchPadABI,
-  MiColeccionABI,
-  MockNFTAbi as MockAbi,
-} from "@marketplace/contracts";
+  MarketplaceRouterAbi as MarketplaceABI,
+  LaunchPadAbi as LaunchPadABI,
+  HypercAbi as MiColeccionABI,
+} from "@marketplace/contracts/abis/web"
