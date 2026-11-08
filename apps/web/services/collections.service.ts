@@ -4,6 +4,7 @@ import { COLLECTION_COLUMNS, type CollectionBidRowText, type CollectionRowText }
 import { Address } from "viem"
 import { Collection } from "@/types/user.types"
 import { clampInt, sanitizePostgrestSearch } from "@/lib/validation"
+import { toWei } from "@/lib/wei"
 
 export type { Collection }
 
@@ -20,10 +21,32 @@ function requireSupportedChain(chainId: number): number {
 type CollectionRow = CollectionRowText
 type CollectionRowWithCount = CollectionRow & { nfts?: Array<{ count: number }> }
 type CollectionBidRow = Pick<CollectionBidRowText, "collection_address" | "price" | "bidder_wallet" | "created_at">
-type Volume24hRow = { collection_address: string; total_sales: number; total_volume: number }
+type Sale24hRow = { collection_address: string | null; price: string | null }
+
+/** Upper bound of SALE rows read for the 24h ranking (one query, no pagination). */
+const SALES_24H_ROW_CAP = 10_000
+
+/** Sum wei per collection (bigint), rank by volume desc, keep the top `limit`. */
+export function aggregateSales24h(rows: Sale24hRow[], limit = 5): Array<{ collection_address: string; volume_wei: string; sales: number }> {
+  const acc = new Map<string, { volume: bigint; sales: number }>()
+  for (const row of rows) {
+    const wei = toWei(row.price)
+    if (!row.collection_address || wei === null) continue
+    const key = row.collection_address.toLowerCase()
+    const cur = acc.get(key) ?? { volume: BigInt(0), sales: 0 }
+    cur.volume += wei
+    cur.sales += 1
+    acc.set(key, cur)
+  }
+  return [...acc.entries()]
+    .sort(([ka, a], [kb, b]) => (a.volume === b.volume ? ka.localeCompare(kb) : a.volume > b.volume ? -1 : 1))
+    .slice(0, limit)
+    .map(([collection_address, v]) => ({ collection_address, volume_wei: v.volume.toString(), sales: v.sales }))
+}
 
 export type CollectionWith24hStats = Collection & {
-  volume_24h: number
+  /** wei, exact decimal-integer text */
+  volume_24h: string
   sales_24h: number
   rank: number
 }
@@ -162,14 +185,28 @@ export class CollectionService {
   }
 
   /**
-   * Top 5 collections by volume in the last 24h.
+   * Top 5 collections by SALE volume in the last 24h on ONE chain.
+   *
+   * Replaces the RPC get_top_collections_volume_24h(), which takes no chain and
+   * also matched 'TOKEN BID ACCEPTED' / 'COLLECTION BID ACCEPTED' (never
+   * written; had they matched, bid sales would count twice next to SALE).
+   * Reads activity (price is wei text) and aggregates in bigint.
    */
-  static async getTopCollectionsByVolume24h(supabase: SupabaseClient, chainId: number): Promise<CollectionWith24hStats[]> {
+  static async getTopCollectionsByVolume24h(supabase: SupabaseClient, chainId: number, now: Date = new Date()): Promise<CollectionWith24hStats[]> {
+    chainId = requireSupportedChain(chainId)
     try {
-      const { data, error } = await supabase.rpc("get_top_collections_volume_24h")
-      const volumeData = (data ?? []) as Volume24hRow[]
+      const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+      const { data, error } = await supabase
+        .from("activity")
+        .select("collection_address, price")
+        .eq("chain_id", chainId)
+        .eq("event", "SALE")
+        .gte("created_at", since)
+        .not("price", "is", null)
+        .limit(SALES_24H_ROW_CAP)
 
       if (error) throw error
+      const volumeData = aggregateSales24h((data ?? []) as Sale24hRow[])
       if (!volumeData.length) return []
 
       const addresses = volumeData.map((item) => item.collection_address)
@@ -181,14 +218,14 @@ export class CollectionService {
       const collectionMap = new Map(((collections ?? []) as CollectionRowWithCount[]).map((collection) => [collection.contract_address.toLowerCase(), toCollection(collection)]))
 
       return volumeData.flatMap((volume, index) => {
-        const collection = collectionMap.get(volume.collection_address.toLowerCase())
+        const collection = collectionMap.get(volume.collection_address)
         if (!collection) return []
 
         return [
           {
             ...collection,
-            volume_24h: volume.total_volume ?? 0,
-            sales_24h: volume.total_sales ?? 0,
+            volume_24h: volume.volume_wei,
+            sales_24h: volume.sales,
             rank: index + 1,
           },
         ]

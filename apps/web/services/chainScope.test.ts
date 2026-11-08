@@ -114,6 +114,16 @@ describe("chain scope of web reads (DB-9)", () => {
     assertAllScoped()
   })
 
+  it("24h top collections: chain-scoped SALE activity, no chain-less RPC", async () => {
+    const sb = fake.client as SupabaseClient & { rpc: ReturnType<typeof vi.fn> }
+    await CollectionService.getTopCollectionsByVolume24h(sb, CHAIN, new Date("2026-11-08T12:00:00Z"))
+    const activity = recorded.find((r) => r.table === "activity")!
+    expect(activity.calls).toContainEqual(["eq", ["event", "SALE"]])
+    expect(activity.calls).toContainEqual(["gte", ["created_at", "2026-11-07T12:00:00.000Z"]])
+    expect(sb.rpc).not.toHaveBeenCalled()
+    assertAllScoped()
+  })
+
   it("rejects an unsupported chain instead of querying", async () => {
     const sb = fake.client as SupabaseClient
     await expect(UserService.getUserTokenBids(sb, USER, 1)).rejects.toThrow("Invalid chain id")
