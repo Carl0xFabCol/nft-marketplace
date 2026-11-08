@@ -1,10 +1,9 @@
-// Re-export all ABI definitions from their canonical source files.
-// Import from "@marketplace/contracts/abis" or "@marketplace/contracts"
+// ABIs of @marketplace/contracts: GENERATED from the Foundry artifacts only
+// (scripts/generate-abis.ts). The hand-pasted *.abi.ts files were removed in
+// Phase 4; never add hand-written ABIs here.
+//
+//   indexer → "@marketplace/contracts/abis/generated/events" (events only)
+//   web     → "@marketplace/contracts/abis/web" (router + bubbling Core/Bids errors)
 
-export { nftAbi } from "./nft.abi";
-export { MockNFTAbi } from "./mock-nft.abi";
-export { MarketplaceABI } from "./marketplace.abi";
-export { MarketplaceBidsABI } from "./marketplace-bids.abi";
-export { MarketplaceCoreABI } from "./marketplace-core.abi";
-export { LaunchPadABI } from "./launchpad.abi";
-export { MiColeccionABI } from "./micoleccion.abi";
+export * from "./web"
+export * from "./events.generated"

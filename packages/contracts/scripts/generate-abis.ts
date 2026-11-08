@@ -6,8 +6,8 @@
  *   pnpm --filter @marketplace/contracts generate:abis --check   # CI gate
  *
  * --check regenerates in memory and exits 1 if any committed file differs.
- * Phase 0: consumers still import the hand-pasted *.abi.ts files; nothing
- * imports the generated bundles yet (switching consumers is Phase 4).
+ * Consumers (Phase 4): the indexer decodes with the events bundle, the web
+ * calls through src/abis/web.ts. No hand-pasted ABI remains.
  */
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
