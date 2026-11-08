@@ -130,6 +130,31 @@ describe("saveBatchListingToDB", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
+  it("reports listings_nft_fk (23503) as not_indexed instead of failing", async () => {
+    // Exact PostgREST error captured from the local stack (Phase 4).
+    mocks.rpc.mockResolvedValue({
+      data: null,
+      error: {
+        code: "23503",
+        details: 'Key (collection_address, token_id, chain_id)=(0x…c1, 1, 99801) is not present in table "nfts".',
+        hint: null,
+        message: 'insert or update on table "listings" violates foreign key constraint "listings_nft_fk"',
+      },
+    })
+
+    await expect(saveBatchListingToDB(data())).resolves.toEqual({ success: false, reason: "not_indexed" })
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("keeps other foreign-key violations generic", async () => {
+    mocks.rpc.mockResolvedValue({
+      data: null,
+      error: { code: "23503", message: 'insert or update on table "listings" violates foreign key constraint "some_other_fk"' },
+    })
+
+    await expect(saveBatchListingToDB(data())).rejects.toThrow("Failed to save listings")
+  })
+
   it("does not leak arbitrary database errors", async () => {
     mocks.rpc.mockResolvedValue({
       data: null,

@@ -16,6 +16,7 @@ import { BatchType } from "@/hooks/useBatchOperations"
 import { useMarketplaceInfo } from "@/hooks/useMarketplaceReads"
 import { useTx } from "@/app/context/TxContext"
 import { saveBatchListingToDB } from "@/actions/listings/createBatch"
+import { NOT_INDEXED_FINAL_MESSAGE, NOT_INDEXED_MESSAGE, retryOptimisticListing } from "@/lib/optimisticListing"
 import { failListingsByTxHash } from "@/actions/listings/failBatch"
 import ExpirationPicker from "@/components/ui/ExpirationPicker"
 import { Modal } from "@/components/ui/Modal"
@@ -193,20 +194,25 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
         label: `Listing ${validItems.length} items...`,
       })
 
-      await saveBatchListingToDB({
-        txHash: hash,
-        collections,
-        tokenIds,
-        prices,
-        seller,
-        chainId,
-        expiresAts,
-      })
+      const payload = { txHash: hash, collections, tokenIds, prices, seller, chainId, expiresAts }
+      const saved = await saveBatchListingToDB(payload)
 
       await waitForTxConfirmation(publicClient, hash)
-      updateTx(hash, { status: "success", label: "Listed!" })
 
-      setTimeout(() => removeTx(hash), 3000)
+      if (saved.success) {
+        updateTx(hash, { status: "success", label: "Listed!" })
+        setTimeout(() => removeTx(hash), 3000)
+      } else {
+        // 23503 listings_nft_fk: the listing IS on-chain (tx confirmed); only
+        // the optimistic DB row waits for the indexer's nfts row. Not a
+        // failure: keep the optimistic UI, retry in the background (the RPC is
+        // idempotent), and the indexer writes the listing regardless.
+        updateTx(hash, { status: "success", label: NOT_INDEXED_MESSAGE })
+        void retryOptimisticListing(() => saveBatchListingToDB(payload)).then((outcome) => {
+          updateTx(hash, { status: "success", label: outcome === "saved" ? "Listed!" : NOT_INDEXED_FINAL_MESSAGE })
+          setTimeout(() => removeTx(hash), outcome === "saved" ? 3000 : 8000)
+        })
+      }
 
       onSuccess?.()
     } catch (err) {

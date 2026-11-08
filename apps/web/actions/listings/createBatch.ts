@@ -7,6 +7,7 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { SUPPORTED_CHAIN_IDS } from "@/lib/chains"
 import { normalizeTokenId } from "@marketplace/shared"
+import { isNftNotIndexedError } from "@/lib/optimisticListing"
 
 export interface BatchListingData {
   txHash: `0x${string}`
@@ -18,12 +19,22 @@ export interface BatchListingData {
   expiresAts: string[]
 }
 
+/**
+ * `{ success: false, reason: "not_indexed" }`: the optimistic insert hit
+ * listings_nft_fk (23503) because the indexer has not written the `nfts` row
+ * yet (fresh mint / transfer). The on-chain listing is fine; the caller retries
+ * (the RPC is idempotent) and the indexer writes the listing from ListingCreated
+ * regardless. Returned, not thrown: Next.js redacts thrown server-action
+ * messages in production builds.
+ */
+export type SaveBatchListingResult = { success: true } | { success: false; reason: "not_indexed" }
+
 const HASH_PATTERN = /^0x[a-fA-F0-9]{64}$/
 const UINT_PATTERN = /^\d{1,78}$/
 const TIMESTAMP_PATTERN = /^\d{1,10}$/
 const MAX_BATCH_SIZE = 100
 
-export async function saveBatchListingToDB(data: BatchListingData) {
+export async function saveBatchListingToDB(data: BatchListingData): Promise<SaveBatchListingResult> {
   try {
     if (!data || typeof data !== "object") throw new Error("Invalid listing data")
 
@@ -79,6 +90,11 @@ export async function saveBatchListingToDB(data: BatchListingData) {
     })
 
     if (dbError) {
+      if (isNftNotIndexedError(dbError)) {
+        console.warn("Optimistic listing waits for the indexer (listings_nft_fk):", dbError.details)
+        return { success: false, reason: "not_indexed" }
+      }
+
       console.error("Failed to save optimistic listings:", dbError)
 
       // Only surface the database's ownership conflict, not arbitrary DB text.
