@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:rls": "node scripts/run-rls-tests.mjs",
-    "generate-types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" > src/types.ts"
+    "gen:types:local": "node scripts/gen-types-local.mjs"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

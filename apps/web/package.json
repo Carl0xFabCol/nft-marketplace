@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "update-types": "supabase gen types typescript --project-id \"tu-project-id\" > src/types/supabase.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "@marketplace/contracts": "workspace:*",
