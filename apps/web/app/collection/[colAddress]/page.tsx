@@ -6,7 +6,7 @@ import CollectionClientArea from "../../../components/features/collections/colle
 import { notFound } from "next/navigation"
 import { isAddress } from "viem"
 import { NFTService } from "@/services/nft.service"
-import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
+import { DATA_CHAIN_ID } from "@/lib/chainGuard"
 
 export default async function CollectionPage({ params }: { params: { colAddress: string } }) {
   const supabase = await getServerSupabase()
@@ -14,7 +14,7 @@ export default async function CollectionPage({ params }: { params: { colAddress:
 
   if (!isAddress(colAddress)) notFound()
 
-  const chainId = DEFAULT_CHAIN_ID
+  const chainId = DATA_CHAIN_ID
 
   const [initialNftsData, collectionBidsResult, collectionResult] = await Promise.all([
     NFTService.getCollectionNFTs(colAddress, { chainId, page: 1, limit: 24 }),
@@ -23,6 +23,7 @@ export default async function CollectionPage({ params }: { params: { colAddress:
       .from("collection_bids")
       .select("*")
       .eq("collection_address", colAddress.toLowerCase())
+      .eq("chain_id", chainId)
       .eq("is_active", true)
       .gt("expires_at", new Date().toISOString())
       .order("price", { ascending: false }),
@@ -38,7 +39,7 @@ export default async function CollectionPage({ params }: { params: { colAddress:
   return (
     <div className="flex flex-col gap-1 relative w-full px-1 pb-6 pt-16">
       <div>
-        <ColInfo colAddress={colAddress} />
+        <ColInfo colAddress={colAddress} chainId={chainId} />
       </div>
       <CollectionClientArea
         colAddress={colAddress}

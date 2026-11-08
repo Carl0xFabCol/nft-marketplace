@@ -15,9 +15,11 @@ interface CollectionBidsProps {
   allBids?: boolean
   /** Used for the realtime subscription filter. */
   collectionAddress: Address
+  /** The page's data chain (realtime rows from other chains are dropped). */
+  chainId: number
 }
 
-export default function CollectionBids({ collectionBids, allBids = true, collectionAddress }: CollectionBidsProps) {
+export default function CollectionBids({ collectionBids, allBids = true, collectionAddress, chainId }: CollectionBidsProps) {
   const [bids, setBids] = useState<UserCollectionBid[]>(collectionBids)
   const { address } = useAccount()
 
@@ -32,6 +34,7 @@ export default function CollectionBids({ collectionBids, allBids = true, collect
   // disappears without a reload.
   useRealtimeTable<UserCollectionBid>({
     table: "collection_bids",
+    chainId,
     filter: `collection_address=eq.${collectionAddress.toLowerCase()}`,
     onChange: (change) => {
       if (change.eventType === "DELETE") {

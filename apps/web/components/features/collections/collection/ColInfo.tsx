@@ -14,7 +14,7 @@ interface ColRow {
   total_sales: number | null
 }
 
-export default function ColInfo({ colAddress }: { colAddress: string }) {
+export default function ColInfo({ colAddress, chainId }: { colAddress: string; chainId: number }) {
   const [col, setCol] = useState<ColRow | null>(null)
 
   useEffect(() => {
@@ -23,6 +23,7 @@ export default function ColInfo({ colAddress }: { colAddress: string }) {
       .from("collections")
       .select("name, royalty_fee, total_volume, total_sales")
       .eq("contract_address", colAddress.toLowerCase())
+      .eq("chain_id", chainId)
       .single()
       .then(({ data }) => {
         if (!cancelled && data) setCol(data as ColRow)
@@ -31,7 +32,7 @@ export default function ColInfo({ colAddress }: { colAddress: string }) {
     return () => {
       cancelled = true
     }
-  }, [colAddress])
+  }, [colAddress, chainId])
 
   const copyToClipboard = (value: string) => {
     navigator.clipboard.writeText(value)
@@ -44,7 +45,7 @@ export default function ColInfo({ colAddress }: { colAddress: string }) {
         <button onClick={() => copyToClipboard(colAddress)} className="bg-transparent! text-(--text)! hover:opacity-75! ml-4">
           <FiCopy className=" text-xl" />
         </button>
-        <a href={explorerTokenUrl(colAddress)} target="_blank">
+        <a href={explorerTokenUrl(colAddress, chainId)} target="_blank">
           <FaExternalLinkAlt className="hover:opacity-75 hover:cursor-pointer text-[17px]" />
         </a>
         <div className="flex items-center ">

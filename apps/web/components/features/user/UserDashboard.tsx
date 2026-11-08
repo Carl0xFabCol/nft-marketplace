@@ -127,7 +127,7 @@ export default function UserDashboard({ userAddress, chainId, initialData, profi
                       chainId={chainId}
                     />
                   )}
-                  {currentView === "history" && <UserHistory activity={initialData.activity} userAddress={userAddress} totalPages={initialData.activityTotalPages ?? 1} />}
+                  {currentView === "history" && <UserHistory activity={initialData.activity} userAddress={userAddress} chainId={chainId} totalPages={initialData.activityTotalPages ?? 1} />}
                 </motion.div>
               </AnimatePresence>
             </motion.div>

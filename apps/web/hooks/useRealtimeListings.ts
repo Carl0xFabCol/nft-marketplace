@@ -19,8 +19,8 @@ export interface UseRealtimeListingsOptions {
   userAddress?: Address
   /** Filter by collection — the collection page. */
   collectionAddress?: Address
-  /** Ignore rows from other chains. */
-  chainId?: number
+  /** The page's data chain; rows from other chains are ignored. */
+  chainId: number
   /** INSERT or UPDATE with `is_active = true` (new listing, price change, pending → confirmed). */
   onUpsert: (listing: UserListing) => void
   /** UPDATE with `is_active = false` or DELETE (delist, sale, cancelled). */
@@ -36,6 +36,7 @@ export function useRealtimeListings({ userAddress, collectionAddress, chainId, o
 
   useRealtimeTable<RealtimeListingRow>({
     table: "listings",
+    chainId,
     filter: filter ?? undefined,
     enabled: Boolean(filter),
     onChange: (change) => {

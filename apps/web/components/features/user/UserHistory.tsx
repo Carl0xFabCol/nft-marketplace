@@ -67,10 +67,11 @@ interface ActivityRow {
 interface UserHistoryProps {
   activity: ActivityRow[]
   userAddress: Address
+  chainId: number
   totalPages: number
 }
 
-export default function UserHistory({ activity: initialActivity, userAddress, totalPages: initialTotalPages }: UserHistoryProps) {
+export default function UserHistory({ activity: initialActivity, userAddress, chainId, totalPages: initialTotalPages }: UserHistoryProps) {
   const { address } = useAccount()
   const self = address?.toLowerCase()
 
@@ -85,6 +86,7 @@ export default function UserHistory({ activity: initialActivity, userAddress, to
     setLoading(true)
     try {
       const result = await UserService.getUserActivityPaginated(getBrowserSupabase(), userAddress, {
+        chainId,
         page: nextPage,
         limit: PAGE_SIZE,
       })

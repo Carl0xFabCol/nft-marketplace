@@ -333,7 +333,7 @@ export default function CollectionClientArea({ colAddress, chainId, collectionBi
           </div>
         )}
 
-        {collectionCard === "bids" && <CollectionBids collectionBids={collectionBids} collectionAddress={colAddress} />}
+        {collectionCard === "bids" && <CollectionBids collectionBids={collectionBids} collectionAddress={colAddress} chainId={chainId} />}
 
         {collectionCard === "holders" && (
           <div className="py-8 text-center opacity-50">

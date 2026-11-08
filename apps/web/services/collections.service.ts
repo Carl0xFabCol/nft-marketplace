@@ -9,9 +9,13 @@ export type { Collection }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-import { DEFAULT_CHAIN_ID, ZERO_ADDRESS } from "@marketplace/shared"
+import { SUPPORTED_CHAIN_IDS, ZERO_ADDRESS } from "@marketplace/shared"
 const ZERO = ZERO_ADDRESS
-const DEFAULT_CHAIN = DEFAULT_CHAIN_ID
+
+function requireSupportedChain(chainId: number): number {
+  if (!SUPPORTED_CHAIN_IDS.includes(chainId as (typeof SUPPORTED_CHAIN_IDS)[number])) throw new Error("Invalid chain id")
+  return chainId
+}
 
 type CollectionRow = Tables<"collections">
 type CollectionRowWithCount = CollectionRow & { nfts?: Array<{ count: number }> }
@@ -41,17 +45,18 @@ export class CollectionService {
    */
   static async getCollections(
     supabase: SupabaseClient,
-    options?: {
+    options: {
+      chainId: number
       page?: number
       limit?: number
       sortBy?: "volume" | "sales" | "name" | "created"
       sortDir?: "asc" | "desc"
       verified?: boolean
       search?: string
-      chainId?: number
     },
   ): Promise<{ collections: Collection[]; total: number; page: number; limit: number; totalPages: number }> {
-    const { sortBy = "volume", sortDir = "desc", verified, search, chainId = DEFAULT_CHAIN } = options || {}
+    const { sortBy = "volume", sortDir = "desc", verified, search } = options
+    const chainId = requireSupportedChain(options.chainId)
     const page = clampInt(options?.page, 1, 1, 100_000)
     const limit = clampInt(options?.limit, 20, 1, 100)
 
@@ -91,7 +96,8 @@ export class CollectionService {
   /**
    * Top N collections by volume.
    */
-  static async getTopCollectionsByVolume(supabase: SupabaseClient, limit = 10, chainId = DEFAULT_CHAIN): Promise<Collection[]> {
+  static async getTopCollectionsByVolume(supabase: SupabaseClient, chainId: number, limit = 10): Promise<Collection[]> {
+    chainId = requireSupportedChain(chainId)
     const safeLimit = clampInt(limit, 10, 1, 100)
 
     const { data, error } = await supabase
@@ -112,9 +118,10 @@ export class CollectionService {
    */
   static async getCollectionsWithTopBids(
     supabase: SupabaseClient,
-    options?: { page?: number; limit?: number; chainId?: number; search?: string },
+    options: { chainId: number; page?: number; limit?: number; search?: string },
   ): Promise<{ collections: Collection[]; total: number; page: number; limit: number; totalPages: number }> {
-    const { chainId = DEFAULT_CHAIN, search } = options || {}
+    const { search } = options
+    const chainId = requireSupportedChain(options.chainId)
     const page = clampInt(options?.page, 1, 1, 100_000)
     const limit = clampInt(options?.limit, 20, 1, 100)
 
@@ -134,6 +141,7 @@ export class CollectionService {
       .from("collection_bids")
       .select("collection_address, price, bidder_wallet, created_at")
       .eq("is_active", true)
+      .eq("chain_id", chainId)
       .in("collection_address", addresses)
       .order("price", { ascending: false })
 
@@ -156,7 +164,7 @@ export class CollectionService {
   /**
    * Top 5 collections by volume in the last 24h.
    */
-  static async getTopCollectionsByVolume24h(supabase: SupabaseClient, chainId = DEFAULT_CHAIN): Promise<CollectionWith24hStats[]> {
+  static async getTopCollectionsByVolume24h(supabase: SupabaseClient, chainId: number): Promise<CollectionWith24hStats[]> {
     try {
       const { data, error } = await supabase.rpc("get_top_collections_volume_24h")
       const volumeData = (data ?? []) as Volume24hRow[]

@@ -4,6 +4,7 @@ import { CollectionService } from "@/services/collections.service"
 import { Collection } from "@/types/user.types"
 import { Pagination } from "@/components/ui/ServerPagination"
 import { getServerSupabase } from "@/lib/supabase/server"
+import { DATA_CHAIN_ID } from "@/lib/chainGuard"
 import { clampInt, sanitizePostgrestSearch } from "@/lib/validation"
 
 export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string }> }) {
@@ -13,6 +14,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
   const search = (typeof q === "string" ? q : "").trim().slice(0, 64)
 
   const { collections, totalPages } = await CollectionService.getCollectionsWithTopBids(supabase, {
+    chainId: DATA_CHAIN_ID,
     page,
     limit: 20,
     search: sanitizePostgrestSearch(search) || undefined,

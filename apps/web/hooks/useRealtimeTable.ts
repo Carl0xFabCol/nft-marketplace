@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase/client"
 import { useEffect, useRef } from "react"
+import { realtimeChangeMatchesChain, type RealtimeChange } from "@/lib/realtimeChain"
 
 // hooks/useRealtimeTable.ts
 //
@@ -10,20 +11,24 @@ import { useEffect, useRef } from "react"
 // the shared engine behind listings, token bids and collection bids; it's the
 // only mechanism that reflects *indexer* writes without polling.
 //
+// Chain scoping: postgres_changes allows a single column filter, which callers
+// spend on wallet/collection. Every payload is therefore checked against the
+// page's data chain here, in the one place all realtime rows pass through; a
+// row that does not explicitly carry that chain (including column-filtered or
+// key-only DELETE payloads) is dropped rather than merged.
+//
 // `onChange` is held in a ref so the subscription is created once per
 // (table, filter) instead of being torn down/recreated on every parent render.
 
 export type RealtimeTableName = "listings" | "token_bids" | "collection_bids"
 
-export interface RealtimeChange<T> {
-  eventType: "INSERT" | "UPDATE" | "DELETE"
-  new?: T
-  old?: T
-}
+export type { RealtimeChange } from "@/lib/realtimeChain"
 
 export interface UseRealtimeTableOptions<T> {
   /** The table to subscribe to. */
   table: RealtimeTableName
+  /** The page's data chain; rows from any other chain are dropped. */
+  chainId: number
   /** postgres_changes filter, e.g. `seller_wallet=eq.0x123…`. Omit to receive all rows. */
   filter?: string
   /** When false, no subscription is created (e.g. no wallet connected yet). */
@@ -34,7 +39,7 @@ export interface UseRealtimeTableOptions<T> {
   channelKey?: string
 }
 
-export function useRealtimeTable<T>({ table, filter, enabled = true, onChange, channelKey }: UseRealtimeTableOptions<T>) {
+export function useRealtimeTable<T>({ table, chainId, filter, enabled = true, onChange, channelKey }: UseRealtimeTableOptions<T>) {
   const onChangeRef = useRef(onChange)
 
   useEffect(() => {
@@ -58,11 +63,12 @@ export function useRealtimeTable<T>({ table, filter, enabled = true, onChange, c
           ...(f ? { filter: f } : {}),
         },
         (payload) => {
-          onChangeRef.current({
+          const change: RealtimeChange<T> = {
             eventType: payload.eventType,
             new: payload.new as T | undefined,
             old: payload.old as T | undefined,
-          })
+          }
+          if (realtimeChangeMatchesChain(change, chainId)) onChangeRef.current(change)
         },
       )
       .subscribe()
@@ -70,5 +76,5 @@ export function useRealtimeTable<T>({ table, filter, enabled = true, onChange, c
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [table, filter, enabled, channelKey])
+  }, [table, chainId, filter, enabled, channelKey])
 }

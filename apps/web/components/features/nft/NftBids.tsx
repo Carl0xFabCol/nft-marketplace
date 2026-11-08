@@ -49,6 +49,7 @@ export default function NFTBids({ bids, chainId, owner = false, collectionAddres
   // one column filter, so the token id is matched client-side.
   useRealtimeTable<UserTokenBid>({
     table: "token_bids",
+    chainId,
     filter: `collection_address=eq.${collectionAddress.toLowerCase()}`,
     onChange: (change) => {
       const row = change.eventType === "DELETE" ? change.old : change.new

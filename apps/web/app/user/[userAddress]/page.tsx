@@ -6,7 +6,7 @@ import { isAddress } from "viem"
 import { UserService } from "@/services/user.service"
 import UserDashboard from "@/components/features/user/UserDashboard"
 import { getServerSupabase } from "@/lib/supabase/server"
-import { DEFAULT_CHAIN_ID } from "@marketplace/shared"
+import { DATA_CHAIN_ID } from "@/lib/chainGuard"
 
 interface UserPageProps {
   params: Promise<{ userAddress: string }>
@@ -17,7 +17,7 @@ export default async function UserPage({ params }: UserPageProps) {
   const supabase = await getServerSupabase()
   if (!isAddress(userAddress)) notFound()
 
-  const chainId = DEFAULT_CHAIN_ID
+  const chainId = DATA_CHAIN_ID
 
   const [userData, profile, avatarOptions] = await Promise.all([
     UserService.getUserData(supabase, userAddress, chainId),
@@ -25,7 +25,7 @@ export default async function UserPage({ params }: UserPageProps) {
       console.error("Failed to load user profile:", error)
       return null
     }),
-    UserService.getProfileAvatarOptions(supabase, userAddress).catch((error) => {
+    UserService.getProfileAvatarOptions(supabase, userAddress, chainId).catch((error) => {
       console.error("Failed to load profile picture options:", error)
       return []
     }),

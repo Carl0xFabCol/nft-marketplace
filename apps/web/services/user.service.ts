@@ -4,8 +4,7 @@ import { Address, isAddress } from "viem"
 import { UserCollectionSummary, UserPageData, UserListing, UserTokenBid, UserCollectionBid, Activity, UserProfile, ProfileNftOption } from "@/types/user.types"
 import { clampInt } from "@/lib/validation"
 
-import { DEFAULT_CHAIN_ID, SUPPORTED_CHAIN_IDS } from "@marketplace/shared"
-const DEFAULT_CHAIN = DEFAULT_CHAIN_ID
+import { SUPPORTED_CHAIN_IDS } from "@marketplace/shared"
 
 function requireSupportedChain(chainId: number): number {
   if (!SUPPORTED_CHAIN_IDS.includes(chainId as (typeof SUPPORTED_CHAIN_IDS)[number])) {
@@ -34,14 +33,15 @@ export class UserService {
   /**
    * NFTs owned by the wallet that have an image, used as PFP choices.
    */
-  static async getProfileAvatarOptions(supabase: SupabaseClient, userAddress: Address): Promise<ProfileNftOption[]> {
+  static async getProfileAvatarOptions(supabase: SupabaseClient, userAddress: Address, chainId: number): Promise<ProfileNftOption[]> {
     if (!isAddress(userAddress)) return []
+    chainId = requireSupportedChain(chainId)
 
     const { data, error } = await supabase
       .from("nfts")
       .select("id, collection_address, token_id, name, image_url")
       .eq("owner_wallet", userAddress.toLowerCase())
-      .eq("chain_id", DEFAULT_CHAIN)
+      .eq("chain_id", chainId)
       .not("image_url", "is", null)
       .order("name", { ascending: true })
       .limit(300)
@@ -64,13 +64,13 @@ export class UserService {
 
     const [listingsRes, colBidsRes, tokenBidsRes, collectionsRes, nftsRes, activityRes] = await Promise.allSettled([
       this.getUserListings(supabase, userAddress, chainId),
-      this.getUserCollectionBids(supabase, userAddress),
-      this.getUserTokenBids(supabase, userAddress),
+      this.getUserCollectionBids(supabase, userAddress, chainId),
+      this.getUserTokenBids(supabase, userAddress, chainId),
       this.getUserCollections(supabase, userAddress, chainId),
       // Match the inventory's default sort so the first render is consistent
       // with the sort indicator shown in the UI.
       this.getUserNFTsPaginated(supabase, userAddress, { chainId, page: 1, limit: 24, sortBy: "price", sortDir: "asc" }),
-      this.getUserActivityPaginated(supabase, userAddress, { page: 1, limit: 24 }),
+      this.getUserActivityPaginated(supabase, userAddress, { chainId, page: 1, limit: 24 }),
     ])
 
     const listings = listingsRes.status === "fulfilled" ? listingsRes.value : []
@@ -134,8 +134,15 @@ export class UserService {
   /**
    * The user's active collection bids.
    */
-  static async getUserCollectionBids(supabase: SupabaseClient, userAddress: Address): Promise<UserCollectionBid[]> {
-    const { data, error } = await supabase.from("collection_bids").select("*").eq("bidder_wallet", userAddress.toLowerCase()).eq("is_active", true).order("created_at", { ascending: false })
+  static async getUserCollectionBids(supabase: SupabaseClient, userAddress: Address, chainId: number): Promise<UserCollectionBid[]> {
+    chainId = requireSupportedChain(chainId)
+    const { data, error } = await supabase
+      .from("collection_bids")
+      .select("*")
+      .eq("bidder_wallet", userAddress.toLowerCase())
+      .eq("chain_id", chainId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
 
     if (error) throw error
     return (data as UserCollectionBid[]) || []
@@ -144,8 +151,15 @@ export class UserService {
   /**
    * The user's active token bids.
    */
-  static async getUserTokenBids(supabase: SupabaseClient, userAddress: Address): Promise<UserTokenBid[]> {
-    const { data, error } = await supabase.from("token_bids").select("*").eq("bidder_wallet", userAddress.toLowerCase()).eq("is_active", true).order("created_at", { ascending: false })
+  static async getUserTokenBids(supabase: SupabaseClient, userAddress: Address, chainId: number): Promise<UserTokenBid[]> {
+    chainId = requireSupportedChain(chainId)
+    const { data, error } = await supabase
+      .from("token_bids")
+      .select("*")
+      .eq("bidder_wallet", userAddress.toLowerCase())
+      .eq("chain_id", chainId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
 
     if (error) throw error
     return (data as UserTokenBid[]) || []
@@ -166,9 +180,9 @@ export class UserService {
         .eq("nfts.owner_wallet", addr)
         .eq("nfts.chain_id", chainId),
 
-      supabase.from("collection_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("is_active", true).eq("collections.chain_id", chainId),
+      supabase.from("collection_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("chain_id", chainId).eq("is_active", true).eq("collections.chain_id", chainId),
 
-      supabase.from("token_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("is_active", true).eq("collections.chain_id", chainId),
+      supabase.from("token_bids").select(`collection_address, collections!inner(*)`).eq("bidder_wallet", addr).eq("chain_id", chainId).eq("is_active", true).eq("collections.chain_id", chainId),
     ])
 
     type OwnedCollectionRow = UserCollectionSummary & {
@@ -237,7 +251,7 @@ export class UserService {
   /**
    * The user's activity.
    */
-  static async getUserActivity(supabase: SupabaseClient, userAddress: Address, options?: { page?: number; limit?: number; sortDir?: "asc" | "desc" }): Promise<Activity[]> {
+  static async getUserActivity(supabase: SupabaseClient, userAddress: Address, options: { chainId: number; page?: number; limit?: number; sortDir?: "asc" | "desc" }): Promise<Activity[]> {
     const { activity } = await this.getUserActivityPaginated(supabase, userAddress, options)
     return activity
   }
@@ -248,14 +262,16 @@ export class UserService {
   static async getUserActivityPaginated(
     supabase: SupabaseClient,
     userAddress: Address,
-    options?: {
+    options: {
+      chainId: number
       page?: number
       limit?: number
       sortDir?: "asc" | "desc"
     },
   ): Promise<{ activity: Activity[]; page: number; limit: number; total: number; totalPages: number }> {
-    const { sortDir = "desc" } = options || {}
+    const { sortDir = "desc" } = options
     if (!isAddress(userAddress)) throw new Error("Invalid wallet address")
+    const chainId = requireSupportedChain(options.chainId)
 
     const page = clampInt(options?.page, 1, 1, 100_000)
     const limit = clampInt(options?.limit, 24, 1, 100)
@@ -267,7 +283,7 @@ export class UserService {
       .from("activity")
       .select("*", { count: "exact" })
       .or(`from.eq.${addr},to.eq.${addr}`)
-      .eq("chain_id", DEFAULT_CHAIN)
+      .eq("chain_id", chainId)
       .order("created_at", { ascending: sortDir === "asc" })
       .range(from, to)
 

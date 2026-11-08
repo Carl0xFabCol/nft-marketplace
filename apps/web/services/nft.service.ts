@@ -44,11 +44,11 @@ export class NFTService {
 
         supabase.from("listings").select("*").eq("collection_address", collectionAddress.toLowerCase()).eq("token_id", canonicalTokenId).eq("chain_id", chainId).eq("is_active", true).maybeSingle(),
 
-        supabase.from("token_bids").select("*").eq("collection_address", collectionAddress.toLowerCase()).eq("token_id", canonicalTokenId).eq("is_active", true).order("price", { ascending: false }),
+        supabase.from("token_bids").select("*").eq("collection_address", collectionAddress.toLowerCase()).eq("token_id", canonicalTokenId).eq("chain_id", chainId).eq("is_active", true).order("price", { ascending: false }),
 
         supabase.from("collections").select("*").eq("contract_address", collectionAddress.toLowerCase()).eq("chain_id", chainId).single(),
 
-        supabase.from("activity").select("*").eq("collection_address", collectionAddress.toLowerCase()).eq("token_id", canonicalTokenId).order("created_at", { ascending: false }).limit(50),
+        supabase.from("activity").select("*").eq("collection_address", collectionAddress.toLowerCase()).eq("token_id", canonicalTokenId).eq("chain_id", chainId).order("created_at", { ascending: false }).limit(50),
       ])
 
       if (nftRes.status === "rejected" || !nftRes.value.data) return null
@@ -129,8 +129,8 @@ export class NFTService {
     const tokenIds = nfts?.map((n) => n.token_id) ?? []
     const [listingsMap, topBidsMap, topColBidsMap] = await Promise.all([
       this.fetchListingsMap(addr, tokenIds, false, chainId),
-      this.fetchTopBidsMap(addr, tokenIds),
-      this.fetchTopCollectionBidsMap([addr as Address]),
+      this.fetchTopBidsMap(addr, tokenIds, chainId),
+      this.fetchTopCollectionBidsMap([addr as Address], chainId),
     ])
 
     let enriched: EnrichedUserNFT[] = (nfts || []).map(
@@ -235,8 +235,8 @@ export class NFTService {
 
     const [listingsMap, topBidsMap, topColBidsMap, collectionsMap] = await Promise.all([
       this.fetchListingsMap(owner, tokenIds, true, chainId), // true = filter by seller_wallet
-      this.fetchTopBidsMap(null, tokenIds, collectionAddresses),
-      this.fetchTopCollectionBidsMap(collectionAddresses),
+      this.fetchTopBidsMap(null, tokenIds, chainId, collectionAddresses),
+      this.fetchTopCollectionBidsMap(collectionAddresses, chainId),
       this.fetchCollectionsMap(collectionAddresses, chainId),
     ])
 
@@ -266,7 +266,7 @@ export class NFTService {
   /**
    * Search NFTs by token id or metadata name.
    */
-  static async searchNFTs(query: string, limit = 10) {
+  static async searchNFTs(query: string, chainId: number, limit = 10) {
     const term = sanitizePostgrestSearch(query)
     if (!term) return []
 
@@ -274,6 +274,7 @@ export class NFTService {
     const { data, error } = await supabase
       .from("nfts")
       .select(`*, collections!inner(name)`)
+      .eq("chain_id", chainId)
       .or(`token_id.eq.${term},metadata->name.ilike.%${term}%`)
       .limit(safeLimit)
 
@@ -301,10 +302,10 @@ export class NFTService {
   /**
    * Map token_id → highest active bid.
    */
-  private static async fetchTopBidsMap(collectionAddress: string | null, tokenIds: string[], collectionAddresses?: Address[]): Promise<Map<string, TopBid>> {
+  private static async fetchTopBidsMap(collectionAddress: string | null, tokenIds: string[], chainId: number, collectionAddresses?: Address[]): Promise<Map<string, TopBid>> {
     if (tokenIds.length === 0) return new Map()
 
-    let q = supabase.from("token_bids").select("token_id, price, bidder_wallet, collection_address").eq("is_active", true).in("token_id", tokenIds)
+    let q = supabase.from("token_bids").select("token_id, price, bidder_wallet, collection_address").eq("is_active", true).eq("chain_id", chainId).in("token_id", tokenIds)
 
     if (collectionAddress) {
       q = q.eq("collection_address", collectionAddress)
@@ -332,13 +333,14 @@ export class NFTService {
   /**
    * Map collection_address → highest active collection bid.
    */
-  private static async fetchTopCollectionBidsMap(collectionAddresses: Address[]): Promise<Map<string, TopBid>> {
+  private static async fetchTopCollectionBidsMap(collectionAddresses: Address[], chainId: number): Promise<Map<string, TopBid>> {
     if (collectionAddresses.length === 0) return new Map()
 
     const { data } = await supabase
       .from("collection_bids")
       .select("collection_address, price, bidder_wallet, quantity")
       .eq("is_active", true)
+      .eq("chain_id", chainId)
       .in(
         "collection_address",
         collectionAddresses.map((a) => a.toLowerCase()),

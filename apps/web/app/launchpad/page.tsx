@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { DATA_CHAIN_ID } from "@/lib/chainGuard"
 import { CollectionService } from "@/services/collections.service"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { RegisterCollection } from "@/components/RegisterCollection"
@@ -33,6 +34,7 @@ export default function MintPage() {
 async function CollectionsGrid() {
   const supabase = await getServerSupabase()
   const { collections } = await CollectionService.getCollections(supabase, {
+    chainId: DATA_CHAIN_ID,
     page: 1,
     limit: 24,
     sortBy: "volume",

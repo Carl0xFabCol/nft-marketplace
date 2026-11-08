@@ -47,6 +47,7 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
   // without a reload, so the "my bids" view reflects the DB as it changes.
   useRealtimeTable<UserTokenBid>({
     table: "token_bids",
+    chainId,
     filter: `bidder_wallet=eq.${userAddress.toLowerCase()}`,
     onChange: (change) => {
       if (change.eventType === "DELETE") {

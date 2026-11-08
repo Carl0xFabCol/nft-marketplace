@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       activity: {
         Row: {
+          chain_id: number
           collection_address: string | null
           created_at: string | null
           event: string | null
@@ -31,6 +32,7 @@ export type Database = {
           tx_hash: string
         }
         Insert: {
+          chain_id?: number
           collection_address?: string | null
           created_at?: string | null
           event?: string | null
@@ -46,6 +48,7 @@ export type Database = {
           tx_hash: string
         }
         Update: {
+          chain_id?: number
           collection_address?: string | null
           created_at?: string | null
           event?: string | null
@@ -64,6 +67,7 @@ export type Database = {
       }
       collection_bids: {
         Row: {
+          chain_id: number
           bidder_wallet: string
           collection_address: string | null
           created_at: string
@@ -76,6 +80,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          chain_id: number
           bidder_wallet: string
           collection_address?: string | null
           created_at: string
@@ -88,6 +93,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          chain_id?: number
           bidder_wallet?: string
           collection_address?: string | null
           created_at?: string
@@ -385,6 +391,7 @@ export type Database = {
       }
       token_bids: {
         Row: {
+          chain_id: number
           bidder_wallet: string | null
           collection_address: string | null
           created_at: string
@@ -397,6 +404,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          chain_id: number
           bidder_wallet?: string | null
           collection_address?: string | null
           created_at: string
@@ -409,6 +417,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          chain_id?: number
           bidder_wallet?: string | null
           collection_address?: string | null
           created_at?: string
