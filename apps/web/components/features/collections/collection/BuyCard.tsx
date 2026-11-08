@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/Modal"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { formatWei } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface BuyCardProps {
   items: BatchNFT[]
@@ -84,9 +85,12 @@ export function BuyCard({ items, chainId, collectionName, onClose, onSuccess, on
       onClose()
     } catch (error) {
       console.error("Buy error:", error)
+      const message = contractErrorMessage(error)
       if (hash) {
-        updateTx(hash, { status: "error", label: "Purchase failed!" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash!), 6000)
+      } else if (!isUserRejection(error)) {
+        setFormError(message)
       }
     }
   }

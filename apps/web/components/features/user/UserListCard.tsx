@@ -23,6 +23,7 @@ import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { formatWei, percentOf } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface ListItemWithPrice extends EnrichedUserNFT {
   price?: bigint
@@ -218,9 +219,12 @@ export function UserListCard({ items, chainId, collections, listings, onClose, o
     } catch (err) {
       console.error("Listing error:", err)
       const hash = txHash ?? (err as { hash?: `0x${string}` })?.hash
+      const message = contractErrorMessage(err, "Listing failed.")
       if (hash) {
-        updateTx(hash, { status: "error", label: "Listing failed" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash), 5000)
+      } else if (!isUserRejection(err)) {
+        setFormError(message)
       }
 
       // Revert the optimistic patch and kill any stale `pending` DB rows so a

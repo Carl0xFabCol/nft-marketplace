@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/Modal"
 import { dateToEpochSeconds } from "@/lib/dates"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { formatWei, parseEtherInput } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface ColBidCardProps {
   collectionAddress: Address
@@ -78,9 +79,12 @@ export function ColBidCard({ collectionAddress, chainId, floorPrice, onClose, on
       onClose()
     } catch (error) {
       console.error("Collection bid error:", error)
+      const message = contractErrorMessage(error)
       if (hash) {
-        updateTx(hash, { status: "error", label: "Bid failed!" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash!), 6000)
+      } else if (!isUserRejection(error)) {
+        setFormError(message)
       }
     }
   }

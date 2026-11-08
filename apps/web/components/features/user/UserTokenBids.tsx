@@ -15,6 +15,7 @@ import { useCancelTokenBid, useCancelTokenBidBatch } from "@/hooks/useBidActions
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserTokenBid, upsertTokenBid, deactivateTokenBid } from "@/lib/bidMerge"
 import { compareWei, formatWei } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface UserTokenBidsProps {
   tokenBids: UserTokenBid[]
@@ -104,10 +105,14 @@ export default function UserTokenBids({ tokenBids, selectedCollection, batchOps,
       updateTx(hash, { status: "success", label: "Cancelled!" })
       clearBatch("cancelTokenBid")
       setTimeout(() => removeTx(hash!), 5000)
-    } catch {
+    } catch (error) {
+      console.error("Cancel token bids error:", error)
+      const message = contractErrorMessage(error)
       if (hash) {
-        updateTx(hash, { status: "error", label: "Cancelling error!" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash!), 6000)
+      } else if (!isUserRejection(error)) {
+        alert(message)
       }
     }
   }

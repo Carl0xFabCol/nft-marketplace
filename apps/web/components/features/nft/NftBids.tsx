@@ -14,9 +14,10 @@ import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserTokenBid, upsertTokenBid, deactivateTokenBid } from "@/lib/bidMerge"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
-import { BidAcceptanceError, type AcceptQuote } from "@/lib/bidAcceptance"
+import type { AcceptQuote } from "@/lib/bidAcceptance"
 import { AcceptBidConfirm } from "@/components/features/nft/AcceptBidConfirm"
 import { formatWei } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface NFTBidsProps {
   bids: UserTokenBid[]
@@ -86,7 +87,7 @@ export default function NFTBids({ bids, chainId, owner = false, collectionAddres
       setPendingQuote(quote)
     } catch (e) {
       console.error("Error quoting token bid:", e)
-      alert(e instanceof BidAcceptanceError ? e.message : "Could not read this bid on-chain. Try again.")
+      alert(contractErrorMessage(e, "Could not read this bid on-chain. Try again."))
     }
   }
 
@@ -109,12 +110,13 @@ export default function NFTBids({ bids, chainId, owner = false, collectionAddres
       updateTx(hash, { status: "success", label: "Token bid accepted!" })
       setTimeout(() => removeTx(hash!), 5000)
     } catch (e) {
-      console.error("Error accepting token bid: " + e)
-      const guardMessage = chainGuardErrorMessage(e)
-      if (guardMessage) alert(guardMessage)
+      console.error("Error accepting token bid:", e)
+      const message = contractErrorMessage(e)
       if (hash) {
-        updateTx(hash, { status: "error", label: "Accept bid failed" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash!), 6000)
+      } else if (!isUserRejection(e)) {
+        alert(message)
       }
     } finally {
       setAccepting(false)

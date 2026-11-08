@@ -12,9 +12,10 @@ import { Address } from "viem"
 import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
-import { BidAcceptanceError, type AcceptQuote } from "@/lib/bidAcceptance"
+import type { AcceptQuote } from "@/lib/bidAcceptance"
 import { AcceptBidConfirm } from "@/components/features/nft/AcceptBidConfirm"
 import { formatWei } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 type NftCardToken = EnrichedUserNFT & {
   /** wei, exact decimal-integer text */
@@ -155,7 +156,7 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
       setPendingQuote(quote)
     } catch (e) {
       console.error("Error quoting bid:", e)
-      alert(e instanceof BidAcceptanceError ? e.message : "Could not read this bid on-chain. Try again.")
+      alert(contractErrorMessage(e, "Could not read this bid on-chain. Try again."))
     }
   }
 
@@ -185,11 +186,12 @@ export function NFTCard({ token, isUserPage = false, index, batchOps, approvalMa
       onBidAccepted?.(token)
     } catch (e) {
       console.error("Error accepting bid:", e)
-      const guardMessage = chainGuardErrorMessage(e)
-      if (guardMessage) alert(guardMessage)
+      const message = contractErrorMessage(e)
       if (hash) {
-        updateTx(hash, { label: "Transaction failed", status: "error" })
+        updateTx(hash, { label: message, status: "error" })
         setTimeout(() => removeTx(hash!), 6000)
+      } else if (!isUserRejection(e)) {
+        alert(message)
       }
     } finally {
       setAccepting(false)

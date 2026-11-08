@@ -15,6 +15,7 @@ import { IpfsImage } from "@/components/features/nft/IpfsImage"
 import { dateToEpochSeconds } from "@/lib/dates"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { formatWei, parseEtherInput } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface BidItemWithPrice extends BatchNFT {
   expiresAt?: Date
@@ -107,9 +108,12 @@ export function BidCard({ items, collectionAddress, chainId, collectionName, onC
       onClose()
     } catch (error) {
       console.error("Bid error:", error)
+      const message = contractErrorMessage(error)
       if (hash) {
-        updateTx(hash, { status: "error", label: "Bid failed!" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash!), 6000)
+      } else if (!isUserRejection(error)) {
+        setFormError(message)
       }
     }
   }

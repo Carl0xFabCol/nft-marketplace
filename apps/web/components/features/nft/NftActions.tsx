@@ -16,6 +16,7 @@ import { BatchNFT, NFTDetail } from "@/types/user.types"
 import { waitForTxConfirmation } from "@/lib/tx"
 import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { formatWei } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface NFTActionsProps {
   nft: NFTDetail
@@ -76,9 +77,12 @@ export function NFTActions({ nft, chainId }: NFTActionsProps) {
       router.refresh()
     } catch (error) {
       console.error("Buy error:", error)
+      const message = contractErrorMessage(error)
       if (hash) {
-        updateTx(hash, { status: "error", label: "Purchase failed!" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash!), 6000)
+      } else if (!isUserRejection(error)) {
+        alert(message)
       }
     } finally {
       setIsProcessing(false)
@@ -130,10 +134,12 @@ export function NFTActions({ nft, chainId }: NFTActionsProps) {
       router.refresh()
     } catch (error) {
       console.error("Cancel listing error:", error)
-
+      const message = contractErrorMessage(error)
       if (hash) {
-        updateTx(hash, { status: "error", label: "Cancellation failed!" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash!), 6000)
+      } else if (!isUserRejection(error)) {
+        alert(message)
       }
     } finally {
       setIsProcessing(false)

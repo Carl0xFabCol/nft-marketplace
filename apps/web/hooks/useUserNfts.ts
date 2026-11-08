@@ -11,6 +11,7 @@ import { assertWalletChain, chainGuardErrorMessage } from "@/lib/chainGuard"
 import { UseBatchOperationsReturn } from "./useBatchOperations"
 import { useCancelListBatch } from "./useListingActions"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface UseUserNftsParams {
   nfts: EnrichedUserNFT[]
@@ -110,9 +111,12 @@ export function useUserNfts({ nfts, batchOps, userAddress, chainId, onDelist, on
     } catch (err) {
       console.error("Delist error:", err)
       const hash = (err as { hash?: `0x${string}` })?.hash
+      const message = contractErrorMessage(err, "Delist failed.")
       if (hash) {
-        updateTx(hash, { status: "error", label: "Delist failed" })
+        updateTx(hash, { status: "error", label: message })
         setTimeout(() => removeTx(hash), 5000)
+      } else if (!isUserRejection(err)) {
+        alert(message)
       }
       // Restore the optimistic patch so items don't stay visually unlisted.
       onDelistFail?.(items)
@@ -148,7 +152,7 @@ export function useUserNfts({ nfts, batchOps, userAddress, chainId, onDelist, on
       }
       console.error("Approval error:", error)
       if (txHash) {
-        updateTx(txHash, { label: "Approval failed", status: "error" })
+        updateTx(txHash, { label: contractErrorMessage(error, "Approval failed."), status: "error" })
         setTimeout(() => removeTx(txHash!), 6000)
       }
     }

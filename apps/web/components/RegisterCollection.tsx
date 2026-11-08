@@ -12,6 +12,7 @@ import { useTx } from "@/app/context/TxContext"
 import { useConnection } from "wagmi"
 import { Modal } from "@/components/ui/Modal"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 const inputClass = "w-full rounded-lg border border-(--accent)/30 bg-(--accent)/5 px-3 py-2 focus:outline-none focus:border-(--accent) disabled:opacity-50"
 
@@ -72,14 +73,13 @@ export function RegisterCollection() {
       router.refresh()
     } catch (e) {
       if (hash) {
-        updateTx(hash, { status: "error", label: "Register failed" })
+        updateTx(hash, { status: "error", label: contractErrorMessage(e, "Register failed.") })
         setTimeout(() => removeTx(hash!), 6000)
       }
-      const err = e as { shortMessage?: string; message?: string }
-      if (err?.shortMessage === "User rejected the request.") {
+      if (isUserRejection(e)) {
         setErrorMsg(null)
       } else {
-        setErrorMsg(err?.shortMessage || err?.message || "Transaction failed")
+        setErrorMsg(contractErrorMessage(e, "Register failed."))
       }
     } finally {
       setBusy(false)

@@ -15,6 +15,7 @@ import { UseBatchOperationsReturn } from "@/hooks/useBatchOperations"
 import { useRealtimeTable } from "@/hooks/useRealtimeTable"
 import { toUserCollectionBid, upsertCollectionBid, deactivateCollectionBid } from "@/lib/bidMerge"
 import { compareWei, formatWei } from "@/lib/wei"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface UserCollectionBidsProps {
   collectionBids: UserCollectionBid[]
@@ -83,7 +84,14 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
       // The contract has no batch cancel for collection bids — send and
       // confirm one transaction per collection so every tx is tracked.
       for (let i = 0; i < collectionAddresses.length; i++) {
-        const hash = await cancelCollectionBid(collectionAddresses[i])
+        let hash: `0x${string}`
+        try {
+          hash = await cancelCollectionBid(collectionAddresses[i])
+        } catch (error) {
+          // Refused before a tx exists (guard, revert at estimation, wallet).
+          if (!isUserRejection(error)) alert(contractErrorMessage(error))
+          throw error
+        }
         addTx({
           hash,
           status: "loading",
@@ -98,7 +106,7 @@ export default function UserCollectionBids({ collectionBids, collections, batchO
           })
           setTimeout(() => removeTx(hash), 5000)
         } catch (error) {
-          updateTx(hash, { status: "error", label: "Cancellation failed!" })
+          updateTx(hash, { status: "error", label: contractErrorMessage(error) })
           setTimeout(() => removeTx(hash), 6000)
           throw error
         }

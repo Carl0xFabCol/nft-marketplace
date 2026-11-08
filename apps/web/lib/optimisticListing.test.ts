@@ -16,7 +16,7 @@ describe("isNftNotIndexedError", () => {
 })
 
 describe("retryOptimisticListing", () => {
-  const sleep = vi.fn(async (_ms: number) => {})
+  const sleep = vi.fn(async (ms: number) => void ms)
 
   it("retries with backoff until the indexer has written the NFT", async () => {
     const save = vi.fn<() => Promise<SaveBatchListingResult>>().mockResolvedValueOnce(notIndexed).mockResolvedValueOnce(saved)

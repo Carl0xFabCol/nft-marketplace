@@ -14,6 +14,7 @@ import { DATA_CHAIN_ID } from "@/lib/chainGuard"
 import { useCreateCollection, useLaunchpadInfo } from "@/hooks/useLaunchpadActions"
 import { LaunchPadABI } from "@/lib/abi"
 import { explorerAddressUrl } from "@/lib/chains"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 type Status = "idle" | "waiting" | "loading" | "success" | "error"
 
@@ -167,15 +168,14 @@ export function LaunchCollection() {
       }, 5000)
     } catch (e) {
       if (hash) {
-        updateTx(hash, { status: "error", label: "Launch failed" })
+        updateTx(hash, { status: "error", label: contractErrorMessage(e, "Launch failed.") })
         setTimeout(() => removeTx(hash!), 6000)
       }
-      const err = e as { shortMessage?: string; message?: string }
-      if (err.shortMessage === "User rejected the request.") {
+      if (isUserRejection(e)) {
         setStatus("idle")
       } else {
         setStatus("error")
-        setErrorMsg(err.shortMessage || err.message || "Transaction failed")
+        setErrorMsg(contractErrorMessage(e, "Launch failed."))
       }
     }
   }

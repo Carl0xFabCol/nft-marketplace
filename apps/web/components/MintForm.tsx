@@ -11,6 +11,7 @@ import { formatEther } from "viem"
 import ConnectWallet from "./ConnectWallet"
 import { useTx } from "@/app/context/TxContext"
 import { waitForTxConfirmation } from "@/lib/tx"
+import { contractErrorMessage, isUserRejection } from "@/lib/contractErrors"
 
 interface props {
   contractAddress: string
@@ -91,13 +92,14 @@ export function MintForm({ contractAddress, name }: props) {
       }, 3500)
     } catch (e) {
       if (hash) {
-        updateTx(hash, { status: "error", label: "Mint failed!" })
+        updateTx(hash, { status: "error", label: contractErrorMessage(e, "Mint failed.") })
         setTimeout(() => removeTx(hash!), 6000)
       }
-      if ((e as { shortMessage?: string })?.shortMessage === "User rejected the request.") {
+      if (isUserRejection(e)) {
         setStatus("idle")
       } else {
         setStatus("error")
+        if (!hash) alert(contractErrorMessage(e, "Mint failed."))
       }
     }
   }
