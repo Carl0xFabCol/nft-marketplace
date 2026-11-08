@@ -12,6 +12,7 @@
     "./abis/generated/full": "./src/abis/full.generated.ts",
     "./abis/generated/launchpad": "./src/abis/launchpad.generated.ts",
     "./abis/generated/collection": "./src/abis/collection.generated.ts",
+    "./abis/web": "./src/abis/web.ts",
     "./integration-checks": "./scripts/lib/integration-checks.ts",
     "./deployment-records": "./scripts/lib/addresses.ts"
   },
