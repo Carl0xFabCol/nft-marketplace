@@ -353,6 +353,25 @@ Same local-only setup as §3.10: project `sec01-local` in a scratch dir, rebuilt
 - **RLS vitest** (`rls.integration.test.ts`) against the stack: **22/22**.
 - **Compatibility:** every column the Phase 4 web selects exists in the baseline or in Phase 2 (live), so the web does not depend on 3B being applied.
 
+### 3.12 Phase 5: end-to-end rehearsal on Anvil (2026-11-13)
+
+Same local-only database setup as §3.10/§3.11:
+- project `sec01-local` in a scratch dir outside the repo;
+- rebuilt from the byte-preserving adapted baseline + all 17 migrations (090000–091600);
+- `FINGERPRINT-SAME` as `catalog_fingerprint.after_phase3b.txt` before anything ran.
+
+No remote database or RPC was contacted, no `.env` was read (forge ran from a scratch copy; the indexer used an empty `DOTENV_CONFIG_PATH`), and no dump was written. The stack and every process were stopped afterwards. Full report: `docs/PHASE5_REHEARSAL.md`.
+
+- **The SEC-01 schema under a real indexer and real chain.** The real indexer process wrote through the service role:
+  - 203 activity rows; listings, bids, fills, NFTs and collections;
+  - the 3B RPCs (`indexer_record_sale`, the bid RPCs, `sec01_save_listing_batch` via the web action).
+- The final reconciliation found **0 mismatches** vs the chain.
+- **Privilege-failure path:** with `INSERT` on `public.activity` revoked from `service_role` (local only), the indexer holds its cursor at the failing block and writes nothing. After re-granting, the retry writes the row exactly once.
+- **Replay safety (audit #11) on a real chain:** a full replay over existing rows changes nothing. Wiping the derived tables and reindexing from `deployBlock − 1` rebuilds a byte-identical canonical dump.
+- **Reorgs:** `REORG_DETECTED` halts with the cursor frozen and nothing written. The `REORG_ROLLBACK_DESIGN.md` §4 operator rewind was rehearsed twice (`evm_revert` and `anvil_reorg`).
+- **Web reads** (anon key) are chain-scoped against a 99801 decoy with the same collection address and token. Amounts are exact text. The 23503 `listings_nft_fk` → `not_indexed` → retry → `saved` path works end to end.
+- **Unchanged:** no migration was written or applied in Phase 5. Phase 3B is still not applied to production (§4).
+
 ## 4. Missing (not implemented anywhere)
 
 - ~~IDX-4 wei precision in the indexer.~~ **Done in Phase 3A** (writes are exact, test #12).

@@ -626,14 +626,66 @@ Branch `chore/production-readiness-phase4`, created from `chore/production-readi
 
 ## Phase 5: Rehearsal on Anvil
 
-- Test 21: deploy → configure → verify → generate addresses/ABIs → validate → seed indexer → run the indexer → compare the DB with `getCollectionStats` on-chain. Nothing moves to the next phase without this.
-- ➕ Repeat the rehearsal on a public testnet with real wallets.
+Branch `chore/production-readiness-phase5`, created from `main` (858f5ca). Not merged. Details, commands and the full findings table are in `docs/PHASE5_REHEARSAL.md`.
+- **Exception used:** `forge --broadcast` only against Anvil on 127.0.0.1, with Anvil's published test keys.
+- No `.env` was read and no remote RPC or DB was contacted. The DB was the local `sec01-local` stack. No dump was written.
+- Everything (Anvil, indexer, metadata server, Supabase stack) was stopped at the end.
+
+- [x] Test 21: deploy → configure → verify → generate addresses/ABIs → validate → seed indexer → run the indexer → compare the DB with the chain. The recorded run is from a fresh DB on 2026-11-13: `pnpm --filter @marketplace/rehearsal anvil-e2e -- --scratch <dir outside the repo>` → **16/16 steps, 183/183 checks, final reconciliation 0 mismatches at block 341.**
+  - Infrastructure (5cd92ca):
+    - `scripts/rehearsal` (`@marketplace/rehearsal`, in turbo);
+    - env-isolation guards;
+    - `launch.ts`, which registers 31337 **in process memory only** before importing the unmodified generator / prepare-deployment / indexer;
+    - a guard test, which fails if any production source or committed address map gains 31337/anvil.
+  - Deployment record (741a225, scripts only, no contract source): `deployBlock`, `verifiedAt` and per-component creation-code hashes. VerifyDeployment preserves them. 6 forge tests; forge 342/342.
+  - generate-addresses **rule 10** (602207c): the record's code hashes must equal the `out/` artifacts, and `deployBlock`/`verifiedAt` must be positive. `deployBlock` is emitted.
+  - `prepare-deployment --deployments-dir` (194290d); F-3 Windows exit fix (148872a).
+  - Reconciliation library + CLI (c4a39b5, Phase 7 seed); web rehearsal suite (58dd351); orchestrator (b477594); harness fixes F-4 (d51d312) and F-5 (d0e85ec); F-1 runbook text (20df731).
+  - First real runs of:
+    - the generator on a verified record (+5 negative probes);
+    - `prepare-deployment` success/no-op/refusal/`--force`;
+    - the indexer on real logs and real reorgs (`evm_revert` and `anvil_reorg`): REORG_DETECTED, halt, operator rewind;
+    - kill mid-range; a failing write holding the cursor; the confirmation lag;
+    - replay over existing rows and wipe + reindex, both byte-identical;
+    - the 23503 `not_indexed` → retry → `saved` path.
+  - **Slippage proof:** all 14 acceptances used the web's own quote at 0 bps. Seller, fee and royalty credits equal the quote to the wei (1 wei, 3 wei, 1234567890123456789 wei, 10¹⁸+1, a 3-token collection bid, partial fills). A stale fee or royalty reverts `SellerProceedsTooLow`, with the web's readable message; a stale price reverts `PriceTooLow` / `bid_changed`.
+  - **Findings:**
+    - F-1 (deploy tooling, medium): `RegisterCollection`/`CreateHypurr` broadcasts revert with forge's default gas → docs-only fix, Phase 6 requirement;
+    - F-2 (info): `validate:integration --live` cannot target 31337, by design;
+    - F-3 (indexer, fixed);
+    - F-4, F-5, F-6, F-7 (test harness, fixed).
+    - **No contract-source, DB or web defect found.**
+  - Verification on the final tree:
+    - turbo typecheck + test 12/12 tasks (rehearsal 49, indexer 132, contracts 86, web 98 + 22 skipped);
+    - forge 342/342;
+    - `generate:abis:check` OK;
+    - `validate:integration --chain-id 99801` OK (5 + 1 live-only skip; 47/47).
+  - Repeatability: the recorded run was the third fresh run of the day. Attempts 1 and 2 stopped at F-4 and F-5; every earlier step passed identically each time. Only one full run was requested (memory); the separate two-run repeatability pair was not done.
+  - Memory on this 8 GB machine: free RAM minimum ≈ 380 MB during a run. An earlier run was killed by the host for low memory.
+  - **Not verified:**
+    - a public testnet;
+    - Orbit `block.number` semantics;
+    - a cross-OS bytecode hash (see Phase 6);
+    - a commit SHA in the record (needs `ffi`);
+    - `CreateHypurr`;
+    - CI: a `rehearsal` job is proposed in `PHASE5_REHEARSAL.md` §6, not added; it is blocked by the gitignored baseline schema.
+- ➕ Repeat the rehearsal on a public testnet with real wallets. **Not done** (needs real keys and a remote RPC; out of scope for the local-only exception).
+
+### Audit vs. code discrepancies found in Phase 5
+
+- **The audit's deploy commands are not sufficient for collections.** With forge's default gas estimate, collection registration reverts on-chain (F-1). Neither the audit nor `DEPLOYMENT.md` mentioned it; `DEPLOYMENT.md` now does.
+- **"VerifyDeployment promotes the record".** It re-serializes the record from the `DeploymentRecord` struct, so any field not in the struct is silently dropped at promotion. The new fields were therefore added to the struct and the read/write functions (741a225).
+- **The indexer and forge read `.env` implicitly** (`dotenv/config`, forge's automatic `.env` loading). Rehearsals and any tooling run near the repo must isolate them, as the rehearsal does.
 
 ## Phase 6: Deployment and activation
 
 - ➕ Confirm that the security audit report covers the exact bytecode to be deployed.
 - ➕ Decide whether the final destination is Elysium (99801) or another mainnet, and define who is the owner or multisig.
 - Run Deploy → Configure → VerifyDeployment (`stage=verified`).
+- **Requirements from the Phase 5 rehearsal:**
+  - **F-1:** register collections (`RegisterCollection`, `CreateHypurr`) with `--gas-estimate-multiplier 200`, as `DEPLOYMENT.md` now documents. Without it the broadcast reverts on-chain with `BoundedStaticCallInsufficientGas`. The Foundry scripts are unchanged by decision.
+  - ⚠ **`.sol` line endings vs the bytecode hash (rule 10).** `.sol` files are not LF-pinned (`core.autocrlf=true`). The CBOR metadata in the bytecode, and therefore the creation-code hash, differs between a Windows and a Linux checkout. `generate-addresses` rule 10 will reject a record deployed from one OS when it is run from the other. Either deploy and generate from the same checkout, or decide on `*.sol text eol=lf` in `.gitattributes` **before** deploying (it changes artifact hashes; needs approval). Also confirm that the audit report covers the bytecode built that way.
+  - ⚠ **Elysium `block.number` / `deployBlock`.** The record's `deployBlock` is the forge-simulated head + 1. That was proven on Anvil, but on Arbitrum Orbit (Elysium) Solidity `block.number` is not the L2 block number, so it is unverified there. Before `prepare-deployment`, check `deployBlock` against the first deployment tx receipt's block and `eth_getCode(core, deployBlock − 1) == 0x`. Correct the record (or pass a verified `--deploy-block`) if they differ.
 - Regenerate `addresses.generated.ts` from the verified registry, which is the moment when the legacy stack is left behind.
 - Run integration validation and tests, and seed `indexer_state` at the deployment block.
 - Build and deploy the frontend. This is only allowed if steps 4–7 have passed.
@@ -644,7 +696,7 @@ Branch `chore/production-readiness-phase4`, created from `chore/production-readi
 - ➕ Set up monitoring and alerts: indexer lag, `errorCount > 0`, failed events, RPC errors.
 - ➕ Define RPCs with fallback, rate limits, and automatic Supabase backups.
 - ➕ Prepare an emergency pause (`Paused`) and incident runbook.
-- ➕ Set up a periodic reconciliation job between `total_volume` and `getCollectionStats`.
+- ➕ Set up a periodic reconciliation job between `total_volume` and `getCollectionStats`. **Seed exists (Phase 5):** `pnpm --filter @marketplace/rehearsal reconcile` (read-only; covers stats, listings, bids, owners and activity-vs-logs; needs `--allow-remote` for a non-loopback target).
 
 ## Security and cleanup (in parallel, before real users)
 
