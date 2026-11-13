@@ -52,6 +52,26 @@ abstract contract DeploymentConfig is Script {
         uint256 chainId;
         bool configured;
         string stage;
+        // Provenance (Phase 5). Every field below MUST round-trip through
+        // _readRecord/_writeRecord: VerifyDeployment re-serializes the record
+        // from this struct, so a field missing here is silently dropped.
+        //
+        // deployBlock: a lower bound for the first block that can contain this
+        // stack's deployment transactions (the simulated head + 1 of the run
+        // that deployed the first component). prepare-deployment seeds the
+        // indexer at deployBlock - 1. 0 = unknown.
+        uint256 deployBlock;
+        // verifiedAt: block.timestamp of the VerifyDeployment run that
+        // promoted the record. 0 until verified.
+        uint256 verifiedAt;
+        // keccak256 of each component's creation code (type(X).creationCode,
+        // i.e. the artifact's bytecode.object) as deployed. generate-addresses
+        // asserts these equal the artifacts it generates from (audit §8.3).
+        // bytes32(0) = unknown.
+        bytes32 coreCodeHash;
+        bytes32 bidsCodeHash;
+        bytes32 marketplaceCodeHash;
+        bytes32 launchpadCodeHash;
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -256,6 +276,17 @@ abstract contract DeploymentConfig is Script {
         rec.chainId = _jsonUintOrZero(json, ".chainId");
         rec.configured = vm.keyExistsJson(json, ".configured") && vm.parseJsonBool(json, ".configured");
         rec.stage = vm.keyExistsJson(json, ".stage") ? vm.parseJsonString(json, ".stage") : "";
+        rec.deployBlock = _jsonUintOrZero(json, ".deployBlock");
+        rec.verifiedAt = _jsonUintOrZero(json, ".verifiedAt");
+        rec.coreCodeHash = _jsonBytes32OrZero(json, ".coreCodeHash");
+        rec.bidsCodeHash = _jsonBytes32OrZero(json, ".bidsCodeHash");
+        rec.marketplaceCodeHash = _jsonBytes32OrZero(json, ".marketplaceCodeHash");
+        rec.launchpadCodeHash = _jsonBytes32OrZero(json, ".launchpadCodeHash");
+    }
+
+    function _jsonBytes32OrZero(string memory json, string memory key) private view returns (bytes32) {
+        if (!vm.keyExistsJson(json, key)) return bytes32(0);
+        return vm.parseJsonBytes32(json, key);
     }
 
     function _jsonAddressOrZero(string memory json, string memory key) private view returns (address) {
@@ -296,6 +327,12 @@ abstract contract DeploymentConfig is Script {
         vm.serializeUint(obj, "launchFee", rec.launchFee);
         vm.serializeUint(obj, "chainId", net.chainId);
         vm.serializeUint(obj, "updatedAt", block.timestamp);
+        vm.serializeUint(obj, "deployBlock", rec.deployBlock);
+        vm.serializeUint(obj, "verifiedAt", rec.verifiedAt);
+        vm.serializeBytes32(obj, "coreCodeHash", rec.coreCodeHash);
+        vm.serializeBytes32(obj, "bidsCodeHash", rec.bidsCodeHash);
+        vm.serializeBytes32(obj, "marketplaceCodeHash", rec.marketplaceCodeHash);
+        vm.serializeBytes32(obj, "launchpadCodeHash", rec.launchpadCodeHash);
         vm.serializeBool(obj, "configured", verified);
         vm.serializeString(obj, "stage", stage);
         string memory json = vm.serializeString(obj, "network", net.name);

@@ -416,6 +416,38 @@ abstract contract DeploymentScriptBase is Test {
         store.write(_recordPath(), json);
     }
 
+    function _readBytes32(string memory key) internal view returns (bytes32) {
+        return vm.parseJsonBytes32(store.read(_recordPath()), key);
+    }
+
+    /// @dev A partial record of an interrupted run that DID record provenance
+    ///      for the components it deployed (core and bids only).
+    function _writeProvenanceRecord(
+        address core,
+        address bids,
+        address router,
+        address launchpad,
+        uint256 deployBlock,
+        bytes32 coreHash,
+        bytes32 bidsHash
+    ) internal {
+        string memory o = "provenanceRecord";
+        vm.serializeAddress(o, "core", core);
+        vm.serializeAddress(o, "bids", bids);
+        vm.serializeAddress(o, "marketplace", router);
+        vm.serializeAddress(o, "launchpad", launchpad);
+        vm.serializeAddress(o, "feeReceiver", feeReceiver);
+        vm.serializeAddress(o, "deployer", deployer);
+        vm.serializeUint(o, "marketplaceFee", 100);
+        vm.serializeUint(o, "chainId", block.chainid);
+        vm.serializeUint(o, "deployBlock", deployBlock);
+        vm.serializeBytes32(o, "coreCodeHash", coreHash);
+        vm.serializeBytes32(o, "bidsCodeHash", bidsHash);
+        vm.serializeBool(o, "configured", false);
+        vm.serializeString(o, "stage", "partial");
+        store.write(_recordPath(), vm.serializeString(o, "network", NETWORK));
+    }
+
     // ── pipeline helpers ──────────────────────────────────────────────────────
 
     function _deploy() internal {
@@ -743,6 +775,85 @@ contract DeployMarketplaceTest is DeploymentScriptBase {
             )
         );
         _deploy();
+    }
+
+    // ── provenance: deployBlock and creation-code hashes (Phase 5) ────────────
+
+    function test_FreshDeployRecordsDeployBlockAndCreationCodeHashes() public {
+        vm.roll(1_234);
+        _deploy();
+
+        // Simulated head + 1: no deployment tx can land at or before the head.
+        assertEq(_readUint(".deployBlock"), 1_235, "deployBlock must be head + 1 of the deploying run");
+        assertEq(_readBytes32(".coreCodeHash"), keccak256(type(MarketplaceCore).creationCode));
+        assertEq(_readBytes32(".bidsCodeHash"), keccak256(type(MarketplaceBids).creationCode));
+        assertEq(_readBytes32(".marketplaceCodeHash"), keccak256(type(Marketplace).creationCode));
+        assertEq(_readBytes32(".launchpadCodeHash"), keccak256(type(LaunchPad).creationCode));
+        assertEq(_readUint(".verifiedAt"), 0, "a partial record is not verified");
+    }
+
+    function test_ReRunKeepsTheOriginalDeployBlockAndHashes() public {
+        vm.roll(100);
+        _deploy();
+        bytes32 coreHash = _readBytes32(".coreCodeHash");
+
+        vm.roll(500);
+        _deploy(); // NothingToDeploy
+
+        assertEq(_readUint(".deployBlock"), 101, "a no-op re-run must not move deployBlock forward");
+        assertEq(_readBytes32(".coreCodeHash"), coreHash);
+    }
+
+    function test_ResumeKeepsDeployBlockAndReusedHashesAndHashesNewComponents() public {
+        vm.roll(100);
+        _deploy();
+        address core0 = _readAddr(".core");
+        address bids0 = _readAddr(".bids");
+        bytes32 coreHash = keccak256("recorded-core-hash");
+        bytes32 bidsHash = keccak256("recorded-bids-hash");
+
+        // The interrupted run recorded block 101 and the hashes of what it deployed.
+        _writeProvenanceRecord(core0, bids0, address(0x1111), address(0x2222), 101, coreHash, bidsHash);
+
+        vm.roll(900);
+        _deploy(); // Resume: router and launchpad are deployed now
+
+        assertEq(_readUint(".deployBlock"), 101, "resume keeps the earlier (lower) bound");
+        assertEq(_readBytes32(".coreCodeHash"), coreHash, "a reused component keeps its recorded hash");
+        assertEq(_readBytes32(".bidsCodeHash"), bidsHash, "a reused component keeps its recorded hash");
+        assertEq(_readBytes32(".marketplaceCodeHash"), keccak256(type(Marketplace).creationCode));
+        assertEq(_readBytes32(".launchpadCodeHash"), keccak256(type(LaunchPad).creationCode));
+    }
+
+    function test_ResumeOfARecordWithoutProvenanceLeavesItUnknown() public {
+        _deploy();
+        address core0 = _readAddr(".core");
+        address bids0 = _readAddr(".bids");
+        _writeRawRecord(core0, bids0, address(0x1111), address(0x2222), 100, 10 ether, "partial", false);
+
+        vm.roll(900);
+        _deploy();
+
+        // Never invented: prepare-deployment then requires --deploy-block, and
+        // generate-addresses rejects the missing hashes.
+        assertEq(_readUint(".deployBlock"), 0);
+        assertEq(_readBytes32(".coreCodeHash"), bytes32(0));
+        assertEq(_readBytes32(".bidsCodeHash"), bytes32(0));
+        assertEq(_readBytes32(".marketplaceCodeHash"), keccak256(type(Marketplace).creationCode));
+    }
+
+    function test_ExplicitRedeployStartsANewDeployBlock() public {
+        vm.roll(10);
+        _deployAndConfigure();
+        _verifyRun();
+        assertEq(_readUint(".deployBlock"), 11);
+
+        vm.roll(300);
+        _set("ALLOW_REDEPLOY", "true");
+        _deploy();
+
+        assertEq(_readUint(".deployBlock"), 301, "a parallel stack has its own deploy block");
+        assertEq(_readUint(".verifiedAt"), 0, "the new stack is not verified");
     }
 
     function _archiveExists() internal view returns (bool) {
@@ -1187,6 +1298,37 @@ contract VerifyDeploymentScriptTest is DeploymentScriptBase {
             )
         );
         _verifyRun();
+    }
+
+    /// @dev VerifyDeployment re-serializes the record from its struct: every
+    ///      provenance field must survive the promotion, in both files.
+    function test_PromotionPreservesProvenanceAndStampsVerifiedAt() public {
+        vm.roll(50);
+        _deployAndConfigure();
+        uint256 deployBlock = _readUint(".deployBlock");
+        bytes32 coreHash = _readBytes32(".coreCodeHash");
+        bytes32 bidsHash = _readBytes32(".bidsCodeHash");
+        bytes32 routerHash = _readBytes32(".marketplaceCodeHash");
+        bytes32 lpHash = _readBytes32(".launchpadCodeHash");
+        assertEq(deployBlock, 51);
+        assertTrue(coreHash != bytes32(0) && bidsHash != bytes32(0) && routerHash != bytes32(0) && lpHash != bytes32(0));
+
+        vm.roll(80);
+        vm.warp(1_900_000_000);
+        _verifyRun();
+
+        assertEq(_readStr(".stage"), "verified");
+        assertEq(_readUint(".deployBlock"), deployBlock, "promotion must not drop or move deployBlock");
+        assertEq(_readBytes32(".coreCodeHash"), coreHash);
+        assertEq(_readBytes32(".bidsCodeHash"), bidsHash);
+        assertEq(_readBytes32(".marketplaceCodeHash"), routerHash);
+        assertEq(_readBytes32(".launchpadCodeHash"), lpHash);
+        assertEq(_readUint(".verifiedAt"), 1_900_000_000);
+
+        string memory latest = store.read(_latestPath());
+        assertEq(vm.parseJsonUint(latest, ".deployBlock"), deployBlock);
+        assertEq(vm.parseJsonBytes32(latest, ".coreCodeHash"), coreHash);
+        assertEq(vm.parseJsonUint(latest, ".verifiedAt"), 1_900_000_000);
     }
 }
 

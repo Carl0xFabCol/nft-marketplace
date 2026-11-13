@@ -61,6 +61,12 @@ contract DeployMarketplace is DeploymentConfig {
         address launchpad;
         bool archiveFirst;
         string reason;
+        // Provenance carried into the record (see DeploymentConfig.DeploymentRecord).
+        uint256 deployBlock;
+        bytes32 coreCodeHash;
+        bytes32 bidsCodeHash;
+        bytes32 marketplaceCodeHash;
+        bytes32 launchpadCodeHash;
     }
 
     struct Settings {
@@ -94,6 +100,7 @@ contract DeployMarketplace is DeploymentConfig {
         Settings memory settings = _loadSettings(deployer);
         DeploymentRecord memory rec = _readRecord(net.name);
         Plan memory plan = _planDeployment(net, rec);
+        _planProvenance(plan, rec);
 
         _logHeader(net, settings, plan);
         _logDryRunNotice();
@@ -120,6 +127,11 @@ contract DeployMarketplace is DeploymentConfig {
             out.deployer = settings.deployer;
             out.marketplaceFee = settings.marketplaceFee;
             out.launchFee = onChainLaunchFee;
+            out.deployBlock = plan.deployBlock;
+            out.coreCodeHash = plan.coreCodeHash;
+            out.bidsCodeHash = plan.bidsCodeHash;
+            out.marketplaceCodeHash = plan.marketplaceCodeHash;
+            out.launchpadCodeHash = plan.launchpadCodeHash;
             // Deliberately `partial`: these addresses are predicted by the
             // simulation and are not confirmed until VerifyDeployment says so.
             _writeRecord(net, out, STAGE_PARTIAL, false);
@@ -281,6 +293,36 @@ contract DeployMarketplace is DeploymentConfig {
         plan.reason = "Resuming an interrupted deployment: reusing live components, deploying only what is missing.";
     }
 
+    /**
+     * @notice Provenance for the record: the deploy block and per-component
+     *         creation-code hashes.
+     * @dev deployBlock is a LOWER BOUND for the first deployment transaction:
+     *      Foundry simulates against the current head, so no transaction of
+     *      this run can land at or before it. A fresh stack takes head + 1. A
+     *      resumed stack keeps the recorded value, because its reused
+     *      components were deployed earlier (an unknown value stays 0 and
+     *      prepare-deployment then requires --deploy-block).
+     *      Reused components keep their recorded hash; components deployed by
+     *      this run get theirs in _execute.
+     *      Caveat for Phase 6: on Arbitrum Orbit chains the block number seen by
+     *      a forked simulation must be checked against eth_getCode history.
+     */
+    function _planProvenance(Plan memory plan, DeploymentRecord memory rec) internal view {
+        if (plan.action == Action.Fresh) {
+            plan.deployBlock = vm.getBlockNumber() + 1;
+            return;
+        }
+        plan.deployBlock = rec.deployBlock;
+        if (plan.core != address(0) && plan.core == rec.core) plan.coreCodeHash = rec.coreCodeHash;
+        if (plan.bids != address(0) && plan.bids == rec.bids) plan.bidsCodeHash = rec.bidsCodeHash;
+        if (plan.marketplace != address(0) && plan.marketplace == rec.marketplace) {
+            plan.marketplaceCodeHash = rec.marketplaceCodeHash;
+        }
+        if (plan.launchpad != address(0) && plan.launchpad == rec.launchpad) {
+            plan.launchpadCodeHash = rec.launchpadCodeHash;
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // EXECUTION
     // ═══════════════════════════════════════════════════════════════════════════
@@ -290,6 +332,7 @@ contract DeployMarketplace is DeploymentConfig {
 
         if (plan.core == address(0)) {
             plan.core = address(new MarketplaceCore(uint16(settings.marketplaceFee), settings.feeReceiver));
+            plan.coreCodeHash = keccak256(type(MarketplaceCore).creationCode);
             console.log("Deployed MarketplaceCore:", plan.core);
         } else {
             console.log("Reusing MarketplaceCore:", plan.core);
@@ -297,6 +340,7 @@ contract DeployMarketplace is DeploymentConfig {
 
         if (plan.bids == address(0)) {
             plan.bids = address(new MarketplaceBids(plan.core));
+            plan.bidsCodeHash = keccak256(type(MarketplaceBids).creationCode);
             console.log("Deployed MarketplaceBids:", plan.bids);
         } else {
             console.log("Reusing MarketplaceBids:", plan.bids);
@@ -304,6 +348,7 @@ contract DeployMarketplace is DeploymentConfig {
 
         if (plan.marketplace == address(0)) {
             plan.marketplace = address(new Marketplace(plan.core, plan.bids));
+            plan.marketplaceCodeHash = keccak256(type(Marketplace).creationCode);
             console.log("Deployed Marketplace:", plan.marketplace);
         } else {
             console.log("Reusing Marketplace:", plan.marketplace);
@@ -311,6 +356,7 @@ contract DeployMarketplace is DeploymentConfig {
 
         if (plan.launchpad == address(0)) {
             plan.launchpad = address(new LaunchPad(plan.core));
+            plan.launchpadCodeHash = keccak256(type(LaunchPad).creationCode);
             console.log("Deployed LaunchPad:", plan.launchpad);
         } else {
             console.log("Reusing LaunchPad:", plan.launchpad);

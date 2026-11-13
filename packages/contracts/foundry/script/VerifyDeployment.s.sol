@@ -340,6 +340,9 @@ contract VerifyDeployment is DeploymentConfig {
         rec.marketplaceFee = report.marketplaceFee;
         rec.launchFee = report.launchFee;
         if (rec.deployer == address(0)) rec.deployer = report.routerOwner;
+        // deployBlock and the code hashes are carried over unchanged from the
+        // partial record (_readRecord round-trips them).
+        rec.verifiedAt = block.timestamp;
 
         _writeRecord(net, rec, STAGE_VERIFIED, true);
         console.log("Deployment promoted to stage=verified and latest.json refreshed.");
