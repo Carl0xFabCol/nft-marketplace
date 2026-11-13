@@ -7,7 +7,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { getAddress, type Address, type Hex } from "viem"
-import { parseRpcEndpoints, renderAddresses, runGenerateAddresses, type ChainReader, type RecordFile, type RunOptions } from "../lib/addresses"
+import { parseRpcEndpoints, renderAddresses, runGenerateAddresses, type ChainReader, type Component, type RecordFile, type RunOptions } from "../lib/addresses"
 
 const CORE = getAddress("0x1000000000000000000000000000000000000001")
 const BIDS = getAddress("0x2000000000000000000000000000000000000002")
@@ -15,6 +15,15 @@ const ROUTER = getAddress("0x3000000000000000000000000000000000000003")
 const LAUNCHPAD = getAddress("0x4000000000000000000000000000000000000004")
 const DEPLOYER = getAddress("0x5000000000000000000000000000000000000005")
 const ZERO = "0x0000000000000000000000000000000000000000"
+
+/** Stand-ins for keccak256(artifact bytecode.object), one per component (rule 10). */
+const ARTIFACT_HASH: Record<Component, Hex> = {
+  core: `0x${"c1".repeat(32)}`,
+  bids: `0x${"b1".repeat(32)}`,
+  marketplace: `0x${"a1".repeat(32)}`,
+  launchpad: `0x${"d1".repeat(32)}`,
+}
+const artifactHash = (c: Component): Hex | undefined => ARTIFACT_HASH[c]
 
 function verifiedRecord(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -28,6 +37,12 @@ function verifiedRecord(overrides: Record<string, unknown> = {}): Record<string,
     launchFee: 0,
     chainId: 99801,
     updatedAt: 1790000000,
+    deployBlock: 12345,
+    verifiedAt: 1790000001,
+    coreCodeHash: ARTIFACT_HASH.core,
+    bidsCodeHash: ARTIFACT_HASH.bids,
+    marketplaceCodeHash: ARTIFACT_HASH.marketplace,
+    launchpadCodeHash: ARTIFACT_HASH.launchpad,
     configured: true,
     stage: "verified",
     network: "elysium",
@@ -100,6 +115,7 @@ function run(records: RecordFile[], state: ChainState = healthyChain(), extra: P
   return runGenerateAddresses({
     records,
     readerFor: () => mockReader(state),
+    artifactHash,
     outPath,
     check: false,
     ...extra,
@@ -130,7 +146,9 @@ describe("positive path", () => {
     expect(content).toContain(`MARKETPLACE_CORE: "${CORE}"`)
     expect(content).toContain(`LAUNCHPAD: "${LAUNCHPAD}"`)
     expect(content).toContain("DEPLOYMENT_METADATA")
-    expect(content).toContain("verifiedAt: 1790000000")
+    // verifiedAt is VerifyDeployment's own stamp now, not updatedAt.
+    expect(content).toContain("verifiedAt: 1790000001")
+    expect(content).toContain("deployBlock: 12345")
   })
 
   it("treats a zero launchpad as absent", async () => {
@@ -238,6 +256,32 @@ describe("rule 9: no duplicate chainId", () => {
       9,
       /also claimed by a\.json/,
     ))
+})
+
+describe("rule 10: provenance (deployBlock, verifiedAt, creation-code hashes = local artifacts)", () => {
+  it("rejects a missing deployBlock", () => expectRejected(run([elysium({ deployBlock: undefined })]), 10, /deployBlock undefined/))
+  it("rejects a zero deployBlock (unknown)", () => expectRejected(run([elysium({ deployBlock: 0 })]), 10, /deployBlock 0/))
+  it("rejects a missing verifiedAt (updatedAt is not a substitute)", () =>
+    expectRejected(run([elysium({ verifiedAt: undefined })]), 10, /verifiedAt/))
+  it("rejects a missing code hash", () => expectRejected(run([elysium({ bidsCodeHash: undefined })]), 10, /bidsCodeHash undefined is missing/))
+  it("rejects a zero code hash (unknown)", () =>
+    expectRejected(run([elysium({ coreCodeHash: `0x${"0".repeat(64)}` })]), 10, /coreCodeHash "0x0+" is missing/))
+  it("rejects a code hash that does not match the local artifact", () =>
+    expectRejected(
+      run([elysium({ marketplaceCodeHash: `0x${"ee".repeat(32)}` })]),
+      10,
+      /marketplaceCodeHash 0x(ee)+ does not match the Marketplace artifact/,
+    ))
+  it("rejects when an artifact is missing (forge build not run)", () =>
+    expectRejected(run([elysium()], healthyChain(), { artifactHash: (c) => (c === "launchpad" ? undefined : ARTIFACT_HASH[c]) }), 10, /no artifact for launchpad [(]LaunchPad[)]/))
+  it("does not require a launchpad hash when there is no launchpad", async () => {
+    const result = await run([elysium({ launchpad: ZERO, launchpadCodeHash: undefined })])
+    expect(result.exitCode).toBe(0)
+  })
+  it("compares hashes case-insensitively", async () => {
+    const result = await run([elysium({ coreCodeHash: ARTIFACT_HASH.core.toUpperCase().replace("0X", "0x") })])
+    expect(result.exitCode).toBe(0)
+  })
 })
 
 describe("legacy stack and fail-closed behaviour", () => {

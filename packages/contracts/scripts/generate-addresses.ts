@@ -6,16 +6,25 @@
  *        [--rpc elysium=https://...] [--deployments-dir <dir>] [--out <file>] [--check]
  *
  * Reads foundry/deployments/<network>.json (latest.json and archive/ are never
- * consumed). Every record must pass rules 1-9 or the command exits 1 and writes
- * nothing. RPC URLs default to [rpc_endpoints] in foundry.toml.
+ * consumed). Every record must pass rules 1-10 or the command exits 1 and writes
+ * nothing. RPC URLs default to [rpc_endpoints] in foundry.toml. Rule 10 needs
+ * `forge build` (foundry/out) from the same sources the stack was deployed from.
  *
  * Phase 0: this is NOT run against the legacy stack (it would be rejected),
  * and addresses.ts is not repointed. Activation happens in Phase 6.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
-import { createPublicClient, http, parseAbi, type Address } from "viem"
-import { parseRpcEndpoints, runGenerateAddresses, type AddressGetter, type ChainReader, type RecordFile } from "./lib/addresses"
+import { createPublicClient, http, isHex, keccak256, parseAbi, type Address, type Hex } from "viem"
+import {
+  COMPONENT_ARTIFACTS,
+  parseRpcEndpoints,
+  runGenerateAddresses,
+  type AddressGetter,
+  type ChainReader,
+  type Component,
+  type RecordFile,
+} from "./lib/addresses"
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..")
 const FOUNDRY_ROOT = path.join(PACKAGE_ROOT, "foundry")
@@ -37,6 +46,22 @@ function createViemReader(url: string): ChainReader {
     readAddress: (contract, fn: AddressGetter) =>
       client.readContract({ address: contract, abi: READ_ABI, functionName: fn }) as Promise<Address>,
     readUint: (contract, fn) => client.readContract({ address: contract, abi: READ_ABI, functionName: fn }),
+  }
+}
+
+/**
+ * Rule 10: keccak256 of foundry/out/<Name>.sol/<Name>.json bytecode.object,
+ * i.e. the creation code DeployMarketplace hashes with type(X).creationCode.
+ * These are the same artifacts generate-abis reads, so a match proves the
+ * deployed stack and the committed ABIs come from one build.
+ */
+function artifactHashFrom(outDir: string): (component: Component) => Hex | undefined {
+  return (component) => {
+    const name = COMPONENT_ARTIFACTS[component]
+    const file = path.join(outDir, `${name}.sol`, `${name}.json`)
+    if (!existsSync(file)) return undefined
+    const object = (JSON.parse(readFileSync(file, "utf8")) as { bytecode?: { object?: string } }).bytecode?.object
+    return typeof object === "string" && isHex(object) && object.length > 2 ? keccak256(object) : undefined
   }
 }
 
@@ -98,6 +123,7 @@ async function main(argv: string[]): Promise<number> {
   const result = await runGenerateAddresses({
     records: loadRecords(args.deploymentsDir, args.networks),
     readerFor: (network) => (endpoints[network] ? createViemReader(endpoints[network]) : undefined),
+    artifactHash: artifactHashFrom(path.join(FOUNDRY_ROOT, "out")),
     outPath: args.out,
     check: args.check,
   })
