@@ -86,15 +86,31 @@ earlier steps printed.
 ```bash
 # an externally deployed ERC721
 NETWORK=elysium COLLECTION_ADDRESS=0x... ROYALTY_FEE=250 ROYALTY_RECEIVER=0x... \
-  forge script RegisterCollection --rpc-url elysium --slow --broadcast
+  forge script RegisterCollection --rpc-url elysium --slow --broadcast \
+  --gas-estimate-multiplier 200
 
 # the Hypurr test collection
 NETWORK=elysium CONFIRM_NEW_COLLECTION=true \
-  forge script CreateHypurr --rpc-url elysium --slow --broadcast
+  forge script CreateHypurr --rpc-url elysium --slow --broadcast \
+  --gas-estimate-multiplier 200
 ```
 
 Both require a `verified`-or-`partial` record for the network and will refuse to
 run without one.
+
+**`--gas-estimate-multiplier 200` is required** (Phase 5 finding F-1). Collection
+registration validates the collection through a gas-bounded `staticcall`, and
+Core refuses to start it unless `gasleft() >= gasLimit * 64/63 + 5000`
+(`BoundedStaticCallInsufficientGas`, selector `0xd0f2e27c`). Forge's default gas
+limit is about 1.3× the gas the simulation used, which is below that floor, so
+without the flag the broadcast transaction **reverts on-chain** after a
+successful simulation (reproduced on Anvil: limit 125,115). The flag doubles the
+limit. Unused gas is refunded, so the only cost is a higher up-front reservation.
+Wallets that estimate gas with `eth_estimateGas` (the web app) are not affected.
+The Phase 5 rehearsal verified the flag with `RegisterCollection`. `CreateHypurr` makes
+the same `Marketplace.registerCollection` call (`CreateHypurr.s.sol:133`), but it
+was not run in the rehearsal (its `ipfs://` base URI would make the indexer
+fetch from public gateways).
 
 ## Royalties: fallback vs. override
 
