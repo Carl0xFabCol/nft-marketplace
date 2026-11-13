@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 /**
  * pnpm --filter @marketplace/indexer prepare-deployment -- --network <elysium|sepolia>
- *      [--deploy-block <n>] [--force] [--dry-run]
+ *      [--deployments-dir <dir>] [--deploy-block <n>] [--force] [--dry-run]
  *
  * INTEGRATION_AUDIT §8 step 8. Seeds indexer_state at deployBlock - 1 and the
  * per-collection cursors for a VERIFIED deployment record
@@ -25,11 +25,12 @@ const DEPLOYMENTS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
+  const deploymentsDir = options.deploymentsDir ? path.resolve(options.deploymentsDir) : DEPLOYMENTS_DIR
   const result = await prepareDeployment(options, {
     chainId: env.chainId,
     readRecord(network) {
       // latest.json and archive/ are never consumed, as in generate-addresses.
-      const file = path.join(DEPLOYMENTS_DIR, `${network}.json`)
+      const file = path.join(deploymentsDir, `${network}.json`)
       if (!existsSync(file)) return null
       return { fileName: `${network}.json`, data: JSON.parse(readFileSync(file, "utf8")) }
     },

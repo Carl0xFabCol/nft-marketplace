@@ -135,6 +135,20 @@ describe("prepare-deployment: CLI arguments", () => {
     })
   })
 
+  it("parses --deployments-dir (default left to the CLI)", () => {
+    expect(parseArgs(["--network", "anvil", "--deployments-dir", "/scratch/deployments"])).toEqual({
+      network: "anvil",
+      deploymentsDir: "/scratch/deployments",
+      force: false,
+      dryRun: false,
+    })
+    expect(parseArgs(["--network", "elysium"]).deploymentsDir).toBeUndefined()
+  })
+
+  it.each([[["--network", "elysium", "--deployments-dir"]], [["--network", "elysium", "--deployments-dir", "--force"]]])("rejects %j", (argv) => {
+    expect(() => parseArgs(argv)).toThrow(/--deployments-dir needs a directory/)
+  })
+
   it.each([[["--deploy-block", "1"]], [["--network", "elysium", "--deploy-block", "1e6"]], [["--network", "elysium", "--bogus"]], [["--network", "../x"]]])(
     "rejects %j",
     (argv) => {

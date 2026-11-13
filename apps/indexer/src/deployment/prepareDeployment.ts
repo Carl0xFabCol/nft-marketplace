@@ -23,6 +23,13 @@ import type { RecordFile, VerifiedDeployment } from "@marketplace/contracts/depl
 
 export interface PrepareDeploymentOptions {
   network: string
+  /**
+   * Directory holding <network>.json. Defaults to
+   * packages/contracts/foundry/deployments (resolved by the CLI). The Phase 5
+   * rehearsal points it at its scratch copy, so a throwaway record never sits
+   * next to the real ones.
+   */
+  deploymentsDir?: string
   deployBlock?: number
   force: boolean
   dryRun: boolean
@@ -131,13 +138,18 @@ export async function prepareDeployment(options: PrepareDeploymentOptions, deps:
   return { deployment, deployBlock, previousLastBlock: previous, lastBlock, indexerStateChanged, seededCollections, dryRun: options.dryRun }
 }
 
-/** CLI arguments: --network <name> [--deploy-block <n>] [--force] [--dry-run] */
+/** CLI arguments: --network <name> [--deployments-dir <dir>] [--deploy-block <n>] [--force] [--dry-run] */
 export function parseArgs(argv: string[]): PrepareDeploymentOptions {
   const options: PrepareDeploymentOptions = { network: "", force: false, dryRun: false }
   const args = argv.filter((a) => a !== "--")
   for (let i = 0; i < args.length; i++) {
     const a = args[i]
     if (a === "--network") options.network = args[++i] ?? ""
+    else if (a === "--deployments-dir") {
+      const dir = args[++i]
+      if (!dir || dir.startsWith("--")) throw new PrepareDeploymentError("--deployments-dir needs a directory")
+      options.deploymentsDir = dir
+    }
     else if (a === "--deploy-block") {
       const raw = args[++i]
       if (!raw || !/^[0-9]+$/.test(raw)) throw new PrepareDeploymentError(`--deploy-block needs a positive integer, got ${JSON.stringify(raw)}`)
