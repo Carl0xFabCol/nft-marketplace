@@ -10,7 +10,7 @@ import { account, RPC_URL } from "./chain"
 import type { Ctx } from "./ctx"
 import { scalar } from "./db"
 import { REHEARSAL_CHAIN_ID } from "./guards"
-import type { IndexerProc } from "./indexer"
+import { CONFIRMATIONS, type IndexerProc } from "./indexer"
 import { spawnBackground, waitFor } from "./proc"
 import { MockNftAbi, must, now, router } from "./scenarios"
 
@@ -54,7 +54,7 @@ export async function webSuite(c: Ctx, idx: IndexerProc): Promise<void> {
   await waitFor("the web suite to ask for the indexer (or finish)", async () => existsSync(path.join(markerDir, "start-indexer")) || exited, { timeoutMs: 300_000, intervalMs: 200 })
   const asked = existsSync(path.join(markerDir, "start-indexer"))
   c.log.check("the web suite reached the 23503 retry and asked for the indexer", asked)
-  if (asked) idx.start()
+  if (asked) await restartIndexerPastListing({ rpc: (m, p) => c.chain.rpc(m, p), indexer: idx })
   const code = await suite.exited
   await suite.stop()
   const out = readFileSync(logPath, "utf8")
@@ -62,3 +62,13 @@ export async function webSuite(c: Ctx, idx: IndexerProc): Promise<void> {
   c.log.check(`web rehearsal suite passes (${summary.trim()})`, code === 0 && /4 passed/.test(summary) && !/skipped/.test(summary), `exit ${code}; see ${logPath}`)
 }
 
+/**
+ * Restarts the indexer and mines CONFIRMATIONS blocks. On an automine Anvil no
+ * block follows the listing tx by itself, so without this the listing block
+ * stays inside the confirmation window and is (correctly) never indexed; on a
+ * live chain the next blocks arrive on their own.
+ */
+export async function restartIndexerPastListing(deps: { rpc: (method: string, params: unknown[]) => Promise<unknown>; indexer: Pick<IndexerProc, "start"> }): Promise<void> {
+  deps.indexer.start()
+  await deps.rpc("anvil_mine", [`0x${CONFIRMATIONS.toString(16)}`])
+}
