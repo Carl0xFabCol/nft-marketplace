@@ -49,5 +49,9 @@ async function main() {
 
 main().catch((error) => {
   console.error(error instanceof PrepareDeploymentError ? `✖ ${error.message}` : error)
-  process.exit(1)
+  // No explicit exit call: after a Supabase round-trip, exiting while fetch
+  // handles are still closing aborts Node on Windows with 0xC0000409
+  // (libuv "!(handle->flags & UV_HANDLE_CLOSING)") instead of exit code 1
+  // (Phase 5 finding F-3). Setting exitCode lets the loop drain and exit 1.
+  process.exitCode = 1
 })

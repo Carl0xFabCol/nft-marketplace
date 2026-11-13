@@ -156,3 +156,15 @@ describe("prepare-deployment: CLI arguments", () => {
     },
   )
 })
+
+describe("prepare-deployment: CLI exit", () => {
+  // Phase 5 finding F-3: an explicit exit after a Supabase round-trip aborts
+  // Node on Windows with 0xC0000409 instead of exiting 1. The CLI must set
+  // process.exitCode instead (verified end to end by the Anvil rehearsal).
+  it("signals failure with process.exitCode, never process.exit()", async () => {
+    const { readFileSync } = await import("node:fs")
+    const src = readFileSync(new URL("../scripts/prepare-deployment.ts", import.meta.url), "utf8")
+    expect(src).toMatch(/process\.exitCode = 1/)
+    expect(src).not.toMatch(/process\.exit\(/)
+  })
+})
