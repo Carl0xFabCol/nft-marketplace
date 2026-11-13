@@ -16,6 +16,7 @@ import { launch } from "./ctx"
 import { sleep, waitFor } from "./proc"
 import { MockNftAbi, must, now, router } from "./scenarios"
 import { account } from "./chain"
+import { anvilReorgParams } from "./reorg"
 
 const CHAIN = REHEARSAL_CHAIN_ID
 
@@ -77,18 +78,20 @@ export async function anvilReorg(c: Ctx, idx: IndexerProc): Promise<boolean> {
   await syncTo(c, idx, head)
   const stored = await cursor()
   const logLen = idx.log().length
+  const params = anvilReorgParams(await c.chain.pub.getBlockNumber(), stored.lastBlock!, account("royalty").address)
+  const forkPoint = (await c.chain.pub.getBlockNumber()) - BigInt(params[0])
   try {
-    await c.chain.rpc("anvil_reorg", [5, []])
+    await c.chain.rpc("anvil_reorg", params)
   } catch (e) {
     c.log.info(`anvil_reorg unavailable: ${e instanceof Error ? e.message : String(e)}`)
     return false
   }
   const canonical = (await c.chain.pub.getBlock({ blockNumber: stored.lastBlock! })).hash
-  c.log.check("(b') anvil_reorg replaced the stored cursor block", canonical !== stored.hash)
+  c.log.check("(b') anvil_reorg replaced the stored cursor block", canonical !== stored.hash, `block ${stored.lastBlock}: stored ${stored.hash}, now ${canonical}; depth ${params[0]}, fork ${forkPoint}`)
   await mine(c, 1)
   await waitFor("a new REORG_DETECTED", async () => idx.log().slice(logLen).includes("REORG_DETECTED"), { timeoutMs: 30_000 })
   c.log.check("(b') anvil_reorg → REORG_DETECTED, halted", await assertCursorHeld(stored.lastBlock, 4))
-  await psql(`update public.indexer_state set last_block = ${head - 5n}, last_block_hash = null where chain_id = ${CHAIN};`)
+  await psql(`update public.indexer_state set last_block = ${forkPoint}, last_block_hash = null where chain_id = ${CHAIN};`)
   await syncTo(c, idx)
   return true
 }
