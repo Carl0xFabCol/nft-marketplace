@@ -1,0 +1,25 @@
+{
+  "name": "@marketplace/rehearsal",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Phase 5 end-to-end rehearsal on a throwaway local Anvil chain + local Supabase stack (audit test #21). Never targets a remote RPC or database.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "anvil-e2e": "tsx src/anvil-e2e.ts",
+    "reconcile": "tsx src/reconcile-cli.ts",
+    "launch": "tsx src/launch.ts"
+  },
+  "dependencies": {
+    "@marketplace/contracts": "workspace:*",
+    "@marketplace/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.110.0",
+    "viem": "^2.44.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.7",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3"
+  }
+}

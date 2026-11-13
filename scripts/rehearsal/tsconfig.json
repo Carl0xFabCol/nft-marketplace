@@ -1,0 +1,20 @@
+{
+  "extends": "../../packages/config/tsconfig/node.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    // Runs through tsx/vitest only (no emit). "bundler" resolution honours the
+    // workspace packages' `exports` subpaths, as in apps/indexer.
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "baseUrl": ".",
+    // The rehearsal imports the web's own quote/error helpers instead of
+    // re-implementing them; apps/web resolves "@/…" to its root.
+    "paths": {
+      "@/*": ["../../apps/web/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "vitest.config.ts"],
+  "exclude": ["node_modules"]
+}
